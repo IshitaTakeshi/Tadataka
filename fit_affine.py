@@ -99,23 +99,93 @@ def initialize_theta(initial_A=None, initial_b=None):
 
 
 
-def get_affine_transformation(A, b):
+def get_affine_matrix(A, b):
     W = np.identity(3)
     W[0:2, 0:2] = A
     W[0:2, 2] = b
+    return W
     return tf.AffineTransform(matrix=W)
 
 
 def transform_image(image, theta):
     A, b = affine_parameters_from_theta(theta)
-    return tf.warp(image, get_affine_transformation(A, b))
+    W = get_affine_matrix(A, b)
+    # Note that tf.warp requires the inverse transformation
+    return tf.warp(image, np.linalg.inv(W))
 
 
-def predict(residual, initial_theta):
+def predict(keypoints1, keypoints2, initial_theta):
+    residual = Residual(keypoints1, keypoints2)
     robustifier = SquaredRobustifier()
     updater = GaussNewtonUpdater(residual, robustifier)
     optimizer = Optimizer(updater, Error(residual))
     return optimizer.optimize(initial_theta, n_max_iter=1000)
+
+
+    # res = least_squares(Error(residual).compute, initial_theta)
+    # image_pred = transform_image(image, res.x)
+    # print("predicted by scipy least squares : ", res.x)
+
+
+
+def plot(image_original, image_true, image_pred,
+         keypoints1, keypoints2, matches12):
+    fig, ax = plt.subplots(nrows=2, ncols=1)
+    plt.gray()
+
+    plot_matches(ax[0], image_original, image_true, keypoints1, keypoints2, matches12)
+    ax[0].axis('off')
+    ax[0].set_title("Original Image vs. Transformed Image")
+
+    plot_matches(ax[1], image_original, image_pred, keypoints1, keypoints2, matches12)
+    ax[1].axis('off')
+    ax[1].set_title("Original Image vs. Predicted Image")
+
+    plt.show()
+
+
+def yx_to_xy(coordinates):
+    return coordinates[:, [1, 0]]
+
+
+def random_rotation_matrix():
+    A = np.random.uniform(-1, 1, (2, 2))
+    return np.linalg.svd(np.dot(A.T, A))[0]
+
+def estimate_image_transformation():
+    theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
+    print("ground truth                     : ", theta_true)
+
+    image_original = rgb2gray(data.astronaut())
+    image_true = transform_image(image_original, theta_true)
+
+    keypoints1, keypoints2, matches12 =\
+            extract_keypoints(image_original, image_true)
+
+    initial_theta = initialize_theta()
+    theta_pred = predict(yx_to_xy(keypoints1[matches12[:, 0]]),
+                         yx_to_xy(keypoints2[matches12[:, 1]]),
+                         initial_theta)
+
+    print("predicted by gauss newton        : ", theta_pred)
+    image_pred = transform_image(image_original, theta_pred)
+
+    plot(image_original, image_true, image_pred,
+         keypoints1, keypoints2, matches12)
+
+
+def test_estimator():
+    X = np.array([[1, 2, 0, 3],
+                  [2, 0, 1, 1]]).T
+
+    theta_true = np.array([1.2, 0.1, -0.1, 1.2, 1.0, 2.0])
+    A, b = affine_parameters_from_theta(theta_true)
+    Y = affine_transform(X, A, b)
+
+    initial_theta = initialize_theta()
+    theta_pred = predict(X, Y, initial_theta)
+    print(theta_true)
+    print(theta_pred)
 
 
 if __name__ == "__main__":
@@ -124,44 +194,4 @@ if __name__ == "__main__":
     np.set_printoptions(precision=5, suppress=True,
                         formatter={'float': '{: 0.5f}'.format})
 
-    fig, ax = plt.subplots(nrows=3, ncols=1)
-    plt.gray()
-
-    image = rgb2gray(data.astronaut())
-
-    theta_true = np.array([1.0, 0.0, 0.0, 1.0, -100.0, 0.0])
-
-    image_true = transform_image(image, theta_true)
-    keypoints1, keypoints2, matches12 = extract_keypoints(image, image_true)
-
-    print("ground truth                     : ", theta_true)
-
-    plot_matches(ax[0], image, image_true, keypoints1, keypoints2, matches12)
-    ax[0].axis('off')
-    ax[0].set_title("Original Image vs. Transformed Image")
-
-    initial_theta = initialize_theta()
-    residual = Residual(
-        keypoints1[matches12[:, 0]],
-        keypoints2[matches12[:, 1]]
-    )
-    theta_pred = predict(residual, initial_theta)
-    image_pred = transform_image(image, theta_pred)
-    print("predicted by gauss-newton        : ", theta_pred)
-
-    plot_matches(ax[1], image, image_pred, keypoints1, keypoints2, matches12)
-    ax[1].axis('off')
-    ax[1].set_title("Original Image vs. "
-                    "Estimated by Gauss-Newton")
-
-
-    res = least_squares(Error(residual).compute, initial_theta)
-    image_pred = transform_image(image, res.x)
-    print("predicted by scipy least squares : ", res.x)
-
-    plot_matches(ax[2], image, image_pred, keypoints1, keypoints2, matches12)
-
-    ax[2].axis('off')
-    ax[2].set_title("Original Image vs. "
-                    "Estimated by SciPy least squares")
-    plt.show()
+    estimate_image_transformation()
