@@ -10,7 +10,10 @@ from autograd import numpy as np
 from autograd import jacobian
 
 from robustifiers import GemanMcClureRobustifier, SquaredRobustifier
+from updaters import GaussNewtonUpdater
 from optimizers import Optimizer
+from residuals import Residual
+from errors import Error
 from keypoints import extract_keypoints
 
 
@@ -29,60 +32,37 @@ def affine_transform(X, A, b):
     return np.dot(A, X.T).T + b
 
 
-def gauss_newton_update(J, r, weights=None):
-    # Not exactly the same as the equation of Gauss-Newton update
-    # d = inv (J^T * J) * J * r
-    # however, it works better than implementing the equation malually
-    theta, error, _, _ = np.linalg.lstsq(J, r, rcond=None)
-    return theta
-
-
-class GaussNewtonUpdater(object):
+# there should be a better name?
+class SumRobustifiedError(Error):
     def __init__(self, residual, robustifier):
         self.residual = residual
         self.robustifier = robustifier
 
-    def jacobian(self, theta):
-        return jacobian(self.residuals)(theta)
-
-    def residuals(self, theta):
+    def compute(self, theta):
         r = self.residual.residuals(theta)
-        return r.flatten()
-
-    def compute(self, theta):
-        r = self.residuals(theta)
-        J = self.jacobian(theta)
-        # weights = self.robustifier.weights(r)
-        return gauss_newton_update(J, r)
-
-
-class Error(object):
-    def __init__(self, residual, robustifier=None):
-        self.residual = residual
-        self.robustifier = robustifier
-
-        if robustifier is None:
-            self.robustifier = SquaredRobustifier()
-
-    def compute(self, theta):
-        R = self.residual.residuals(theta)
-        norms = np.linalg.norm(R, axis=1)
+        norms = np.linalg.norm(r.reshape(-1, 2), axis=1)
         return np.sum(self.robustifier.robustify(norms))
 
 
-class Residual(object):
-    def __init__(self, X, Y):
-        self.X = X
-        self.Y = Y
+def from_2d(x):
+    return x.flatten()
 
-    def residuals(self, theta):
-        """
-        Returns:
-            residuals of shape (n_points, 2)
-        """
-        # R[i, :] row has d_i = y_i - (A * x_i + b)
-        A, b = affine_parameters_from_theta(theta)
-        return self.Y - affine_transform(self.X, A, b)
+
+def to_2d(x):
+    return x.reshape(-1, 2)
+
+
+def transformer(x, theta):
+    """
+    X : image coordinates of shape (n_points, 2)
+    A : 2x2 transformation matrix
+    b : bias term of shape (2,)
+    """
+
+    X = to_2d(x)
+    A, b = affine_parameters_from_theta(theta)
+    y = affine_transform(X, A, b)
+    return from_2d(y)
 
 
 def initialize_theta(initial_A=None, initial_b=None):
@@ -98,34 +78,27 @@ def initialize_theta(initial_A=None, initial_b=None):
     ))
 
 
-
 def get_affine_matrix(A, b):
     W = np.identity(3)
     W[0:2, 0:2] = A
     W[0:2, 2] = b
     return W
-    return tf.AffineTransform(matrix=W)
 
 
 def transform_image(image, theta):
     A, b = affine_parameters_from_theta(theta)
     W = get_affine_matrix(A, b)
     # Note that tf.warp requires the inverse transformation
-    return tf.warp(image, np.linalg.inv(W))
+    return tf.warp(image, tf.AffineTransform(matrix=np.linalg.inv(W)))
 
 
 def predict(keypoints1, keypoints2, initial_theta):
-    residual = Residual(keypoints1, keypoints2)
+    residual = Residual(from_2d(keypoints1), from_2d(keypoints2), transformer)
+    # TODO Geman-McClure is used in the original paper
     robustifier = SquaredRobustifier()
     updater = GaussNewtonUpdater(residual, robustifier)
-    optimizer = Optimizer(updater, Error(residual))
+    optimizer = Optimizer(updater, SumRobustifiedError(residual, robustifier))
     return optimizer.optimize(initial_theta, n_max_iter=1000)
-
-
-    # res = least_squares(Error(residual).compute, initial_theta)
-    # image_pred = transform_image(image, res.x)
-    # print("predicted by scipy least squares : ", res.x)
-
 
 
 def plot(image_original, image_true, image_pred,
@@ -133,11 +106,13 @@ def plot(image_original, image_true, image_pred,
     fig, ax = plt.subplots(nrows=2, ncols=1)
     plt.gray()
 
-    plot_matches(ax[0], image_original, image_true, keypoints1, keypoints2, matches12)
+    plot_matches(ax[0], image_original, image_true,
+                 keypoints1, keypoints2, matches12)
     ax[0].axis('off')
     ax[0].set_title("Original Image vs. Transformed Image")
 
-    plot_matches(ax[1], image_original, image_pred, keypoints1, keypoints2, matches12)
+    plot_matches(ax[1], image_original, image_pred,
+                 keypoints1, keypoints2, matches12)
     ax[1].axis('off')
     ax[1].set_title("Original Image vs. Predicted Image")
 
@@ -152,6 +127,7 @@ def random_rotation_matrix():
     A = np.random.uniform(-1, 1, (2, 2))
     return np.linalg.svd(np.dot(A.T, A))[0]
 
+
 def estimate_image_transformation():
     theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
     print("ground truth                     : ", theta_true)
@@ -160,7 +136,7 @@ def estimate_image_transformation():
     image_true = transform_image(image_original, theta_true)
 
     keypoints1, keypoints2, matches12 =\
-            extract_keypoints(image_original, image_true)
+        extract_keypoints(image_original, image_true)
 
     initial_theta = initialize_theta()
     theta_pred = predict(yx_to_xy(keypoints1[matches12[:, 0]]),
