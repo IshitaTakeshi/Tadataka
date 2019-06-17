@@ -1,4 +1,4 @@
-class Transformer(object):
+class BaseTransformer(object):
     def __init__(self, theta):
         self.theta = theta
 

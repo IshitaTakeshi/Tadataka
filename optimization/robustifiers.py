@@ -2,7 +2,7 @@ from autograd import elementwise_grad
 from autograd import numpy as np
 
 
-class Robustifier(object):
+class BaseRobustifier(object):
     def robustify(self, x):
         raise NotImplementedError()
 
@@ -22,12 +22,12 @@ class Robustifier(object):
         return y
 
 
-class SquaredRobustifier(Robustifier):
+class SquaredRobustifier(BaseRobustifier):
     def robustify(self, x):
         return np.power(x, 2)
 
 
-class GemanMcClureRobustifier(Robustifier):
+class GemanMcClureRobustifier(BaseRobustifier):
     def __init__(self, sigma=0.1):
         self.v = np.power(sigma, 2)
 

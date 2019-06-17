@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 
-class Optimizer(object):
+class BaseOptimizer(object):
     def __init__(self, updater, error):
         self.updater = updater
         self.error = error

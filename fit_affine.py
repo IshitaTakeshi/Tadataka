@@ -10,9 +10,9 @@ from autograd import jacobian
 
 from optimization.robustifiers import GemanMcClureRobustifier, SquaredRobustifier
 from optimization.updaters import GaussNewtonUpdater
-from optimization.optimizers import Optimizer
+from optimization.optimizers import BaseOptimizer
 from optimization.residuals import Residual
-from optimization.errors import Error
+from optimization.errors import BaseError
 from flow_estimation.keypoints import extract_keypoints
 from curvature_extrema.image_curvature import curvature
 from utils import affine_matrix, to_2d, from_2d
@@ -43,7 +43,7 @@ def affine_transform(X, A, b):
 
 
 # there should be a better name?
-class SumRobustifiedError(Error):
+class Error(BaseError):
     def __init__(self, residual, robustifier):
         self.residual = residual
         self.robustifier = robustifier
@@ -92,9 +92,8 @@ def predict(keypoints1, keypoints2, initial_theta):
     # TODO Geman-McClure is used in the original paper
     robustifier = SquaredRobustifier()
     updater = GaussNewtonUpdater(residual, robustifier)
-    optimizer = Optimizer(updater, SumRobustifiedError(residual, robustifier))
+    optimizer = BaseOptimizer(updater, Error(residual, robustifier))
     return optimizer.optimize(initial_theta, n_max_iter=1000)
-
 
 
 def yx_to_xy(coordinates):

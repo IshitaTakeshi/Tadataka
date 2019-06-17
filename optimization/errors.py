@@ -1,3 +1,3 @@
-class Error(object):
+class BaseError(object):
     def compute(self):
         raise NotImplementedError()
