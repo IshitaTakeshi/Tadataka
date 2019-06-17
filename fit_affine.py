@@ -1,3 +1,4 @@
+import skimage
 from skimage import data
 from skimage import transform as tf
 from skimage.color import rgb2gray
@@ -122,11 +123,10 @@ def estimate_affine_transformation(image1, image2):
 
 
 def search_maximum(coordinates, K, robustifier, n_max_iter=20, lambda_=0.3):
-    # used to generate neighbors
     def regularizer(x):
         return 1 - robustifier.robustify(x)
 
-    def energies(P, p0):
+    def F(P, p0):
         R = regularizer(np.linalg.norm(P - p0, 1))
         xs, ys = P[:, 0], P[:, 1]
         return K[ys, xs] + lambda_ * R
@@ -140,12 +140,12 @@ def search_maximum(coordinates, K, robustifier, n_max_iter=20, lambda_=0.3):
     def get_neighbors(p):
         return p + diffs_
 
-    def search(p):
-        p0 = np.copy(p)
+    def search(p0):
+        p = np.copy(p0)
         for i in range(n_max_iter):
             neighbors = get_neighbors(p)
-            argmin = np.argmin(energies(neighbors, p))
-            p = neighbors[argmin]
+            argmax = np.argmax(F(neighbors, p0))
+            p = neighbors[argmax]
         return p
 
     for i in range(coordinates.shape[0]):
@@ -161,14 +161,38 @@ def is_in_image_range(points, image_shape):
     return np.logical_and(mask_x, mask_y)
 
 
+def plot_keypoints(ax, image, keypoints, **kwargs):
+    print(skimage.img_as_float(image))
+    ax.imshow(skimage.img_as_float(image), cmap='gray')
+    ax.scatter(keypoints[:, 0], keypoints[:, 1], **kwargs)
+
+
+def round_to_int(X):
+    return np.round(X, 0).astype(np.int64)
+
+
+def plot(ax, image_transformed, keypoints_pred, lambda_):
+    size = 2
+
+    ax.set_title(r"$\lambda = {}$".format(lambda_))
+
+    plot_keypoints(ax, image_transformed, keypoints_pred,
+                   c='red', s=size, label="predicted")
+
+    keypoints_corrected = search_maximum(keypoints_pred, K, robustifier,
+                                         lambda_=lambda_)
+    plot_keypoints(ax, image_transformed, keypoints_corrected,
+                   c='blue', s=size, label="corrected")
+
 
 if __name__ == "__main__":
     from scipy.optimize import least_squares
+    from matplotlib import pyplot as plt
 
     np.set_printoptions(precision=5, suppress=True,
                         formatter={'float': '{: 0.5f}'.format})
 
-    image = rgb2gray(data.astronaut())
+    image = rgb2gray(data.camera())
 
     theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
     print("ground truth                     : ", theta_true)
@@ -179,12 +203,23 @@ if __name__ == "__main__":
         estimate_affine_transformation(image, image_transformed)
 
     keypoints_pred = affine_transform(keypoints, A, b)
-
-    keypoints_pred = np.round(keypoints_pred, 0).astype(np.int64)
+    keypoints_pred = round_to_int(keypoints_pred)
 
     mask = is_in_image_range(keypoints_pred, image.shape[0:2])
     keypoints_pred = keypoints_pred[mask]
 
     K = curvature(image_transformed)
-    keypoints_pred = search_maximum(keypoints_pred, K, GemanMcClureRobustifier())
-    print(keypoints_pred)
+    robustifier = GemanMcClureRobustifier()
+
+    fig, ax = plt.subplots(nrows=1, ncols=3)
+
+    plot(ax[0], image_transformed, keypoints_pred,
+         lambda_=1.0)
+    plot(ax[1], image_transformed, keypoints_pred,
+         lambda_=0.01)
+    plot(ax[2], image_transformed, keypoints_pred,
+         lambda_=0.0001)
+
+    ax[2].legend(loc="best", borderaxespad=0.1)
+
+    plt.show()
