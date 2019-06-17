@@ -1,26 +1,35 @@
 from skimage import data
 from skimage import transform as tf
-from skimage.feature import plot_matches
 from skimage.color import rgb2gray
-import matplotlib.pyplot as plt
 
 # required to import numpy from autograd
 # so that autograd available for all numpy functions
 from autograd import numpy as np
 from autograd import jacobian
 
-from robustifiers import GemanMcClureRobustifier, SquaredRobustifier
-from updaters import GaussNewtonUpdater
-from optimizers import Optimizer
-from residuals import Residual
-from errors import Error
-from keypoints import extract_keypoints
+from optimization.robustifiers import GemanMcClureRobustifier, SquaredRobustifier
+from optimization.updaters import GaussNewtonUpdater
+from optimization.optimizers import Optimizer
+from optimization.residuals import Residual
+from optimization.errors import Error
+from flow_estimation.keypoints import extract_keypoints
+from curvature_extrema.image_curvature import curvature
+from utils import affine_matrix, to_2d, from_2d
 
 
-def affine_parameters_from_theta(theta):
+# we handle point coordinates P in a format:
+# P[:, 0] contains x coordinates
+# P[:, 1] contains y coordinates
+
+
+def theta_to_affine_params(theta):
     A = np.reshape(theta[0:4], (2, 2))
     b = theta[4:6]
     return A, b
+
+
+def affine_params_to_theta(A, b):
+    return np.concatenate((A.flatten(), b))
 
 
 def affine_transform(X, A, b):
@@ -44,14 +53,6 @@ class SumRobustifiedError(Error):
         return np.sum(self.robustifier.robustify(norms))
 
 
-def from_2d(x):
-    return x.flatten()
-
-
-def to_2d(x):
-    return x.reshape(-1, 2)
-
-
 def transformer(x, theta):
     """
     X : image coordinates of shape (n_points, 2)
@@ -60,7 +61,7 @@ def transformer(x, theta):
     """
 
     X = to_2d(x)
-    A, b = affine_parameters_from_theta(theta)
+    A, b = theta_to_affine_params(theta)
     y = affine_transform(X, A, b)
     return from_2d(y)
 
@@ -78,16 +79,9 @@ def initialize_theta(initial_A=None, initial_b=None):
     ))
 
 
-def get_affine_matrix(A, b):
-    W = np.identity(3)
-    W[0:2, 0:2] = A
-    W[0:2, 2] = b
-    return W
-
-
 def transform_image(image, theta):
-    A, b = affine_parameters_from_theta(theta)
-    W = get_affine_matrix(A, b)
+    A, b = theta_to_affine_params(theta)
+    W = affine_matrix(A, b)
     # Note that tf.warp requires the inverse transformation
     return tf.warp(image, tf.AffineTransform(matrix=np.linalg.inv(W)))
 
@@ -101,67 +95,71 @@ def predict(keypoints1, keypoints2, initial_theta):
     return optimizer.optimize(initial_theta, n_max_iter=1000)
 
 
-def plot(image_original, image_true, image_pred,
-         keypoints1, keypoints2, matches12):
-    fig, ax = plt.subplots(nrows=2, ncols=1)
-    plt.gray()
-
-    plot_matches(ax[0], image_original, image_true,
-                 keypoints1, keypoints2, matches12)
-    ax[0].axis('off')
-    ax[0].set_title("Original Image vs. Transformed Image")
-
-    plot_matches(ax[1], image_original, image_pred,
-                 keypoints1, keypoints2, matches12)
-    ax[1].axis('off')
-    ax[1].set_title("Original Image vs. Predicted Image")
-
-    plt.show()
-
 
 def yx_to_xy(coordinates):
     return coordinates[:, [1, 0]]
 
 
-def random_rotation_matrix():
-    A = np.random.uniform(-1, 1, (2, 2))
-    return np.linalg.svd(np.dot(A.T, A))[0]
+def xy_to_yx(coordinates):
+    # this is identical to 'yx_to_xy' but I prefer to name expilictly
+    return yx_to_xy(coordinates)
 
 
-def estimate_image_transformation():
-    theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
-    print("ground truth                     : ", theta_true)
+def estimate_affine_transformation(image1, image2):
+    """
+    Esitmate the affine transformation from image1 to image2
+    """
 
-    image_original = rgb2gray(data.astronaut())
-    image_true = transform_image(image_original, theta_true)
+    keypoints1, keypoints2, matches12 = extract_keypoints(image1, image2)
 
-    keypoints1, keypoints2, matches12 =\
-        extract_keypoints(image_original, image_true)
-
-    initial_theta = initialize_theta()
-    theta_pred = predict(yx_to_xy(keypoints1[matches12[:, 0]]),
-                         yx_to_xy(keypoints2[matches12[:, 1]]),
-                         initial_theta)
-
-    print("predicted by gauss newton        : ", theta_pred)
-    image_pred = transform_image(image_original, theta_pred)
-
-    plot(image_original, image_true, image_pred,
-         keypoints1, keypoints2, matches12)
-
-
-def test_estimator():
-    X = np.array([[1, 2, 0, 3],
-                  [2, 0, 1, 1]]).T
-
-    theta_true = np.array([1.2, 0.1, -0.1, 1.2, 1.0, 2.0])
-    A, b = affine_parameters_from_theta(theta_true)
-    Y = affine_transform(X, A, b)
+    keypoints1 = yx_to_xy(keypoints1[matches12[:, 0]])
+    keypoints2 = yx_to_xy(keypoints2[matches12[:, 1]])
 
     initial_theta = initialize_theta()
-    theta_pred = predict(X, Y, initial_theta)
-    print(theta_true)
-    print(theta_pred)
+    theta_pred = predict(keypoints1, keypoints2, initial_theta)
+    A, b = theta_to_affine_params(theta_pred)
+    return keypoints1, keypoints2, A, b
+
+
+def search_maximum(coordinates, K, robustifier, n_max_iter=20, lambda_=0.3):
+    # used to generate neighbors
+    def regularizer(x):
+        return 1 - robustifier.robustify(x)
+
+    def energies(P, p0):
+        R = regularizer(np.linalg.norm(P - p0, 1))
+        xs, ys = P[:, 0], P[:, 1]
+        return K[ys, xs] + lambda_ * R
+
+    def diffs():
+        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
+        return np.vstack((xs.flatten(), ys.flatten())).T
+
+    diffs_ = diffs()
+
+    def get_neighbors(p):
+        return p + diffs_
+
+    def search(p):
+        p0 = np.copy(p)
+        for i in range(n_max_iter):
+            neighbors = get_neighbors(p)
+            argmin = np.argmin(energies(neighbors, p))
+            p = neighbors[argmin]
+        return p
+
+    for i in range(coordinates.shape[0]):
+        coordinates[i] = search(coordinates[i])
+    return coordinates
+
+
+def is_in_image_range(points, image_shape):
+    height, width = image_shape
+    xs, ys = keypoints_pred[:, 0], keypoints_pred[:, 1]
+    mask_x = np.logical_and(0 <= xs, xs < width)
+    mask_y = np.logical_and(0 <= ys, ys < width)
+    return np.logical_and(mask_x, mask_y)
+
 
 
 if __name__ == "__main__":
@@ -170,4 +168,23 @@ if __name__ == "__main__":
     np.set_printoptions(precision=5, suppress=True,
                         formatter={'float': '{: 0.5f}'.format})
 
-    estimate_image_transformation()
+    image = rgb2gray(data.astronaut())
+
+    theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
+    print("ground truth                     : ", theta_true)
+
+    image_transformed = transform_image(image, theta_true)
+
+    keypoints, keypoints_transformed, A, b =\
+        estimate_affine_transformation(image, image_transformed)
+
+    keypoints_pred = affine_transform(keypoints, A, b)
+
+    keypoints_pred = np.round(keypoints_pred, 0).astype(np.int64)
+
+    mask = is_in_image_range(keypoints_pred, image.shape[0:2])
+    keypoints_pred = keypoints_pred[mask]
+
+    K = curvature(image_transformed)
+    keypoints_pred = search_maximum(keypoints_pred, K, GemanMcClureRobustifier())
+    print(keypoints_pred)
