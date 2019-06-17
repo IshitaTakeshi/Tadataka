@@ -14,8 +14,9 @@ from optimization.optimizers import BaseOptimizer
 from optimization.residuals import Residual
 from optimization.errors import BaseError
 from flow_estimation.keypoints import extract_keypoints
-from curvature_extrema.image_curvature import curvature
-from utils import affine_matrix, to_2d, from_2d
+from flow_estimation.extrema_tracker import ExtremaTracker
+from utils import to_2d, from_2d, is_in_image_range
+from matrix import affine_trasformation, homogeneous_matrix
 
 
 # we handle point coordinates P in a format:
@@ -23,26 +24,6 @@ from utils import affine_matrix, to_2d, from_2d
 # P[:, 1] contains y coordinates
 
 
-def theta_to_affine_params(theta):
-    A = np.reshape(theta[0:4], (2, 2))
-    b = theta[4:6]
-    return A, b
-
-
-def affine_params_to_theta(A, b):
-    return np.concatenate((A.flatten(), b))
-
-
-def affine_transform(X, A, b):
-    """
-    X : image coordinates of shape (n_points, 2)
-    A : 2x2 transformation matrix
-    b : bias term of shape (2,)
-    """
-    return np.dot(A, X.T).T + b
-
-
-# there should be a better name?
 class Error(BaseError):
     def __init__(self, residual, robustifier):
         self.residual = residual
@@ -52,19 +33,6 @@ class Error(BaseError):
         r = self.residual.residuals(theta)
         norms = np.linalg.norm(r.reshape(-1, 2), axis=1)
         return np.sum(self.robustifier.robustify(norms))
-
-
-def transformer(x, theta):
-    """
-    X : image coordinates of shape (n_points, 2)
-    A : 2x2 transformation matrix
-    b : bias term of shape (2,)
-    """
-
-    X = to_2d(x)
-    A, b = theta_to_affine_params(theta)
-    y = affine_transform(X, A, b)
-    return from_2d(y)
 
 
 def initialize_theta(initial_A=None, initial_b=None):
@@ -80,11 +48,30 @@ def initialize_theta(initial_A=None, initial_b=None):
     ))
 
 
+def theta_to_affine_params(theta):
+    A = np.reshape(theta[0:4], (2, 2))
+    b = theta[4:6]
+    return A, b
+
+
 def transform_image(image, theta):
     A, b = theta_to_affine_params(theta)
-    W = affine_matrix(A, b)
+    W = homogeneous_matrix(A, b)
     # Note that tf.warp requires the inverse transformation
     return tf.warp(image, tf.AffineTransform(matrix=np.linalg.inv(W)))
+
+
+def transformer(x, theta):
+    """
+    X : image coordinates of shape (n_points, 2)
+    A : 2x2 transformation matrix
+    b : bias term of shape (2,)
+    """
+
+    X = to_2d(x)
+    A, b = theta_to_affine_params(theta)
+    Y = affine_trasformation(X, A, b)
+    return from_2d(Y)
 
 
 def predict(keypoints1, keypoints2, initial_theta):
@@ -121,45 +108,6 @@ def estimate_affine_transformation(image1, image2):
     return keypoints1, keypoints2, A, b
 
 
-def search_maximum(coordinates, K, robustifier, n_max_iter=20, lambda_=0.3):
-    def regularizer(x):
-        return 1 - robustifier.robustify(x)
-
-    def F(P, p0):
-        R = regularizer(np.linalg.norm(P - p0, 1))
-        xs, ys = P[:, 0], P[:, 1]
-        return K[ys, xs] + lambda_ * R
-
-    def diffs():
-        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-        return np.vstack((xs.flatten(), ys.flatten())).T
-
-    diffs_ = diffs()
-
-    def get_neighbors(p):
-        return p + diffs_
-
-    def search(p0):
-        p = np.copy(p0)
-        for i in range(n_max_iter):
-            neighbors = get_neighbors(p)
-            argmax = np.argmax(F(neighbors, p0))
-            p = neighbors[argmax]
-        return p
-
-    for i in range(coordinates.shape[0]):
-        coordinates[i] = search(coordinates[i])
-    return coordinates
-
-
-def is_in_image_range(points, image_shape):
-    height, width = image_shape
-    xs, ys = keypoints_pred[:, 0], keypoints_pred[:, 1]
-    mask_x = np.logical_and(0 <= xs, xs < width)
-    mask_y = np.logical_and(0 <= ys, ys < width)
-    return np.logical_and(mask_x, mask_y)
-
-
 def plot_keypoints(ax, image, keypoints, **kwargs):
     print(skimage.img_as_float(image))
     ax.imshow(skimage.img_as_float(image), cmap='gray')
@@ -170,17 +118,22 @@ def round_to_int(X):
     return np.round(X, 0).astype(np.int64)
 
 
-def plot(ax, image_transformed, keypoints_pred, lambda_):
+def plot(ax, image, keypoints, lambda_):
+
+    robustifier = GemanMcClureRobustifier()
+    regularizer = lambda x: 1 - robustifier.robustify(x)
+
     size = 2
 
     ax.set_title(r"$\lambda = {}$".format(lambda_))
 
-    plot_keypoints(ax, image_transformed, keypoints_pred,
+    plot_keypoints(ax, image, keypoints,
                    c='red', s=size, label="predicted")
 
-    keypoints_corrected = search_maximum(keypoints_pred, K, robustifier,
-                                         lambda_=lambda_)
-    plot_keypoints(ax, image_transformed, keypoints_corrected,
+    tracker = ExtremaTracker(image, keypoints, regularizer, lambda_=lambda_)
+    keypoints = tracker.optimize()
+
+    plot_keypoints(ax, image, keypoints,
                    c='blue', s=size, label="corrected")
 
 
@@ -201,14 +154,11 @@ if __name__ == "__main__":
     keypoints, keypoints_transformed, A, b =\
         estimate_affine_transformation(image, image_transformed)
 
-    keypoints_pred = affine_transform(keypoints, A, b)
+    keypoints_pred = affine_trasformation(keypoints, A, b)
     keypoints_pred = round_to_int(keypoints_pred)
 
     mask = is_in_image_range(keypoints_pred, image.shape[0:2])
     keypoints_pred = keypoints_pred[mask]
-
-    K = curvature(image_transformed)
-    robustifier = GemanMcClureRobustifier()
 
     fig, ax = plt.subplots(nrows=1, ncols=3)
 
