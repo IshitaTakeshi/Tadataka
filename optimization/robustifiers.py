@@ -7,10 +7,19 @@ class Robustifier(object):
         raise NotImplementedError()
 
     def grad(self, x):
-        return elementwise_grad(self.robustify)
+        return elementwise_grad(self.robustify)(x)
 
     def weights(self, x):
-        return self.grad(norms) / norms
+        mask = (x != 0)
+
+        # process only nonzero members to avoid division by zero
+        # for members where x == 0, we set 0 to corresponding y
+        # because usually x = norm(residual), so x == 0 means that
+        # residual is zero and weighting is not required
+
+        y = np.zeros(x.shape)
+        y[mask] = self.grad(x[mask]) / x[mask]
+        return y
 
 
 class SquaredRobustifier(Robustifier):
