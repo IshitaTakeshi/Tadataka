@@ -3,7 +3,7 @@ from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
 
 
 def extract_keypoints(image1, image2):
-    extractor = BRIEF(mode="normal", sigma=0.4)
+    extractor = BRIEF(mode="uniform")
 
     def extract_(image):
         keypoints = corner_peaks(corner_harris(image), min_distance=5)
