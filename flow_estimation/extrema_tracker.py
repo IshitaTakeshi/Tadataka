@@ -1,40 +1,75 @@
 from autograd import numpy as np
-
+from optimization.robustifiers import GemanMcClureRobustifier
 from flow_estimation.image_curvature import curvature
+from utils import is_in_image_range
+
+
+class Neighbors(object):
+    def __init__(self, image_shape):
+        self.image_shape = image_shape[0:2]
+
+        # diffs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], ..., [1, 1]]
+        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
+        self.diffs = np.vstack((xs.flatten(), ys.flatten())).T
+
+    def get(self, p):
+        """
+        Return neighbors of a point `p` including `p` itself
+        """
+        neighbors = p + self.diffs
+        mask = is_in_image_range(neighbors, self.image_shape)
+        return neighbors[mask]
+
+
+class Regularizer(object):
+    def __init__(self, p0, robustifier=GemanMcClureRobustifier()):
+        self.robustifier = robustifier
+        self.p0 = p0
+
+    def regularize(self, P):
+        norms = np.linalg.norm(P - self.p0)
+        return 1 - self.robustifier.robustify(norms)
+
+
+class Energy(object):
+    def __init__(self, K, regularizer, lambda_=0.3):
+        self.K = K
+        self.regularizer = regularizer
+        self.lambda_ = lambda_
+
+    def compute(self, coordinates):
+        R = self.regularizer.regularize(coordinates)
+        xs, ys = coordinates[:, 0], coordinates[:, 1]
+        return self.K[ys, xs] + self.lambda_ * R
+
+
+class Maximizer(object):
+    def __init__(self, image, p0, n_max_iter=20):
+        self.p0 = p0
+        self.energy = Energy(curvature(image), Regularizer(p0))
+        self.neighbors = Neighbors(image.shape)
+        self.n_max_iter = n_max_iter
+
+    def search_neighbors(self, p):
+        neighbors = self.neighbors.get(p)
+        argmax = np.argmax(self.energy.compute(neighbors))
+        return neighbors[argmax]
+
+    def search(self):
+        p = np.copy(self.p0)
+        for i in range(self.n_max_iter):
+            p = self.search_neighbors(p)
+        return p
 
 
 class ExtremaTracker(object):
-    def __init__(self, image, keypoints, regularizer,
-                 n_max_iter=20, lambda_=0.3):
-        self.K = curvature(image)
+    def __init__(self, image, keypoints):
+        self.image = image
         self.keypoints = keypoints
-        self.regularizer = regularizer
-        self.n_max_iter = n_max_iter
-        self.lambda_ = lambda_
-
-        # coordinate differences from the center
-        # [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], ..., [1, 1]]
-        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-        self.diff_to_neighbors = np.vstack((xs.flatten(), ys.flatten())).T
-
-    def energy(self, P, p0):
-        R = self.regularizer(np.linalg.norm(P - p0, 1))
-        xs, ys = P[:, 0], P[:, 1]
-        return self.K[ys, xs] + self.lambda_ * R
-
-    def search_neighbors(self, p, p0):
-        neighbors = p + self.diff_to_neighbors
-        argmax = np.argmax(self.energy(neighbors, p0))
-        return neighbors[argmax]
-
-    def search(self, p0):
-        p = np.copy(p0)
-        for i in range(self.n_max_iter):
-            p = self.search_neighbors(p, p0)
-        return p
 
     def optimize(self):
         coordinates = np.empty(self.keypoints.shape)
         for i in range(self.keypoints.shape[0]):
-            coordinates[i] = self.search(self.keypoints[i])
+            maximizer = Maximizer(self.image, self.keypoints[i])
+            coordinates[i] = maximizer.search()
         return coordinates
