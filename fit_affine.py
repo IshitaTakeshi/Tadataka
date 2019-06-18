@@ -124,22 +124,36 @@ def plot(ax, image, keypoints, lambda_):
     ax.set_title(r"$\lambda = {}$".format(lambda_))
 
     plot_keypoints(ax, image, keypoints,
-                   c='red', s=size, label="predicted")
+                   c="yellow", s=size, label=r"$\overline{\mathbf{x}}$")
 
-    keypoints = ExtremaTracker(image, keypoints).optimize()
+    keypoints = ExtremaTracker(image, keypoints, lambda_).optimize()
 
     plot_keypoints(ax, image, keypoints,
-                   c='blue', s=size, label="corrected")
+                   c="red", s=size, label=r"$\arg \max \, F(\mathbf{x})$")
+
+
+def test_extrema_tracker(image, keypoints):
+    lambdas = [0, 1e-4, 1e-2, 1, 1e2, 1e4]
+    fig, axes = plt.subplots(nrows=2, ncols=len(lambdas)//2)
+    axes = axes.flatten()
+
+    for ax, lambda_ in zip(axes, lambdas):
+        ax.axis('off')
+        plot(ax, image, keypoints, lambda_)
+
+    axes[-1].legend(loc="best", borderaxespad=0.1)
+
+    plt.show()
 
 
 if __name__ == "__main__":
     from scipy.optimize import least_squares
     from matplotlib import pyplot as plt
 
-    np.set_printoptions(precision=5, suppress=True,
-                        formatter={'float': '{: 0.5f}'.format})
+    np.set_printoptions(precision=5, suppress=True, linewidth=100,
+                        formatter={'float': '{: 08.5f}'.format})
 
-    image = rgb2gray(data.camera())
+    image = rgb2gray(data.astronaut())
 
     theta_true = np.array([1.0, 0.2, -0.2, 1.0, -100.0, 20.0])
     print("ground truth                     : ", theta_true)
@@ -155,15 +169,4 @@ if __name__ == "__main__":
     mask = is_in_image_range(keypoints_pred, image.shape[0:2])
     keypoints_pred = keypoints_pred[mask]
 
-    fig, ax = plt.subplots(nrows=1, ncols=3)
-
-    plot(ax[0], image_transformed, keypoints_pred,
-         lambda_=1.0)
-    plot(ax[1], image_transformed, keypoints_pred,
-         lambda_=0.01)
-    plot(ax[2], image_transformed, keypoints_pred,
-         lambda_=0.0001)
-
-    ax[2].legend(loc="best", borderaxespad=0.1)
-
-    plt.show()
+    test_extrema_tracker(image, keypoints)
