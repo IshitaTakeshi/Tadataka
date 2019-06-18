@@ -13,7 +13,7 @@ def grad_y(image):
     return ndimage.sobel(image, axis=1, mode='constant')
 
 
-def curvature(image):
+def image_curvature(image):
     gx = grad_x(image)
     gy = grad_y(image)
 
