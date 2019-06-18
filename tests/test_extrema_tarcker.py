@@ -67,7 +67,7 @@ def test_error():
 
 def test_maximizer():
     # always move to right
-    class Energy(object):
+    class Energy1(object):
         def compute(self, coordinates):
             energies = np.zeros(coordinates.shape[0])
             energies[5] = 1
@@ -75,7 +75,20 @@ def test_maximizer():
 
 
     # move 1 pixel to right 10 times
-    maximizer = Maximizer(Energy(), (100, 100), n_max_iter=10)
+    maximizer = Maximizer(Energy1(), (100, 100), n_max_iter=10)
     assert_array_equal(maximizer.search(np.array([4, 3])),
                        np.array([14, 3]))
+
+
+    # stay at the same pixel
+    class Energy2(object):
+        def compute(self, coordinates):
+            energies = np.zeros(coordinates.shape[0])
+            energies[4] = 1
+            return energies
+
+
+    maximizer = Maximizer(Energy2(), (100, 100), n_max_iter=10)
+    assert_array_equal(maximizer.search(np.array([4, 3])),
+                       np.array([4, 3]))
 
