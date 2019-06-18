@@ -61,7 +61,10 @@ class Maximizer(object):
     def search(self):
         p = np.copy(self.p0)
         for i in range(self.n_max_iter):
-            p = self.search_neighbors(p)
+            p_new = self.search_neighbors(p)
+            if (p_new == p).all():
+                return p
+            p = p_new
         return p
 
 
