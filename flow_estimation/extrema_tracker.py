@@ -47,10 +47,9 @@ class Energy(object):
 
 
 class Maximizer(object):
-    def __init__(self, curvature, p0, lambda_, n_max_iter=20):
-        self.p0 = p0
-        self.energy = Energy(curvature, Regularizer(p0), lambda_)
-        self.neighbors = Neighbors(curvature.shape)
+    def __init__(self, energy, image_shape, n_max_iter=20):
+        self.energy = energy
+        self.neighbors = Neighbors(image_shape)
         self.n_max_iter = n_max_iter
 
     def search_neighbors(self, p):
@@ -58,8 +57,8 @@ class Maximizer(object):
         argmax = np.argmax(self.energy.compute(neighbors))
         return neighbors[argmax]
 
-    def search(self):
-        p = np.copy(self.p0)
+    def search(self, p0):
+        p = np.copy(p0)
         for i in range(self.n_max_iter):
             p_new = self.search_neighbors(p)
             if (p_new == p).all():
@@ -73,10 +72,13 @@ class ExtremaTracker(object):
         self.lambda_ = lambda_
         self.curvature = image_curvature(image)
         self.keypoints = keypoints
+        self.image_shape = self.curvature.shape[0:2]
 
     def optimize(self):
         coordinates = np.empty(self.keypoints.shape)
         for i in range(self.keypoints.shape[0]):
-            maximizer = Maximizer(self.curvature, self.keypoints[i], self.lambda_)
-            coordinates[i] = maximizer.search()
+            p0 = self.keypoints[i]
+            energy = Energy(self.curvature, Regularizer(p0), self.lambda_)
+            maximizer = Maximizer(energy, self.image_shape)
+            coordinates[i] = maximizer.search(p0)
         return coordinates
