@@ -35,7 +35,7 @@ class Regularizer(object):
 
 
 class Energy(object):
-    def __init__(self, curvature, regularizer, lambda_=0.3):
+    def __init__(self, curvature, regularizer, lambda_):
         self.curvature = curvature
         self.regularizer = regularizer
         self.lambda_ = lambda_
@@ -47,9 +47,9 @@ class Energy(object):
 
 
 class Maximizer(object):
-    def __init__(self, curvature, p0, n_max_iter=20):
+    def __init__(self, curvature, p0, lambda_, n_max_iter=20):
         self.p0 = p0
-        self.energy = Energy(curvature, Regularizer(p0))
+        self.energy = Energy(curvature, Regularizer(p0), lambda_)
         self.neighbors = Neighbors(curvature.shape)
         self.n_max_iter = n_max_iter
 
@@ -66,13 +66,14 @@ class Maximizer(object):
 
 
 class ExtremaTracker(object):
-    def __init__(self, image, keypoints):
+    def __init__(self, image, keypoints, lambda_):
+        self.lambda_ = lambda_
         self.curvature = image_curvature(image)
         self.keypoints = keypoints
 
     def optimize(self):
         coordinates = np.empty(self.keypoints.shape)
         for i in range(self.keypoints.shape[0]):
-            maximizer = Maximizer(self.curvature, self.keypoints[i])
+            maximizer = Maximizer(self.curvature, self.keypoints[i], self.lambda_)
             coordinates[i] = maximizer.search()
         return coordinates
