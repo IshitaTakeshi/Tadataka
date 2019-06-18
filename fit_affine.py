@@ -8,7 +8,8 @@ from skimage.color import rgb2gray
 from autograd import numpy as np
 from autograd import jacobian
 
-from optimization.robustifiers import GemanMcClureRobustifier, SquaredRobustifier
+from optimization.robustifiers import (
+    GemanMcClureRobustifier, SquaredRobustifier)
 from optimization.updaters import GaussNewtonUpdater
 from optimization.optimizers import BaseOptimizer
 from optimization.residuals import Residual
