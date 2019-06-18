@@ -119,10 +119,6 @@ def round_to_int(X):
 
 
 def plot(ax, image, keypoints, lambda_):
-
-    robustifier = GemanMcClureRobustifier()
-    regularizer = lambda x: 1 - robustifier.robustify(x)
-
     size = 2
 
     ax.set_title(r"$\lambda = {}$".format(lambda_))
@@ -130,8 +126,7 @@ def plot(ax, image, keypoints, lambda_):
     plot_keypoints(ax, image, keypoints,
                    c='red', s=size, label="predicted")
 
-    tracker = ExtremaTracker(image, keypoints, regularizer, lambda_=lambda_)
-    keypoints = tracker.optimize()
+    keypoints = ExtremaTracker(image, keypoints).optimize()
 
     plot_keypoints(ax, image, keypoints,
                    c='blue', s=size, label="corrected")
