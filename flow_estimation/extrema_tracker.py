@@ -26,11 +26,11 @@ class Neighbors(object):
 
 class Regularizer(object):
     def __init__(self, p0, robustifier=GemanMcClureRobustifier()):
-        self.robustifier = robustifier
         self.p0 = p0
+        self.robustifier = robustifier
 
     def regularize(self, P):
-        norms = np.linalg.norm(P - self.p0)
+        norms = np.linalg.norm(P - self.p0, axis=1)
         return 1 - self.robustifier.robustify(norms)
 
 
