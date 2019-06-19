@@ -20,6 +20,10 @@ class GaussNewtonUpdater(GradientBasedUpdater):
         r = self.residual.residuals(theta)
         J = self.jacobian(theta)
 
+        # residuals can be a multi-dimensonal array so flatten them
+        r = r.flatten()
+        J = J.reshape(r.shape[0], theta.shape[0])
+
         # TODO add weighted Gauss-Newton as an option
         # weights = self.robustifier.weights(r)
         theta, error, _, _ = np.linalg.lstsq(J, r, rcond=None)

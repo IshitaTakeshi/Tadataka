@@ -1,19 +1,17 @@
 class Residual(object):
-    def __init__(self, x, y, transformer):
+    def __init__(self, transformer, Y):
         """
-        y : Target value
-        x : Values to be transformed by the transformer
+        Y : Target values
         """
 
-        self.x = x
-        self.y = y
         self.transformer = transformer
+        self.Y = Y
 
     def residuals(self, theta):
         """
         Returns:
-            residuals of shape (n_points, 2)
+            residuals
         """
 
-        # HACK the design of the transformer is may not be optimal
-        return self.y - self.transformer(self.x, theta)
+        # HACK the design of the transformer may not be optimal
+        return self.Y - self.transformer.transform(theta)
