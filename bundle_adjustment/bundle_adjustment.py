@@ -12,9 +12,9 @@ from rigid.transformation import transform_each
 
 
 class ParameterConverter(object):
-    def __init__(self, n_points, n_viewpoints):
-        self.n_points = n_points
+    def __init__(self, n_viewpoints, n_points):
         self.n_viewpoints = n_viewpoints
+        self.n_points = n_points
 
     def from_params(self, params):
         N = 6 * self.n_viewpoints
@@ -41,25 +41,33 @@ class Transformer(BaseTransformer):
         self.converter = converter
 
     def transform(self, params):
-        """
-        """
         omegas, translations, points = self.converter.from_params(params)
 
         rotations = rodrigues(omegas)
 
-        # points.shape == (n_points, n_viewpoints, 3) after transformation
+        # points.shape == (n_viewpoints, n_points, 3) after transformation
         points = transform_each(rotations, translations, points)
 
-        # points.shape == (n_viewpoints * n_points, 3)
-        points = points.reshape(-1, 3)
+        shape = points.shape[0:2]
+        points = points.reshape(-1, 3)  # flatten once
 
-        return self.projection.project(points)
+        keypoints = self.projection.project(points)  # project
+
+        return keypoints.reshape(*shape, 2)  # restore the shape
 
 
 class BundleAdjustment(object):
-    def __init__(self, keypoints, projection, n_points, n_viewpoints):
-        self.converter = ParameterConverter(n_points, n_viewpoints)
-        self.residual = Residual(Transformer(projection, self.converter), keypoints)
+    def __init__(self, keypoints, projection):
+        """
+        keypoints: np.ndarray
+            Keypoint coordinates of shape (n_viewpoints, n_points, 2)
+        projection: projection model
+        """
+        n_viewpoints, n_points = keypoints.shape[0:2]
+        self.converter = ParameterConverter(n_viewpoints, n_points)
+
+        transformer = Transformer(projection, self.converter)
+        self.residual = Residual(transformer, keypoints)
 
     def optimize(self):
         initial_params = np.ones(self.converter.n_dims)
