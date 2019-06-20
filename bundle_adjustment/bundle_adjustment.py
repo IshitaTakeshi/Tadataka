@@ -32,7 +32,6 @@ class ParameterConverter(object):
         return 6 * self.n_viewpoints + 3 * self.n_points
 
 
-
 class Transformer(BaseTransformer):
     def __init__(self, projection, converter):
         # There are no objects to be converted. We just adjust parameters
