@@ -1,4 +1,5 @@
 from autograd import numpy as np
+from scipy.optimize import least_squares
 
 from optimization.robustifiers import SquaredRobustifier
 from optimization.updaters import GaussNewtonUpdater
@@ -56,6 +57,27 @@ class Transformer(BaseTransformer):
         return keypoints.reshape(*shape, 2)  # restore the shape
 
 
+class ScipyLeastSquaresOptimizer(BaseOptimizer):
+    def __init__(self, updater, error):
+        super().__init__(updater, error)
+
+    def optimize(self, initial_theta):
+        residual_ = self.updater.residual
+        jacobian_ = self.updater.jacobian
+
+        def residual(theta):
+            r = residual_.residuals(theta)
+            return r.flatten()
+
+        def jacobian(theta):
+            J = jacobian_(theta)
+            return J.reshape(-1, theta.shape[0])
+
+        res = least_squares(residual, initial_theta, jacobian,
+                            max_nfev=200, verbose=2)
+        return res.x
+
+
 class BundleAdjustment(object):
     def __init__(self, keypoints, projection):
         """
@@ -75,6 +97,6 @@ class BundleAdjustment(object):
         robustifier = SquaredRobustifier()
         updater = GaussNewtonUpdater(self.residual, robustifier)
         error = SumRobustifiedNormError(self.residual, robustifier)
-        optimizer = BaseOptimizer(updater, error)
-        params = optimizer.optimize(initial_params, n_max_iter=1000)
+        optimizer = ScipyLeastSquaresOptimizer(updater, error)
+        params = optimizer.optimize(initial_params)
         return self.converter.from_params(params)
