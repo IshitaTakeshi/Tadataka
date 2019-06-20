@@ -11,12 +11,13 @@ def transform_each(rotations, translations, points):
     assert(translations.shape[1] == 3)
 
     # reshape translations to align the shape to the rotated points
-    # translations.shapee == (1, n_viewpoints, 3)
-    translations = translations[np.newaxis]
+    # translations.shapee == (n_viewpoints, 1, 3)
+    n_viewpoints = translations.shape[0]
+    translations = translations.reshape(n_viewpoints, 1, 3)
 
-    # points.shape = (n_points, n_viewpoints, 3)
-    # i : n_viewpoints
+    # points.shape = (n_viewpoints, n_points, 3)
     # l : n_points
-    points = np.einsum('ijk,lk->lij', rotations, points)
+    # i : n_viewpoints
+    points = np.einsum('ijk,lk->ilj', rotations, points)
     points = points + translations
     return points
