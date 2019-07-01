@@ -28,6 +28,13 @@ class ParameterConverter(object):
 
         return omegas, translations, points
 
+    def to_params(self, omegas, translations, points):
+        return np.concatenate((
+            omegas.flatten(),
+            translations.flatten(),
+            points.flatten()
+        ))
+
     @property
     def n_dims(self):
         return 6 * self.n_viewpoints + 3 * self.n_points
@@ -91,8 +98,12 @@ class BundleAdjustment(object):
         transformer = Transformer(projection, self.converter)
         self.residual = Residual(transformer, keypoints)
 
-    def optimize(self):
-        initial_params = np.ones(self.converter.n_dims)
+    def optimize(self, initial_omegas, initial_translations, initial_points):
+        initial_params = self.converter.to_params(
+            initial_omegas,
+            initial_translations,
+            initial_points
+        )
 
         robustifier = SquaredRobustifier()
         updater = GaussNewtonUpdater(self.residual, robustifier)
