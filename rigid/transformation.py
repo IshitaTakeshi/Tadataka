@@ -21,3 +21,7 @@ def transform_each(rotations, translations, points):
     points = np.einsum('ijk,lk->ilj', rotations, points)
     points = points + translations
     return points
+
+
+def transform(R, t, X):
+    return np.dot(R, X.T).T + t
