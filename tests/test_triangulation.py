@@ -45,39 +45,30 @@ def normalize(M):
 
 
 def test_estimate_fundamental():
-    X = transform_each(rotations, translations, X_true)[0]
+    R, t = rotations[0], translations[0]
+    keypoints0 = projection.project(X_true)
+    keypoints1 = projection.project(transform(R, t, X_true))
 
-    points0 = projection.project(X_true)
-    points1 = projection.project(X)
-
-    F = estimate_fundamental(points0, points1)
+    F = estimate_fundamental(keypoints0, keypoints1)
 
     N = X_true.shape[0]
     for i in range(N):
-        x0 = np.append(points0[i], 1)
-        x1 = np.append(points1[i], 1)
+        x0 = np.append(keypoints0[i], 1)
+        x1 = np.append(keypoints1[i], 1)
         assert_almost_equal(x1.dot(F).dot(x0), 0)
 
 
-def test_structure_from_poses():
-    X = transform_each(rotations, translations, X_true)[0]
-
-    points0 = projection.project(X_true)
-    points1 = projection.project(X)
-
-    R0 = np.identity(3)
-    t0 = np.zeros(3)
-
-    R1 = rotations[0]
-    t1 = translations[0]
+def test_structure_from_pose():
+    R, t = rotations[0], translations[0]
+    keypoints0 = projection.project(X_true)
+    keypoints1 = projection.project(transform(R, t, X_true))
 
     K = camera_parameters.matrix
 
     N = X_true.shape[0]
     for i in range(N):
-        x = structure_from_poses(K, R0, R1, t0, t1, points0[i], points1[i])
-        assert_array_almost_equal(x[:3], X_true[i])
-        assert_equal(x[3], 1)
+        x = structure_from_pose(K, R, t, keypoints0[i], keypoints1[i])
+        assert_array_almost_equal(x, X_true[i])
 
 
 def test_extract_poses():

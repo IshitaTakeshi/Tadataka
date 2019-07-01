@@ -28,13 +28,15 @@ def project(p, K):
     return q / q[2]
 
 
-def estimate_fundamental(points0, points1):
+def estimate_fundamental(keypoints0, keypoints1):
     # Eq. 11.3
-    assert(points0.shape == points1.shape)
-    N = points0.shape[0]
+    assert(keypoints0.shape == keypoints1.shape)
 
-    XA, YA = points0[:, 0], points0[:, 1]
-    XB, YB = points1[:, 0], points1[:, 1]
+    N = keypoints0.shape[0]
+    assert(N >= 8)
+
+    XA, YA = keypoints0[:, 0], keypoints0[:, 1]
+    XB, YB = keypoints1[:, 0], keypoints1[:, 1]
     A = np.vstack((XB * XA, XB * YA, XB,
                    YB * XA, YB * YA, YB,
                    XA, YA, np.ones(N))).T
@@ -101,15 +103,15 @@ def extract_poses(E):
     return R1, R2, t1, t2
 
 
-def triangulate(points0, points1, K):
-    assert(points0.shape == points1.shape)
-    N = points0.shape[0]
+def two_view_reconstruction(keypoints0, keypoints1, K):
+    assert(keypoints0.shape == keypoints1.shape)
+    N = keypoints0.shape[0]
 
-    F = estimate_fundamental(points0, points1)
+    F = estimate_fundamental(keypoints0, keypoints1)
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    X = np.zeros((N, 4))
+    X = np.empty((N, 3))
     for i in range(N):
-        X[i] = structure_from_poses(K, R1, t1, points0[i], points1[i])
+        X[i] = structure_from_pose(K, R1, t1, keypoints0[i], keypoints1[i])
     return R1, t1, X
