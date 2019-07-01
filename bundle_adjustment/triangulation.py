@@ -74,7 +74,8 @@ def structure_from_pose(K, R1, t1, point0, point1):
         y1 * P1[2] - P1[1],
     ])
     x = solve_linear(A)
-    return x / x[3]  # normalize so that x be a homogeneous vector
+    assert(x[3] != 0)
+    return x[0:3] / x[3]  # normalize so that x be a homogeneous vector
 
 
 def projection_matrix(E, F, K):
