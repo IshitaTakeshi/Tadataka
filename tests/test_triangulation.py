@@ -5,9 +5,10 @@ from numpy.testing import (assert_array_almost_equal,
 from projection.projections import PerspectiveProjection
 from camera import CameraParameters
 from rigid.rotation import tangent_so3
-from rigid.transformation import transform_each
-from triangulation import (estimate_fundamental, extract_poses,
-                           projection_matrix, structure_from_poses)
+from rigid.transformation import transform_each, transform
+from bundle_adjustment.triangulation import (
+    estimate_fundamental, extract_poses,
+    projection_matrix, structure_from_pose)
 from matrix import to_homogeneous
 
 

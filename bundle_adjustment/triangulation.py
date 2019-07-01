@@ -52,7 +52,7 @@ def fundamental_to_essential(F, K0, K1=None):
 
 
 # TODO compute multiple points
-def structure_from_poses(K, R1, t1, point0, point1):
+def structure_from_pose(K, R1, t1, point0, point1):
     def motion_matrix(R, t):
         T = np.empty((3, 4))
         T[0:3, 0:3] = R
