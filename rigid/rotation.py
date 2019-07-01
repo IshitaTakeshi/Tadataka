@@ -2,6 +2,10 @@ from autograd import numpy as np
 
 
 def tangent_so3(V):
+    """
+    V: np.ndarray
+        Array of se3 elements
+    """
     # Generate skew matrices by calculating below for
     # all elements along the 0-th axis of V
     #

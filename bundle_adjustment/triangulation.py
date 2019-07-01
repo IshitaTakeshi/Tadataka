@@ -67,6 +67,7 @@ def structure_from_pose(K, R1, t1, point0, point1):
     x0, y0 = point0
     x1, y1 = point1
 
+    # See section 12.2 for details
     A = np.vstack([
         x0 * P0[2] - P0[0],
         y0 * P0[2] - P0[1],
@@ -90,6 +91,10 @@ def projection_matrix(E, F, K):
 
 
 def extract_poses(E):
+    """
+    Get rotation and translation from the essential matrix
+    There are 2 solutions so this functions returns both
+    """
     # Eq. 9.14
     U, s, VH = np.linalg.svd(E)
     s[2] = 0  # assume rank(E) == 2
