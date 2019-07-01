@@ -106,25 +106,15 @@ def extract_poses(E):
     return R1, R2, t1, t2
 
 
-if __name__ == "__main__":
-    from visualization import plot2d, plot3d
+def triangulate(points0, points1, K):
+    assert(points0.shape == points1.shape)
+    N = points0.shape[0]
 
-    K = np.identity(3)
-    observations = np.load("observations.npy")
-    points0, points1 = observations[0], observations[1]
     F = estimate_fundamental(points0, points1)
     E = fundamental_to_essential(F, K)
-    plot2d(points0)
-    plot2d(points1)
     R1, R2, t1, t2 = extract_poses(E)
 
-    N = points0.shape[0]
     X = np.zeros((N, 4))
     for i in range(N):
         X[i] = structure_from_poses(K, R1, t1, points0[i], points1[i])
-
-    plot3d(X)
-    # fig = plt.figure()
-    # ax = fig.add_subplot(221, projection='3d')
-    # ax.scatter(X[:, 0], X[:, 1], X[:, 2])
-    plt.show()
+    return R1, t1, X
