@@ -52,6 +52,14 @@ def homogeneous_transformation(X, T):
     """
 
     X = to_homogeneous(X)
-    print(X)
     Y = np.dot(T, X.T).T
     return from_homogeneous(Y)
+
+
+def solve_linear(A):
+    # find x such that
+    # Ax = 0  if A.shape[0] < A.shape[1]
+    # min ||Ax|| otherwise
+    # x is a vector in the kernel space of A
+    U, S, VH = np.linalg.svd(A)
+    return VH[-1]

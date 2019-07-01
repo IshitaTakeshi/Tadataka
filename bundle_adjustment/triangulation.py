@@ -3,6 +3,7 @@ from numpy.linalg import inv
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from matrix import solve_linear
 from rigid.rotation import tangent_so3
 
 
@@ -25,12 +26,6 @@ W = np.array([
 def project(p, K):
     q = np.dot(K, p)
     return q / q[2]
-
-
-def solve_linear(A):
-    # find x such that Ax = 0
-    U, S, VH = np.linalg.svd(A)
-    return VH[-1]
 
 
 def estimate_fundamental(points0, points1):
