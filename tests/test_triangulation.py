@@ -68,7 +68,7 @@ def test_linear_triangulation():
 
     N = X_true.shape[0]
     for i in range(N):
-        x = linear_triangulation(K, R, t, keypoints0[i], keypoints1[i])
+        x = linear_triangulation(keypoints0[i], keypoints1[i], R, t, K)
         assert_array_almost_equal(x, X_true[i])
 
 
