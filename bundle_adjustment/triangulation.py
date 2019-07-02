@@ -48,7 +48,7 @@ def estimate_fundamental(keypoints0, keypoints1):
 def fundamental_to_essential(F, K0, K1=None):
     if K1 is None:
         K1 = K0
-    return inv(K1).T.dot(F).dot(inv(K0))
+    return K1.T.dot(F).dot(K0)
 
 
 # TODO compute multiple points
