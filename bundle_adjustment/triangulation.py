@@ -92,20 +92,19 @@ def projection_matrix(E, F, K):
 
 def extract_poses(E):
     """
-    Get rotation and translation from the essential matrix
-    There are 2 solutions so this functions returns both
+    Get rotation and translation from the essential matrix.
+    There are 2 solutions and this functions returns both of them.
     """
+
     # Eq. 9.14
-    U, s, VH = np.linalg.svd(E)
-    s[2] = 0  # assume rank(E) == 2
+    U, _, VH = np.linalg.svd(E)
 
     R1 = U.dot(W).dot(VH)
     R2 = U.dot(W.T).dot(VH)
 
-    S = -U.dot(W).dot(np.diag(s)).dot(U.T)
-    t = np.array([S[2, 1], S[0, 2], S[1, 0]])
-    t1 = t
-    t2 = -t
+    S = -U.dot(W).dot(np.diag([1, 1, 0])).dot(U.T)
+    t1 = np.array([S[2, 1], S[0, 2], S[1, 0]])
+    t2 = -t1
     return R1, R2, t1, t2
 
 
