@@ -125,5 +125,5 @@ def two_view_reconstruction(keypoints0, keypoints1, K):
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    X = structure_from_pose(keypoints0[i], keypoints1[i], R1, t1, K)
+    X = structure_from_pose(keypoints0, keypoints1, R1, t1, K)
     return R1, t1, X
