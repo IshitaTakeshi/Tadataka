@@ -52,7 +52,7 @@ def fundamental_to_essential(F, K0, K1=None):
 
 
 # TODO compute multiple points
-def structure_from_pose(K, R1, t1, point0, point1):
+def linear_triangulation(K, R1, t1, point0, point1):
     def motion_matrix(R, t):
         T = np.empty((3, 4))
         T[0:3, 0:3] = R
@@ -109,6 +109,13 @@ def extract_poses(E):
     return R1, R2, t1, t2
 
 
+def structure_from_pose(K, R1, t1, keypoints0, keypoints1):
+    X = np.empty((N, 3))
+    for i in range(N):
+        X[i] = linear_triangulation(K, R1, t1, keypoints0[i], keypoints1[i])
+    return X
+
+
 def two_view_reconstruction(keypoints0, keypoints1, K):
     assert(keypoints0.shape == keypoints1.shape)
     N = keypoints0.shape[0]
@@ -117,7 +124,5 @@ def two_view_reconstruction(keypoints0, keypoints1, K):
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    X = np.empty((N, 3))
-    for i in range(N):
-        X[i] = structure_from_pose(K, R1, t1, keypoints0[i], keypoints1[i])
+    X = structure_from_pose(K, R1, t1, keypoints0[i], keypoints1[i])
     return R1, t1, X

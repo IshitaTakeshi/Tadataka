@@ -8,7 +8,7 @@ from rigid.rotation import tangent_so3
 from rigid.transformation import transform_each, transform
 from bundle_adjustment.triangulation import (
     estimate_fundamental, extract_poses,
-    projection_matrix, structure_from_pose)
+    projection_matrix, linear_triangulation)
 from matrix import to_homogeneous
 
 
@@ -59,7 +59,7 @@ def test_estimate_fundamental():
         assert_almost_equal(x1.dot(F).dot(x0), 0)
 
 
-def test_structure_from_pose():
+def test_linear_triangulation():
     R, t = rotations[0], translations[0]
     keypoints0 = projection.project(X_true)
     keypoints1 = projection.project(transform(R, t, X_true))
@@ -68,7 +68,7 @@ def test_structure_from_pose():
 
     N = X_true.shape[0]
     for i in range(N):
-        x = structure_from_pose(K, R, t, keypoints0[i], keypoints1[i])
+        x = linear_triangulation(K, R, t, keypoints0[i], keypoints1[i])
         assert_array_almost_equal(x, X_true[i])
 
 
@@ -93,7 +93,3 @@ def test_extract_poses():
     E_pred = to_essential(R2, t2)
     assert_array_almost_equal(E_pred / np.linalg.norm(E_pred),
                               E_true / np.linalg.norm(E_true))
-
-
-def test_projection_matrix():
-    pass
