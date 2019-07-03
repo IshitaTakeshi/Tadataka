@@ -152,8 +152,8 @@ def two_view_reconstruction(keypoints0, keypoints1, K):
         X, points_are_valid = structure_from_pose(
             keypoints0, keypoints1, R, t, K)
 
-        # only 1 pair (R, t) among the candidates must be the correct pair,
-        # not more nor less
+        # only 1 pair (R, t) among the candidates has to be
+        # the correct pair, not more nor less
         if points_are_valid:
             assert(X_valid is None)
             X_valid, R_valid, t_valid = X, R, t

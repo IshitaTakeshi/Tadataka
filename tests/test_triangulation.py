@@ -39,14 +39,16 @@ rotations = np.array([
 
 translations = np.array([[-3, 1, 4]])
 
-camera_parameters = CameraParameters(focal_length=[0.8, 1.2], offset=[0.8, 0.2])
+camera_parameters = CameraParameters(
+    focal_length=[0.8, 1.2],
+    offset=[0.8, 0.2]
+)
 projection = PerspectiveProjection(camera_parameters)
 
 
 def normalize(M):
     m = M.flatten()
     return M / (norm(m) * np.sign(m[-1]))
-
 
 
 def test_estimate_fundamental():
@@ -133,7 +135,6 @@ def test_extract_poses():
         assert_array_almost_equal(np.dot(R2.T, R2), np.identity(3))
         assert_almost_equal(np.linalg.det(R1), 1.)
         assert_almost_equal(np.linalg.det(R2), 1.)
-
 
     for R, t in itertools.product(rotations, translations):
         test(R, t)
