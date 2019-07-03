@@ -99,6 +99,12 @@ def extract_poses(E):
     # Eq. 9.14
     U, _, VH = np.linalg.svd(E)
 
+    if np.linalg.det(U) < 0:
+        U = -U
+
+    if np.linalg.det(VH) < 0:
+        VH = -VH
+
     R1 = U.dot(W).dot(VH)
     R2 = U.dot(W.T).dot(VH)
 
