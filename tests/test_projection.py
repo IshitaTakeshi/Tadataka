@@ -30,8 +30,6 @@ def test_perspective_projection():
         [4.0, 3.0, 5.0]
     ])
 
-    print(camera_parameters.matrix)
-
     expected = np.array([
         [1.4, 3.2],
         [1.64, 2.72],

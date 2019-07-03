@@ -45,8 +45,8 @@ projection = PerspectiveProjection(camera_parameters)
 
 def normalize(M):
     m = M.flatten()
-    norm = np.linalg.norm(m)
-    return M / (norm * np.sign(m[-1]))
+    return M / (norm(m) * np.sign(m[-1]))
+
 
 
 def test_estimate_fundamental():
@@ -104,8 +104,12 @@ def test_linear_triangulation():
 
     N = X_true.shape[0]
     for i in range(N):
-        x = linear_triangulation(keypoints0[i], keypoints1[i], R, t, K)
-        assert_array_almost_equal(x, X_true[i])
+        x_true = X_true[i]
+        x, depth0, depth1 = linear_triangulation(
+            keypoints0[i], keypoints1[i], R, t, K)
+        assert_array_almost_equal(x, x_true)
+        assert_equal(depth0, x[2])
+        assert_equal(depth1, x[1] + t[2])
 
 
 def test_extract_poses():
