@@ -1,19 +1,22 @@
+import itertools
+
 import numpy as np
 from numpy.testing import (assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
+from numpy.linalg import inv, norm
 
 from projection.projections import PerspectiveProjection
 from camera import CameraParameters
 from rigid.rotation import tangent_so3
 from rigid.transformation import transform_each, transform
 from bundle_adjustment.triangulation import (
-    estimate_fundamental, extract_poses,
+    estimate_fundamental, fundamental_to_essential, extract_poses,
     projection_matrix, linear_triangulation)
 from matrix import to_homogeneous
 
 
 X_true = np.array([
-   [2, -2, 2],
+   [4, -1, 3],
    [1, -3, -2],
    [-2, 3, -2],
    [-3, -2, -5],
@@ -28,12 +31,13 @@ X_true = np.array([
 rotations = np.array([
     [[1, 0, 0],
      [0, 0, -1],
-     [0, 1, 0]]
+     [0, 1, 0]],
+    [[0, 0, 1],
+     [-1, 0, 0],
+     [0, -1, 0]]
 ])
-translations = np.array([[-3, 1, 4]])
 
-# skew matrices corresponding to each translation
-skews = tangent_so3(translations)
+translations = np.array([[-3, 1, 4]])
 
 camera_parameters = CameraParameters(focal_length=[0.8, 1.2], offset=[0.8, 0.2])
 projection = PerspectiveProjection(camera_parameters)
@@ -105,19 +109,27 @@ def test_linear_triangulation():
 
 
 def test_extract_poses():
-    E_true = np.dot(skews[0], rotations[0])
-    R1, R2, t1, t2 = extract_poses(E_true)
+    def test(R_true, t_true):
+        # skew matrx corresponding to t
+        S_true = tangent_so3(t_true.reshape(1, *t_true.shape))[0]
 
-    # make sure that both of R1 and R2 are rotation matrices
-    assert_array_almost_equal(np.dot(R1.T, R1), np.identity(3))
-    assert_array_almost_equal(np.dot(R2.T, R2), np.identity(3))
-    assert_almost_equal(np.linalg.det(R1), 1.)
-    assert_almost_equal(np.linalg.det(R2), 1.)
+        E_true = np.dot(R_true, S_true)
 
-    E_pred = to_essential(R1, t1)
-    assert_array_almost_equal(E_pred / np.linalg.norm(E_pred),
-                              E_true / np.linalg.norm(E_true))
+        R1, R2, t1, t2 = extract_poses(E_true)
 
-    E_pred = to_essential(R2, t2)
-    assert_array_almost_equal(E_pred / np.linalg.norm(E_pred),
-                              E_true / np.linalg.norm(E_true))
+        # t1 = -t2, R.T * t1 is parallel to t_true
+        assert_array_almost_equal(t1, -t2)
+        assert_array_almost_equal(np.cross(np.dot(R1.T, t1), t_true),
+                                  np.zeros(3))
+        assert_array_almost_equal(np.cross(np.dot(R2.T, t1), t_true),
+                                  np.zeros(3))
+
+        # make sure that both of R1 and R2 are rotation matrices
+        assert_array_almost_equal(np.dot(R1.T, R1), np.identity(3))
+        assert_array_almost_equal(np.dot(R2.T, R2), np.identity(3))
+        assert_almost_equal(np.linalg.det(R1), 1.)
+        assert_almost_equal(np.linalg.det(R2), 1.)
+
+
+    for R, t in itertools.product(rotations, translations):
+        test(R, t)
