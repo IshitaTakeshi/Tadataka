@@ -1,8 +1,9 @@
+import itertools
+
 import numpy as np
 from numpy.linalg import inv
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
 from matrix import solve_linear
 from rigid.rotation import tangent_so3
 
@@ -53,6 +54,9 @@ def fundamental_to_essential(F, K0, K1=None):
 
 # TODO compute multiple points
 def linear_triangulation(point0, point1, R1, t1, K):
+    def calc_depth(P, x):
+        return np.dot(P[2], x)
+
     def motion_matrix(R, t):
         T = np.empty((3, 4))
         T[0:3, 0:3] = R
@@ -75,8 +79,13 @@ def linear_triangulation(point0, point1, R1, t1, K):
         y1 * P1[2] - P1[1],
     ])
     x = solve_linear(A)
+
+    # normalize so that x / x[3] be a homogeneous vector [x y z 1]
+    # and extract the first 3 elements
     assert(x[3] != 0)
-    return x[0:3] / x[3]  # normalize so that x be a homogeneous vector
+    x = x / x[3]
+    # calculate depths for utilities
+    return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
 
 
 def projection_matrix(E, F, K):
@@ -119,9 +128,14 @@ def structure_from_pose(keypoints0, keypoints1, R1, t1, K):
     N = keypoints0.shape[0]
 
     X = np.empty((N, 3))
+    structure_is_valid = True
     for i in range(N):
-        X[i] = linear_triangulation(keypoints0[i], keypoints1[i], R1, t1, K)
-    return X
+        X[i], depth0, depth1 = linear_triangulation(
+            keypoints0[i], keypoints1[i], R1, t1, K)
+
+        depth_is_valid = depth0 > 0 and depth1 > 0
+        structure_is_valid = structure_is_valid and depth_is_valid
+    return X, structure_is_valid
 
 
 def two_view_reconstruction(keypoints0, keypoints1, K):
@@ -131,5 +145,19 @@ def two_view_reconstruction(keypoints0, keypoints1, K):
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    X = structure_from_pose(keypoints0, keypoints1, R1, t1, K)
-    return R1, t1, X
+    X_valid = None
+    R_valid = None
+    t_valid = None
+    for R, t in itertools.product((R1, R2), (t1, t2)):
+        X, points_are_valid = structure_from_pose(
+            keypoints0, keypoints1, R, t, K)
+
+        # only 1 pair (R, t) among the candidates must be the correct pair,
+        # not more nor less
+        if points_are_valid:
+            assert(X_valid is None)
+            X_valid, R_valid, t_valid = X, R, t
+
+    assert(X_valid is not None)
+
+    return R_valid, t_valid, X_valid
