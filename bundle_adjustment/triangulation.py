@@ -123,19 +123,24 @@ def extract_poses(E):
     return R1, R2, t1, t2
 
 
-def structure_from_pose(keypoints0, keypoints1, R1, t1, K):
+def points_from_pose(keypoints0, keypoints1, R1, t1, K):
+    """
+    Reconstruct 3D points from 2 camera poses.
+    The first camera pose is assumed to be R = identity, t = zeros.
+    """
+
     assert(keypoints0.shape == keypoints1.shape)
     N = keypoints0.shape[0]
 
-    X = np.empty((N, 3))
-    structure_is_valid = True
+    points = np.empty((N, 3))
+    depths_are_valid = True
     for i in range(N):
-        X[i], depth0, depth1 = linear_triangulation(
+        points[i], depth0, depth1 = linear_triangulation(
             keypoints0[i], keypoints1[i], R1, t1, K)
 
         depth_is_valid = depth0 > 0 and depth1 > 0
-        structure_is_valid = structure_is_valid and depth_is_valid
-    return X, structure_is_valid
+        depths_are_valid = depths_are_valid and depth_is_valid
+    return points, depths_are_valid
 
 
 def two_view_reconstruction(keypoints0, keypoints1, K):
@@ -145,19 +150,15 @@ def two_view_reconstruction(keypoints0, keypoints1, K):
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    X_valid = None
-    R_valid = None
-    t_valid = None
     for R, t in itertools.product((R1, R2), (t1, t2)):
-        X, points_are_valid = structure_from_pose(
+        X, depths_are_valid = points_from_pose(
             keypoints0, keypoints1, R, t, K)
 
         # only 1 pair (R, t) among the candidates has to be
         # the correct pair, not more nor less
-        if points_are_valid:
-            assert(X_valid is None)
-            X_valid, R_valid, t_valid = X, R, t
+        if depths_are_valid:
+            return R, t, X
 
-    assert(X_valid is not None)
-
-    return R_valid, t_valid, X_valid
+    # should not reach here
+    raise ValueError("Keypoints may contain points where the depth of "
+                     "the corresponding 3D point is <= 0")
