@@ -11,7 +11,7 @@ from rigid.rotation import tangent_so3
 from rigid.transformation import transform_each, transform
 from bundle_adjustment.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
-    projection_matrix, linear_triangulation)
+    projection_matrix, linear_triangulation, points_from_pose)
 from matrix import to_homogeneous
 
 
@@ -138,3 +138,52 @@ def test_extract_poses():
 
     for R, t in itertools.product(rotations, translations):
         test(R, t)
+
+
+def test_points_from_pose():
+    camera_parameters = CameraParameters(
+        focal_length=[1., 1.],
+        offset=[0., 0.]
+    )
+    K = camera_parameters.matrix
+
+    projection = PerspectiveProjection(camera_parameters)
+
+    points = np.array([
+        [-1, 3, 2],
+        [1, 1, 1],
+    ])
+
+    R = np.array([
+        [-1, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+    ])
+    t = np.array([
+        [0, 1, 0]
+    ])
+
+    # obviously points are in front of the both camers (depth > 0)
+    _, depths_are_valid = points_from_pose(
+        projection.project(points),
+        projection.project(np.dot(R, points.T).T + t),
+        R, t, K
+    )
+    assert(depths_are_valid)
+
+    R = np.array([
+        [-1, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+    ])
+    t = np.array([
+        [0, 0, -2]
+    ])
+
+    # points[1] is behind the 2nd camera
+    _, depths_are_valid = points_from_pose(
+        projection.project(points),
+        projection.project(np.dot(R, points.T).T + t),
+        R, t, K
+    )
+    assert(not depths_are_valid)
