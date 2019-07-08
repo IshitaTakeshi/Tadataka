@@ -1,6 +1,7 @@
 from autograd import numpy as np
 from scipy.optimize import least_squares
 
+from bundle_adjustment.triangulation import two_view_reconstruction
 from optimization.robustifiers import SquaredRobustifier
 from optimization.updaters import GaussNewtonUpdater
 from optimization.optimizers import BaseOptimizer
@@ -80,9 +81,27 @@ class ScipyLeastSquaresOptimizer(BaseOptimizer):
             J = jacobian_(theta)
             return J.reshape(-1, theta.shape[0])
 
-        res = least_squares(residual, initial_theta, jacobian,
-                            max_nfev=200, verbose=2)
+        res = least_squares(residual, initial_theta, jacobian, ftol=0.1,
+                            max_nfev=20, verbose=2)
         return res.x
+
+
+def initialize(keypoints, K):
+    # TODO make independent from cv2
+    import cv2
+
+    n_viewpoints = keypoints.shape[0]
+
+    R, t, points = two_view_reconstruction(keypoints[0], keypoints[1], K)
+
+    omegas = np.empty((n_viewpoints, 3))
+    translations = np.empty((n_viewpoints, 3))
+    for i in range(n_viewpoints):
+        retval, rvec, tvec = cv2.solvePnP(points, keypoints[i], K, np.zeros(4))
+        omegas[i] = rvec.flatten()
+        translations[i] = tvec.flatten()
+    return omegas, translations, points
+
 
 
 class BundleAdjustment(object):
@@ -108,6 +127,7 @@ class BundleAdjustment(object):
         robustifier = SquaredRobustifier()
         updater = GaussNewtonUpdater(self.residual, robustifier)
         error = SumRobustifiedNormError(self.residual, robustifier)
+        # optimizer = BaseOptimizer(updater, error)
         optimizer = ScipyLeastSquaresOptimizer(updater, error)
         params = optimizer.optimize(initial_params)
         return self.converter.from_params(params)
