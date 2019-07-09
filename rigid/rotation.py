@@ -96,6 +96,8 @@ def rodrigues(V):
     N = V.shape[0]
 
     theta = np.linalg.norm(V, axis=1)
+    theta[theta == 0] = 1  # avoid division by zero
+
     V = V / theta[:, np.newaxis]
     K = tangent_so3(V)
 

@@ -68,6 +68,7 @@ def test_tangents_so3():
 
 def test_rodrigues():
     V = np.array([
+        [0, 0, 0],
         [np.pi / 2, 0, 0],
         [0, -np.pi / 2, 0],
         [0, 0, np.pi],
@@ -75,6 +76,9 @@ def test_rodrigues():
     ])
 
     expected = np.array([
+        [[1, 0, 0],
+         [0, 1, 0],
+         [0, 0, 1]],
         [[1, 0, 0],
          [0, 0, -1],
          [0, 1, 0]],
