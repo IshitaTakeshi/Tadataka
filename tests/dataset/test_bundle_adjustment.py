@@ -51,8 +51,9 @@ def test_generate_translations():
 def test_generate_observations():
     camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
     projection = PerspectiveProjection(camera_parameters)
-    observations = generate_observations(rotations, translations, points,
-                                         projection)
+    observations, positive_depth_mask = generate_observations(
+        rotations, translations, points, projection)
+
     expected = np.array([
         [[2 / -1, 1 / -1],
          [0 / 1, 3 / 1],
@@ -63,3 +64,6 @@ def test_generate_observations():
     ])
 
     assert_array_equal(observations, expected)
+
+    expected = np.array([[False, True, True], [False, False, False]])
+    assert_array_equal(positive_depth_mask, expected)
