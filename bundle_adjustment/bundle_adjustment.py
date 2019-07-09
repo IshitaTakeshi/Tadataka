@@ -19,13 +19,12 @@ class ParameterConverter(object):
         self.n_points = n_points
 
     def from_params(self, params):
-        N = 6 * self.n_viewpoints
-        pose_params, points = params[:N], params[N:]
+        assert(params.shape[0] == self.n_viewpoints * 6 + self.n_points * 3)
 
-        pose_params = pose_params.reshape(-1, 6)
-        omegas, translations = pose_params[:, 0:3], pose_params[:, 3:6]
-
-        points = points.reshape(-1, 3)
+        N = 3 * self.n_viewpoints
+        omegas = params[0:N].reshape(self.n_viewpoints, 3)
+        translations = params[N:2*N].reshape(self.n_viewpoints, 3)
+        points = params[2*N:].reshape(self.n_points, 3)
 
         return omegas, translations, points
 

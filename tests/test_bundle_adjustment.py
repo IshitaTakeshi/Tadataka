@@ -38,14 +38,14 @@ def test_parameter_converter():
         omegas,
         np.array([
             [1, 2, 3],
-            [7, 8, 9]
+            [4, 5, 6],
         ])
     )
 
     assert_array_equal(
         translations,
         np.array([
-            [4, 5, 6],
+            [7, 8, 9],
             [10, 11, 12]
         ])
     )
