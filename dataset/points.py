@@ -23,6 +23,7 @@ def corridor(width, height, length):
         beam[-1] * np.ones(NY)
     ))
     xs = np.tile(xs, NZ)
+    xs = xs - width / 2.
 
     ys = np.concatenate((
         pillar[0] * np.ones(NX),
@@ -31,6 +32,7 @@ def corridor(width, height, length):
         pillar
     ))
     ys = np.tile(ys, NZ)
+    ys = ys - height / 2.
 
     zs = np.repeat(np.arange(NZ), NX * 2 + NY * 2)
     return np.vstack((xs, ys, zs)).T
