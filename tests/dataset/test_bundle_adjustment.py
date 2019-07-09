@@ -3,7 +3,8 @@ from numpy.testing import assert_array_less, assert_array_equal
 
 from camera import CameraParameters
 from projection.projections import PerspectiveProjection
-from dataset.generators import generate_translations, generate_observations
+from dataset.bundle_adjustment import (
+    generate_translations, generate_observations)
 from rigid.transformation import transform_each
 
 
