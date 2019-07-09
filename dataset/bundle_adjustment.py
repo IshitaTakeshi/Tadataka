@@ -15,11 +15,12 @@ def generate_observations(rotations, translations, points, projection):
 
     points = transform_each(rotations, translations, points)
 
-    points = points.reshape(-1, 3)
-    observations = projection.project(points)
-    observations = observations.reshape(n_viewpoints, n_points, 2)
+    positive_depth_mask = points[:, :, 2] > 0
 
-    return observations
+    observations = projection.project(points.reshape(-1, 3))
+    observations = observations.reshape(*points.shape[0:2], 2)
+
+    return observations, positive_depth_mask
 
 
 def generate_translations(rotations, points, offset=2.0):
