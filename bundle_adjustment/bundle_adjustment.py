@@ -48,20 +48,15 @@ class Transformer(BaseTransformer):
         self.projection = projection
         self.converter = converter
 
+    def project(self, omegas, translations, points):
+        points = transform_each(rodrigues(omegas), translations, points)
+        keypoints = self.projection.project(points.reshape(-1, 3))
+        keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
+        return keypoints
+
     def transform(self, params):
         omegas, translations, points = self.converter.from_params(params)
-
-        rotations = rodrigues(omegas)
-
-        # points.shape == (n_viewpoints, n_points, 3) after transformation
-        points = transform_each(rotations, translations, points)
-
-        shape = points.shape[0:2]
-        points = points.reshape(-1, 3)  # flatten once
-
-        keypoints = self.projection.project(points)  # project
-
-        return keypoints.reshape(*shape, 2)  # restore the shape
+        return self.project(omegas, translations, points)
 
 
 class ScipyLeastSquaresOptimizer(BaseOptimizer):
@@ -100,7 +95,6 @@ def initialize(keypoints, K):
         omegas[i] = rvec.flatten()
         translations[i] = tvec.flatten()
     return omegas, translations, points
-
 
 
 class BundleAdjustment(object):
