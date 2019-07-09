@@ -53,7 +53,7 @@ def test_parameter_converter():
 
 
 def test_initialize():
-    def projection(rotations, translations, points, camera_parameters):
+    def project(rotations, translations, points, camera_parameters):
         points = transform_each(rotations, translations, points)
         keypoints = PerspectiveProjection(camera_parameters).project(points.reshape(-1, 3))
         keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
@@ -61,8 +61,8 @@ def test_initialize():
 
 
     camera_parameters = CameraParameters(
-        focal_length=[1., 1.],
-        offset=[0., 0.]
+        focal_length=[0.9, 1.2],
+        offset=[0.8, -0.2]
     )
 
     rotations_true = np.array([
@@ -91,7 +91,7 @@ def test_initialize():
         [1, 1, -1], [1, 1, 0], [1, 1, 1],
     ])
 
-    keypoints_true = projection(
+    keypoints_true = project(
         rotations_true, translations_true, points_true,
         camera_parameters
     )
@@ -101,7 +101,10 @@ def test_initialize():
 
     rotations_pred = rodrigues(omegas_pred)
 
-    keypoints_pred = projection(
+    # camera poses and the reconstructed points have scale / rotation ambiguity
+    # therefore we project the points and test if the projected points
+    # match the original keypoints
+    keypoints_pred = project(
         rotations_pred, translations_pred, points_pred,
         camera_parameters
     )
