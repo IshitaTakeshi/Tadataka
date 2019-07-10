@@ -12,6 +12,7 @@ class BaseOptimizer(object):
         for i in range(n_max_iter):
             d = self.updater.compute(theta)
             current_error = self.error.compute(theta)
+            print("iteration: {:>8d}  error: {}".format(i, current_error))
             if current_error >= last_error:
                 return theta
 

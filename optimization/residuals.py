@@ -1,17 +1,20 @@
-class Residual(object):
-    def __init__(self, transformer, Y):
+from optimization.functions import Function
+
+
+class BaseResidual(Function):
+    def __init__(self, y, transformation):
         """
-        Y : Target values
+        y : Target values
         """
 
-        self.transformer = transformer
-        self.Y = Y
+        self.y = y
+        self.transformation = transformation
 
-    def residuals(self, theta):
+    def compute(self, theta):
         """
         Returns:
             residuals
         """
 
         # HACK the design of the transformer may not be optimal
-        return self.Y - self.transformer.transform(theta)
+        return self.y - self.transformation.compute(theta)

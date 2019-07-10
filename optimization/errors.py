@@ -1,17 +1,12 @@
 from autograd import numpy as np
 
-
-class BaseError(object):
-    def compute(self):
-        raise NotImplementedError()
+from optimization.functions import Function
 
 
-class SumRobustifiedNormError(BaseError):
-    def __init__(self, residual, robustifier):
-        self.residual = residual
+class SumRobustifiedNormError(Function):
+    def __init__(self, robustifier):
         self.robustifier = robustifier
 
-    def compute(self, theta):
-        r = self.residual.residuals(theta)
-        norms = np.linalg.norm(r, axis=1)
+    def compute(self, residual):
+        norms = np.linalg.norm(residual, axis=1)
         return np.sum(self.robustifier.robustify(norms))

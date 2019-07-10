@@ -4,7 +4,7 @@ from autograd import numpy as np
 
 class GradientBasedUpdater(object):
     def jacobian(self, theta):
-        return jacobian(self.residual.residuals)(theta)
+        return jacobian(self.residual.compute)(theta)
 
 
 class GaussNewtonUpdater(GradientBasedUpdater):
@@ -17,14 +17,15 @@ class GaussNewtonUpdater(GradientBasedUpdater):
         # d = inv (J^T * J) * J * r
         # however, it works better than implementing the equation malually
 
-        r = self.residual.residuals(theta)
+        r = self.residual.compute(theta)
         J = self.jacobian(theta)
 
+        assert(np.ndim(r) == 1)
+
         # residuals can be a multi-dimensonal array so flatten them
-        r = r.flatten()
         J = J.reshape(r.shape[0], theta.shape[0])
 
         # TODO add weighted Gauss-Newton as an option
         # weights = self.robustifier.weights(r)
-        theta, error, _, _ = np.linalg.lstsq(J, r, rcond=None)
-        return theta
+        delta, error, _, _ = np.linalg.lstsq(J, r, rcond=None)
+        return delta
