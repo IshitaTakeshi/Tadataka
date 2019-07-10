@@ -1,11 +1,12 @@
 from autograd import numpy as np
 
 from bundle_adjustment.triangulation import two_view_reconstruction
-from bundle_adjustment.bundle_adjustment import BundleAdjustment, initialize
+from bundle_adjustment.bundle_adjustment import BundleAdjustment
 from camera import CameraParameters
 from dataset.points import cubic_lattice
-from dataset.generators import generate_observations, generate_translations
+from dataset.bundle_adjustment import generate_observations, generate_translations
 from projection.projections import PerspectiveProjection
+from optimization.residuals import BaseResidual
 from rigid.transformation import transform_each
 from rigid.rotation import rodrigues
 
@@ -24,19 +25,16 @@ projection = PerspectiveProjection(camera_parameters)
 omegas = np.random.uniform(-1, 1, (n_viewpoints, 3))
 translations = generate_translations(rodrigues(omegas), points_true)
 
-observations = generate_observations(omegas, translations, points_true, projection)
-
-omegas, translations, points = initialize(observations,
-                                          camera_parameters.matrix)
+observations, mask = generate_observations(
+    rodrigues(omegas), translations, points_true, projection)
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from visualization import plot3d
+from visualizer.visualizers import plot3d
 plot3d(points_true)
-plot3d(points)
 
-ba = BundleAdjustment(observations, projection)
-omegas, translations, points = ba.optimize(omegas, translations, points)
+ba = BundleAdjustment(observations, camera_parameters)
+omegas, translations, points = ba.optimize()
 
 plot3d(points)
 plt.show()
