@@ -17,7 +17,7 @@ def generate_observations(rotations, translations, points, projection):
 
     positive_depth_mask = points[:, :, 2] > 0
 
-    observations = projection.project(points.reshape(-1, 3))
+    observations = projection.compute(points.reshape(-1, 3))
     observations = observations.reshape(*points.shape[0:2], 2)
 
     return observations, positive_depth_mask

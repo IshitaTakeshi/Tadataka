@@ -1,5 +1,7 @@
 from autograd import numpy as np
 
+from optimization.functions import Function
+
 
 def pi(P):
     Z = P[:, [2]]
@@ -7,16 +9,13 @@ def pi(P):
     return XY / Z
 
 
-class BaseProjection(object):
+class BaseProjection(Function):
     def __init__(self, camera_parameters):
         self.camera_parameters = camera_parameters
 
-    def project(self, P):
-        raise NotImplementedError()
-
 
 class PerspectiveProjection(BaseProjection):
-    def project(self, P):
+    def compute(self, P):
         K = self.camera_parameters.matrix
         P = np.dot(K, P.T).T
         return pi(P)
