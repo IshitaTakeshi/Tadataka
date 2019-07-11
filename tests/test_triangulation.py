@@ -53,8 +53,8 @@ def normalize(M):
 
 def test_estimate_fundamental():
     R, t = rotations[0], translations[0]
-    keypoints0 = projection.project(X_true)
-    keypoints1 = projection.project(transform(R, t, X_true))
+    keypoints0 = projection.compute(X_true)
+    keypoints1 = projection.compute(transform(R, t, X_true))
 
     K = camera_parameters.matrix
     K_inv = np.linalg.inv(K)
@@ -99,8 +99,8 @@ def test_fundamental_to_essential():
 
 def test_linear_triangulation():
     R, t = rotations[0], translations[0]
-    keypoints0 = projection.project(X_true)
-    keypoints1 = projection.project(transform(R, t, X_true))
+    keypoints0 = projection.compute(X_true)
+    keypoints1 = projection.compute(transform(R, t, X_true))
 
     K = camera_parameters.matrix
 
@@ -165,8 +165,8 @@ def test_points_from_pose():
 
     # obviously points are in front of the both camers (depth > 0)
     _, depths_are_valid = points_from_pose(
-        projection.project(points),
-        projection.project(np.dot(R, points.T).T + t),
+        projection.compute(points),
+        projection.compute(np.dot(R, points.T).T + t),
         R, t, K
     )
     assert(depths_are_valid)
@@ -182,8 +182,8 @@ def test_points_from_pose():
 
     # points[1] is behind the 2nd camera
     _, depths_are_valid = points_from_pose(
-        projection.project(points),
-        projection.project(np.dot(R, points.T).T + t),
+        projection.compute(points),
+        projection.compute(np.dot(R, points.T).T + t),
         R, t, K
     )
     assert(not depths_are_valid)

@@ -1,7 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from bundle_adjustment.bundle_adjustment import ParameterConverter, initialize
+from bundle_adjustment.bundle_adjustment import ParameterConverter, Initializer
 from camera import CameraParameters
 from rigid.transformation import transform_each
 from rigid.rotation import rodrigues
@@ -55,7 +55,8 @@ def test_parameter_converter():
 def test_initialize():
     def project(rotations, translations, points, camera_parameters):
         points = transform_each(rotations, translations, points)
-        keypoints = PerspectiveProjection(camera_parameters).project(points.reshape(-1, 3))
+        projection = PerspectiveProjection(camera_parameters)
+        keypoints = projection.compute(points.reshape(-1, 3))
         keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
         return keypoints
 
@@ -96,8 +97,9 @@ def test_initialize():
         camera_parameters
     )
 
-    omegas_pred, translations_pred, points_pred =\
-        initialize(keypoints_true, camera_parameters.matrix)
+    masks = np.ones(keypoints_true.shape[0:2], dtype=np.bool)
+    initializer = Initializer(keypoints_true, masks, camera_parameters.matrix)
+    omegas_pred, translations_pred, points_pred = initializer.initialize()
 
     rotations_pred = rodrigues(omegas_pred)
 

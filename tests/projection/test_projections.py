@@ -34,4 +34,4 @@ def test_perspective_projection():
         [1.4, 3.2],
         [1.64, 2.72],
     ])
-    assert_array_almost_equal(projection.project(points), expected)
+    assert_array_almost_equal(projection.compute(points), expected)
