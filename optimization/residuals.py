@@ -2,13 +2,13 @@ from optimization.functions import Function
 
 
 class BaseResidual(Function):
-    def __init__(self, y, transformation):
+    def __init__(self, y, transformer):
         """
         y : Target values
         """
 
         self.y = y
-        self.transformation = transformation
+        self.transformer = transformer
 
     def compute(self, theta):
         """
@@ -16,5 +16,4 @@ class BaseResidual(Function):
             residuals
         """
 
-        # HACK the design of the transformer may not be optimal
-        return self.y - self.transformation.compute(theta)
+        return self.y - self.transformer.compute(theta)
