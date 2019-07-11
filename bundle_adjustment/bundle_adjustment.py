@@ -62,6 +62,8 @@ class ScipyLeastSquaresOptimizer(BaseOptimizer):
 def initialize_poses(points, keypoints, K):
     # TODO make independent from cv2
     import cv2
+def count_shared(mask1, mask2):
+    return np.sum(np.logical_and(mask1, mask2))
 
     n_viewpoints = keypoints.shape[0]
 
