@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 
-EPSILON = 1e-8
+EPSILON = 1e-16
 
 
 def log_so3(RS):
@@ -97,12 +97,14 @@ def rodrigues(V):
 
     theta = np.linalg.norm(V, axis=1)
 
-    mask = theta != 0
-    V[mask] = V[mask] / theta[mask, np.newaxis]
-    K = tangent_so3(V)
-
     A = np.zeros((N, 3, 3))
     A[:, [0, 1, 2], [0, 1, 2]] = 1  # [np.eye(3) for i in range(N)]
+
+    if np.all(theta == 0):
+        return A
+
+    # Add EPSILON to avoid division by zero
+    K = tangent_so3(V / (theta[:, np.newaxis] + EPSILON))
 
     B = np.einsum('i,ijk->ijk', np.sin(theta), K)
     C = np.einsum('ijk,ikl->ijl', K, K)  # [dot(L, L) for L in K]
