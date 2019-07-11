@@ -59,31 +59,25 @@ class ScipyLeastSquaresOptimizer(BaseOptimizer):
         return res.x
 
 
-def initialize_poses(points, keypoints, K):
-    # TODO make independent from cv2
-    import cv2
 def count_shared(mask1, mask2):
     return np.sum(np.logical_and(mask1, mask2))
 
-    n_viewpoints = keypoints.shape[0]
 
-    omegas = np.empty((n_viewpoints, 3))
-    translations = np.empty((n_viewpoints, 3))
-    for i in range(n_viewpoints):
-        retval, rvec, tvec = cv2.solvePnP(points, keypoints[i], K, np.zeros(4))
-        omegas[i] = rvec.flatten()
-        translations[i] = tvec.flatten()
-    return omegas, translations
-
-
-def select_initial_viewpointns():
-    return 0, 1
+def select_initial_viewpoints(masks):
+    n_visible = np.sum(masks, axis=1)
+    viewpoint1, viewpoint2 = np.argsort(n_visible)[::-1][0:2]
+    mask = np.logical_and(
+        masks[viewpoint1],
+        masks[viewpoint2]
+    )
+    return mask, viewpoint1, viewpoint2
 
 
 class Initializer(object):
-    def __init__(self, keypoints, K):
+    def __init__(self, keypoints, masks, K):
         n_viewpoints, n_points = keypoints.shape[0:2]
         self.keypoints = keypoints
+        self.masks = masks
         self.K = K
 
     def initialize(self):
@@ -94,34 +88,48 @@ class Initializer(object):
             A set of keypoints of shape (n_viewpoints, 2)
         """
 
-        viewpoint1, viewpoint2 = select_initial_viewpointns()
+        n_viewpoints = self.keypoints.shape[0]
+        reconstruction_mask, viewpoint1, viewpoint2 =\
+            select_initial_viewpoints(self.masks)
 
         R, t, points = two_view_reconstruction(
-            self.keypoints[viewpoint1],
-            self.keypoints[viewpoint2],
+            self.keypoints[viewpoint1, reconstruction_mask],
+            self.keypoints[viewpoint2, reconstruction_mask],
             self.K
         )
 
-        omegas, translations = initialize_poses(
-            points, self.keypoints, self.K)
+        # TODO make independent from cv2
+        import cv2
 
+        omegas = np.empty((n_viewpoints, 3))
+        translations = np.empty((n_viewpoints, 3))
+        for i in range(n_viewpoints):
+            # at least 3 points have to be seen from each viewpoint
+            # to execute pnp properly
+            n_visible = count_shared(reconstruction_mask, self.masks[i])
+            assert(n_visible > 3)
+
+            retval, rvec, tvec = cv2.solvePnP(points, self.keypoints[i],
+                                              self.K, np.zeros(4))
+            omegas[i] = rvec.flatten()
+            translations[i] = tvec.flatten()
         return omegas, translations, points
 
 
 class Transformer(Function):
     def __init__(self, n_viewpoints, n_points, camera_parameters, converter):
         self.transform = RigidTransform()
-        self.reshape = Reshape((n_viewpoints * n_points, 3))
+        self.reshape1 = Reshape((n_viewpoints * n_points, 3))
         self.projection = PerspectiveProjection(camera_parameters)
-        self.flatten = Flatten()
+        self.reshape2 = Reshape((n_viewpoints, n_points, 2))
         self.converter = converter
 
     def compute(self, params):
         omegas, translations, points = self.converter.from_params(params)
         points = self.transform.compute(omegas, translations, points)
-        points = self.reshape.compute(points)
+        points = self.reshape1.compute(points)
         keypoints = self.projection.compute(points)
-        keypoints = self.flatten.compute(keypoints)
+        keypoints = self.reshape2.compute(keypoints)
         return keypoints
 
 
@@ -148,20 +156,34 @@ class Optimizer(object):
         return self.optimizer.optimize(initial_params)
 
 
+class MaskedResidual(BaseResidual):
+    def __init__(self, y, transformer, masks):
+        super().__init__(y, transformer)
+        self.masks = masks
+
+    def compute(self, theta):
+        residual = super().compute(theta)
+        print(residual.shape)
+        print(self.masks.shape)
+        residual = residual[self.masks].flatten()
+        print(residual.shape)
+        return residual
+
+
 class BundleAdjustment(object):
-    def __init__(self, keypoints, camera_parameters):
+    def __init__(self, keypoints, masks, camera_parameters):
         """
         keypoints: np.ndarray
             Keypoint coordinates of shape (n_viewpoints, n_points, 2)
         """
 
-        self.initializer = Initializer(keypoints, camera_parameters.matrix)
+        self.initializer = Initializer(keypoints, masks, camera_parameters.matrix)
         n_viewpoints, n_points = keypoints.shape[0:2]
         self.converter = ParameterConverter(n_viewpoints, n_points)
 
-        transformation = Transformer(n_viewpoints, n_points, camera_parameters,
-                                     self.converter)
-        residual = BaseResidual(keypoints.flatten(), transformation)
+        transformer = Transformer(n_viewpoints, n_points, camera_parameters,
+                                  self.converter)
+        residual = MaskedResidual(keypoints, transformer, masks)
         self.optimizer = Optimizer(residual)
 
     def optimize(self):
