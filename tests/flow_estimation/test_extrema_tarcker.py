@@ -74,7 +74,7 @@ def test_maximizer():
             return energies
 
     # move 1 pixel to right 10 times
-    maximizer = Maximizer(Energy1(), (100, 100), n_max_iter=10)
+    maximizer = Maximizer(Energy1(), (100, 100), max_iter=10)
     assert_array_equal(maximizer.search(np.array([4, 3])),
                        np.array([14, 3]))
 
@@ -85,6 +85,6 @@ def test_maximizer():
             energies[4] = 1
             return energies
 
-    maximizer = Maximizer(Energy2(), (100, 100), n_max_iter=10)
+    maximizer = Maximizer(Energy2(), (100, 100), max_iter=10)
     assert_array_equal(maximizer.search(np.array([4, 3])),
                        np.array([4, 3]))

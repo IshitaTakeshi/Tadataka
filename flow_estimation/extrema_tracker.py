@@ -47,10 +47,10 @@ class Energy(object):
 
 
 class Maximizer(object):
-    def __init__(self, energy, image_shape, n_max_iter=20):
+    def __init__(self, energy, image_shape, max_iter=20):
         self.energy = energy
         self.neighbors = Neighbors(image_shape)
-        self.n_max_iter = n_max_iter
+        self.max_iter = max_iter
 
     def search_neighbors(self, p):
         neighbors = self.neighbors.get(p)
@@ -59,7 +59,7 @@ class Maximizer(object):
 
     def search(self, p0):
         p = np.copy(p0)
-        for i in range(self.n_max_iter):
+        for i in range(self.max_iter):
             p_new = self.search_neighbors(p)
             if (p_new == p).all():
                 return p

@@ -6,10 +6,10 @@ class BaseOptimizer(object):
         self.updater = updater
         self.error = error
 
-    def optimize(self, initial_theta, n_max_iter=200):
+    def optimize(self, initial_theta, max_iter=200):
         theta = initial_theta
         last_error = float('inf')
-        for i in range(n_max_iter):
+        for i in range(max_iter):
             d = self.updater.compute(theta)
             current_error = self.error.compute(theta)
             print("iteration: {:>8d}  error: {}".format(i, current_error))

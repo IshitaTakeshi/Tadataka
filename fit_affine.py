@@ -69,7 +69,7 @@ def predict(keypoints1, keypoints2, initial_theta):
     robustifier = SquaredRobustifier()
     updater = GaussNewtonUpdater(residual, robustifier)
     optimizer = BaseOptimizer(updater, SumRobustifiedNormError(residual, robustifier))
-    return optimizer.optimize(initial_theta, n_max_iter=1000)
+    return optimizer.optimize(initial_theta, max_iter=1000)
 
 
 def yx_to_xy(coordinates):
