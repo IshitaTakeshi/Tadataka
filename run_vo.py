@@ -24,6 +24,11 @@ def generate_poses(n_viewpoints):
     return omegas, translations
 
 
+def set_invisible(observations, masks):
+    observations[~masks] = np.nan
+    return observations
+
+
 window_size = 8
 points_true = corridor(width=2, height=4, length=2)
 omegas_true, translations_true = generate_poses(n_viewpoints=12)
@@ -34,10 +39,10 @@ camera_parameters = CameraParameters(
 )
 projection = PerspectiveProjection(camera_parameters)
 
+
 observations, masks = generate_observations(
     rodrigues(omegas_true), translations_true, points_true, projection)
-
-observations[~masks] = np.nan
+observations = set_invisible(observations, masks)
 
 N = observations.shape[0]
 for i in range(0, N-window_size+1):
