@@ -3,7 +3,7 @@ from numpy.testing import assert_array_less, assert_array_equal
 
 from vitamine.camera import CameraParameters
 from vitamine.projection.projections import PerspectiveProjection
-from vitamine.dataset.bundle_adjustment import (
+from vitamine.dataset.observations import (
     generate_translations, generate_observations)
 from vitamine.rigid.transformation import transform_each
 
