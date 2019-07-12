@@ -1,6 +1,8 @@
 from autograd import numpy as np
 
-from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
+from vitamine.bundle_adjustment.mask import (
+    keypoint_mask, point_mask, fill_masked
+)
 from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
 
 from vitamine.optimization.initializers import BaseInitializer
@@ -24,16 +26,13 @@ class PointInitializer(object):
             self.keypoints
         )
 
-        n_points = self.keypoints.shape[1]
-
-        points = np.full((n_points, 3), np.nan)
         R, t, points_ = two_view_reconstruction(
             self.keypoints[viewpoint1, mask],
             self.keypoints[viewpoint2, mask],
             self.K
         )
 
-        points[mask] = points_
+        points = fill_masked(points_, mask)
         return points
 
 

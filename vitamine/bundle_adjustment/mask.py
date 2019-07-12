@@ -19,3 +19,14 @@ def pose_mask(omegas, translations):
 
 def point_mask(points):
     return mask(points)
+
+
+def fill_masked(array, mask):
+    """
+    Create nan array and fill masked elements with float variables
+    """
+    assert(np.ndim(array) == 2)
+    assert(np.ndim(mask) == 1)
+    array_ = np.full((mask.shape[0], array.shape[1]), np.nan)
+    array_[mask] = array
+    return array_
