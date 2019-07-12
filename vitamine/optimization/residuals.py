@@ -1,4 +1,4 @@
-from optimization.functions import Function
+from vitamine.optimization.functions import Function
 
 
 class BaseResidual(Function):
