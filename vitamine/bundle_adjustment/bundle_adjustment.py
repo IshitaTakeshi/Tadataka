@@ -8,7 +8,7 @@ from vitamine.optimization.robustifiers import SquaredRobustifier
 from vitamine.optimization.updaters import GaussNewtonUpdater
 from vitamine.optimization.array_utils import Flatten, Reshape
 from vitamine.optimization.transformers import BaseTransformer
-from vitamine.optimization.errors import SumRobustifiedNormError
+from vitamine.optimization.errors import BaseError, SumRobustifiedNormError
 from vitamine.optimization.functions import Function
 from vitamine.optimization.residuals import BaseResidual
 from vitamine.optimization.optimizers import Optimizer
@@ -42,13 +42,13 @@ class Transformer(Function):
 
 
 class Error(Function):
-    def __init__(self, residual, robustifier):
-        self.residual = residual
+    def __init__(self, robustifier):
+        super().__init__()
+
         self.reshape = Reshape((-1, 2))
         self.error = SumRobustifiedNormError(robustifier)
 
-    def compute(self, params):
-        residual = self.residual.compute(params)
+    def compute(self, residual):
         residual = self.reshape.compute(residual)
         return self.error.compute(residual)
 
