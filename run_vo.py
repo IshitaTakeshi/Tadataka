@@ -1,13 +1,15 @@
 from autograd import numpy as np
 
-from bundle_adjustment.triangulation import two_view_reconstruction
-from bundle_adjustment.bundle_adjustment import BundleAdjustment
-from camera import CameraParameters
-from dataset.points import cubic_lattice, corridor
-from dataset.bundle_adjustment import generate_observations, generate_translations
-from projection.projections import PerspectiveProjection
-from rigid.transformation import transform_each
-from rigid.rotation import rodrigues
+from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
+from vitamine.bundle_adjustment.bundle_adjustment import BundleAdjustment
+from vitamine.camera import CameraParameters
+from vitamine.dataset.points import cubic_lattice, corridor
+from vitamine.dataset.observations import (
+    generate_observations, generate_translations
+)
+from vitamine.projection.projections import PerspectiveProjection
+from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.rotation import rodrigues
 
 
 def generate_poses(n_viewpoints):
