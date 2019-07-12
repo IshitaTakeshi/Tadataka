@@ -14,6 +14,7 @@ setup(
         'scipy',
         'scikit-image',
         'matplotlib',
-        'numpy'
+        'numpy',
+        'opencv-python'  # TODO make independent from this
     ]
 )
