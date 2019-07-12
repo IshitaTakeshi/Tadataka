@@ -4,8 +4,9 @@ from scipy.optimize import least_squares
 
 
 class BaseOptimizer(object):
-    def __init__(self, updater, error):
+    def __init__(self, updater, residual, error):
         self.updater = updater
+        self.residual = residual
         self.error = error
 
     def optimize(self):
@@ -19,7 +20,8 @@ class Optimizer(BaseOptimizer):
         last_error = float('inf')
         for i in range(max_iter):
             d = self.updater.compute(theta)
-            current_error = self.error.compute(theta)
+            residual = self.residual.compute(theta)
+            current_error = self.error.compute(residual)
             print("iteration: {:>8d}  error: {}".format(i, current_error))
             if current_error >= last_error:
                 return theta
