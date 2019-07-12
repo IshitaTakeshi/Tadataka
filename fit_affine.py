@@ -8,18 +8,20 @@ from skimage.feature import peak_local_max
 # so that autograd available for all numpy functions
 from autograd import numpy as np
 
-from optimization.robustifiers import (
+from vitamine.optimization.array_utils import Flatten
+from vitamine.optimization.robustifiers import (
     GemanMcClureRobustifier, SquaredRobustifier)
-from optimization.updaters import GaussNewtonUpdater
-from optimization.optimizers import BaseOptimizer
-from optimization.residuals import Residual
-from optimization.transformers import BaseTransformer
-from optimization.errors import SumRobustifiedNormError
-from flow_estimation.keypoints import extract_keypoints
-from flow_estimation.extrema_tracker import ExtremaTracker
-from flow_estimation.image_curvature import image_curvature
-from utils import to_2d, from_2d, is_in_image_range
-from matrix import affine_trasformation, homogeneous_matrix
+from vitamine.optimization.updaters import GaussNewtonUpdater
+from vitamine.optimization.functions import Function
+from vitamine.optimization.optimizers import Optimizer
+from vitamine.optimization.residuals import BaseResidual
+from vitamine.optimization.transformers import BaseTransformer
+from vitamine.optimization.errors import SumRobustifiedNormError
+from vitamine.flow_estimation.keypoints import extract_keypoints
+from vitamine.flow_estimation.extrema_tracker import ExtremaTracker
+from vitamine.flow_estimation.image_curvature import image_curvature
+from vitamine.util import to_2d, from_2d, is_in_image_range
+from vitamine.matrix import affine_trasformation, homogeneous_matrix
 
 
 # we handle point coordinates P in a format:
@@ -53,22 +55,35 @@ def transform_image(image, theta):
     return tf.warp(image, tf.AffineTransform(matrix=np.linalg.inv(W)))
 
 
-class AffineTransformer(BaseTransformer):
-    def transform(self, theta):
+class AffineTransformer(Function):
+    def __init__(self, X):
+        self.X = X
+
+    def compute(self, A, b):
         # X : image coordinates of shape (n_points, 2)
         # A : 2x2 transformation matrix
         # b : bias term of shape (2,)
-        A, b = theta_to_affine_params(theta)
         return affine_trasformation(self.X, A, b)
 
 
+class Transformer(Function):
+    def __init__(self, keypoints):
+        self.affine = AffineTransformer(keypoints)
+
+    def compute(self, theta):
+        A, b = theta_to_affine_params(theta)
+        return self.affine.compute(A, b)
+
+
 def predict(keypoints1, keypoints2, initial_theta):
-    transformer = AffineTransformer(keypoints1)
-    residual = Residual(transformer, keypoints2)
+    print(initial_theta.shape)
+    transformer = Transformer(keypoints1)
+    residual = BaseResidual(keypoints2, transformer)
     # TODO Geman-McClure is used in the original paper
     robustifier = SquaredRobustifier()
     updater = GaussNewtonUpdater(residual, robustifier)
-    optimizer = BaseOptimizer(updater, SumRobustifiedNormError(residual, robustifier))
+    error = SumRobustifiedNormError(robustifier)
+    optimizer = Optimizer(updater, residual, error)
     return optimizer.optimize(initial_theta, max_iter=1000)
 
 
@@ -98,7 +113,6 @@ def estimate_affine_transformation(image1, image2):
 
 
 def plot_keypoints(ax, image, keypoints, **kwargs):
-    print(skimage.img_as_float(image))
     ax.imshow(skimage.img_as_float(image), cmap='gray')
     ax.scatter(keypoints[:, 0], keypoints[:, 1], **kwargs)
 
