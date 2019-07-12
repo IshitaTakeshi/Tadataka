@@ -1,3 +1,4 @@
 autograd
 scipy
+skimage
 matplotlib
