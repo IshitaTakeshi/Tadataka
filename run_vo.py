@@ -35,11 +35,12 @@ projection = PerspectiveProjection(camera_parameters)
 observations, masks = generate_observations(
     rodrigues(omegas_true), translations_true, points_true, projection)
 
+observations[~masks] = np.nan
+
 N = observations.shape[0]
 for i in range(0, N-window_size+1):
     ba = BundleAdjustment(
         observations[i:i+window_size],
-        masks[i:i+window_size],
         camera_parameters
     )
     omegas, translations, points = ba.optimize()

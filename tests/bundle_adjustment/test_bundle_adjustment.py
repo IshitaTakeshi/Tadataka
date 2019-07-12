@@ -98,7 +98,7 @@ def test_initialize():
     )
 
     masks = np.ones(keypoints_true.shape[0:2], dtype=np.bool)
-    initializer = Initializer(keypoints_true, masks, camera_parameters.matrix)
+    initializer = Initializer(keypoints_true, camera_parameters.matrix)
     omegas_pred, translations_pred, points_pred = initializer.initialize()
 
     rotations_pred = rodrigues(omegas_pred)
