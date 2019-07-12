@@ -54,7 +54,7 @@ for i in range(0, N-window_size+1):
 
 
 from matplotlib import pyplot as plt
-from visualizer.visualizers import plot3d
+from vitamine.visualization.visualizers import plot3d
 plot3d(points_true)
 plot3d(points)
 plt.show()
