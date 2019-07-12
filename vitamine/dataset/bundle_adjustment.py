@@ -1,7 +1,7 @@
 import numpy as np
 
-from rigid.rotation import rodrigues
-from rigid.transformation import transform_each
+from vitamine.rigid.rotation import rodrigues
+from vitamine.rigid.transformation import transform_each
 
 
 def generate_observations(rotations, translations, points, projection):

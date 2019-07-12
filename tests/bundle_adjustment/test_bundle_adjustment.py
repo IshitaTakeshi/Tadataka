@@ -1,11 +1,11 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from bundle_adjustment.initializers import Initializer
-from camera import CameraParameters
-from rigid.transformation import transform_each
-from rigid.rotation import rodrigues
-from projection.projections import PerspectiveProjection
+from vitamine.bundle_adjustment.initializers import Initializer
+from vitamine.camera import CameraParameters
+from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.rotation import rodrigues
+from vitamine.projection.projections import PerspectiveProjection
 
 
 def test_initialize():

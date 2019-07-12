@@ -1,7 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
 
-from rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_each
 
 
 def test_transform_each():

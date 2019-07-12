@@ -1,8 +1,8 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from optimization.robustifiers import SquaredRobustifier
-from flow_estimation.extrema_tracker import (
+from vitamine.optimization.robustifiers import SquaredRobustifier
+from vitamine.flow_estimation.extrema_tracker import (
         ExtremaTracker, Energy, Neighbors, Regularizer, Maximizer)
 
 

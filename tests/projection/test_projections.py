@@ -1,8 +1,8 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from camera import CameraParameters
-from projection.projections import pi, PerspectiveProjection
+from vitamine.camera import CameraParameters
+from vitamine.projection.projections import pi, PerspectiveProjection
 
 
 def test_pi():

@@ -5,14 +5,13 @@ from numpy.testing import (assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
 from numpy.linalg import inv, norm
 
-from projection.projections import PerspectiveProjection
-from camera import CameraParameters
-from rigid.rotation import tangent_so3
-from rigid.transformation import transform_each, transform
-from bundle_adjustment.triangulation import (
+from vitamine.projection.projections import PerspectiveProjection
+from vitamine.camera import CameraParameters
+from vitamine.rigid.rotation import tangent_so3
+from vitamine.rigid.transformation import transform
+from vitamine.bundle_adjustment.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
     projection_matrix, linear_triangulation, points_from_pose)
-from matrix import to_homogeneous
 
 
 X_true = np.array([

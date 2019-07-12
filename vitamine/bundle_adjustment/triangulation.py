@@ -4,8 +4,8 @@ import numpy as np
 from numpy.linalg import inv
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from matrix import solve_linear
-from rigid.rotation import tangent_so3
+from vitamine.matrix import solve_linear
+from vitamine.rigid.rotation import tangent_so3
 
 
 # Equation numbers are the ones in Multiple View Geometry

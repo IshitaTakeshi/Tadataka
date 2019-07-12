@@ -1,7 +1,9 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from bundle_adjustment.mask import mask, keypoint_mask, point_mask, pose_mask
+from vitamine.bundle_adjustment.mask import (
+    mask, keypoint_mask, point_mask, pose_mask
+)
 
 
 def test_mask():

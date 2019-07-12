@@ -1,31 +1,27 @@
 from autograd import numpy as np
 
-from bundle_adjustment.initializers import Initializer
-from bundle_adjustment.parameters import ParameterConverter
-from bundle_adjustment.mask import keypoint_mask, point_mask
+from vitamine.bundle_adjustment.initializers import Initializer
+from vitamine.bundle_adjustment.parameters import ParameterConverter
+from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
 
-from optimization.robustifiers import SquaredRobustifier
-from optimization.updaters import GaussNewtonUpdater
-from optimization.array_utils import Flatten, Reshape
-from optimization.transformers import BaseTransformer
-from optimization.errors import SumRobustifiedNormError
-from optimization.functions import Function
-from optimization.residuals import BaseResidual
-from optimization.optimizers import Optimizer
+from vitamine.optimization.robustifiers import SquaredRobustifier
+from vitamine.optimization.updaters import GaussNewtonUpdater
+from vitamine.optimization.array_utils import Flatten, Reshape
+from vitamine.optimization.transformers import BaseTransformer
+from vitamine.optimization.errors import SumRobustifiedNormError
+from vitamine.optimization.functions import Function
+from vitamine.optimization.residuals import BaseResidual
+from vitamine.optimization.optimizers import Optimizer
 
-from projection.projections import PerspectiveProjection
+from vitamine.projection.projections import PerspectiveProjection
 
-from rigid.rotation import rodrigues
-from rigid.transformation import transform_each
+from vitamine.rigid.rotation import rodrigues
+from vitamine.rigid.transformation import transform_each
 
 
 class RigidTransform(Function):
     def compute(self, omegas, translations, points):
         return transform_each(rodrigues(omegas), translations, points)
-
-
-def count_correspondences(mask_reference, masks):
-    return np.sum(np.logical_and(mask_reference, masks), axis=1)
 
 
 class Transformer(Function):
@@ -66,14 +62,6 @@ class MaskedResidual(BaseResidual):
         residual = super().compute(theta)
         residual = residual[self.masks].flatten()
         return residual
-
-
-def mask_params(omegas, translations, points):
-    mask = pose_mask(omegas, translations)
-    omegas, translations = omegas[mask], translations[mask]
-    mask = point_mask(points)
-    points = points[mask]
-    return omegas, translations, points
 
 
 class BundleAdjustmentSolver(object):

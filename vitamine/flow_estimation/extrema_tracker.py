@@ -1,7 +1,7 @@
 from autograd import numpy as np
-from optimization.robustifiers import GemanMcClureRobustifier
-from flow_estimation.image_curvature import image_curvature
-from utils import is_in_image_range
+from vitamine.optimization.robustifiers import GemanMcClureRobustifier
+from vitamine.flow_estimation.image_curvature import image_curvature
+from vitamine.util import is_in_image_range
 
 
 class Neighbors(object):

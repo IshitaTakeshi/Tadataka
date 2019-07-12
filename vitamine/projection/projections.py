@@ -1,6 +1,6 @@
 from autograd import numpy as np
 
-from optimization.functions import Function
+from vitamine.optimization.functions import Function
 
 
 def pi(P):

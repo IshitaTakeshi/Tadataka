@@ -1,4 +1,0 @@
-autograd
-scipy
-skimage
-matplotlib

@@ -1,9 +1,9 @@
 from autograd import numpy as np
 
-from bundle_adjustment.mask import keypoint_mask, point_mask
-from bundle_adjustment.triangulation import two_view_reconstruction
+from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
+from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
 
-from optimization.initializers import BaseInitializer
+from vitamine.optimization.initializers import BaseInitializer
 
 
 def select_initial_viewpoints(keypoints):
