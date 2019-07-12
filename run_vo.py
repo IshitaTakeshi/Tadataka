@@ -49,12 +49,5 @@ for i in range(0, N-window_size+1):
 from matplotlib import pyplot as plt
 from visualizer.visualizers import plot3d
 plot3d(points_true)
-plt.show()
-
-plot3d(points)
-
-ba = BundleAdjustment(observations, projection)
-omegas, translations, points = ba.optimize(omegas, translations, points)
-
 plot3d(points)
 plt.show()
