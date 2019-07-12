@@ -3,6 +3,10 @@ from autograd import numpy as np
 
 
 class GradientBasedUpdater(object):
+    def flattened_residual(self, theta):
+        residual = self.residual.compute(theta)
+        return residual.flatten()
+
     def jacobian(self, theta):
         return jacobian(self.residual.compute)(theta)
 
@@ -17,7 +21,7 @@ class GaussNewtonUpdater(GradientBasedUpdater):
         # d = inv (J^T * J) * J * r
         # however, it works better than implementing the equation malually
 
-        r = self.residual.compute(theta)
+        r = self.flattened_residual(theta)
         J = self.jacobian(theta)
 
         assert(np.ndim(r) == 1)

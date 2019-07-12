@@ -60,7 +60,7 @@ class MaskedResidual(BaseResidual):
 
     def compute(self, theta):
         residual = super().compute(theta)
-        residual = residual[self.masks].flatten()
+        residual = residual[self.masks]
         return residual
 
 
@@ -68,8 +68,8 @@ class BundleAdjustmentSolver(object):
     def __init__(self, residual):
         robustifier = SquaredRobustifier()
         updater = GaussNewtonUpdater(residual, robustifier)
-        error = Error(residual, robustifier)
-        self.optimizer = Optimizer(updater, error)
+        error = Error(robustifier)
+        self.optimizer = Optimizer(updater, residual, error)
 
     def solve(self, initial_params):
         return self.optimizer.optimize(initial_params)
