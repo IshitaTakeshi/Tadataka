@@ -12,6 +12,6 @@ class SumRobustifiedNormError(BaseError):
     def __init__(self, robustifier):
         self.robustifier = robustifier
 
-    def compute(self, residual):
-        norms = np.linalg.norm(residual, axis=1)
+    def compute(self, residuals):
+        norms = np.linalg.norm(residuals, axis=1)
         return np.sum(self.robustifier.robustify(norms))
