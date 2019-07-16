@@ -9,6 +9,10 @@ class BaseOptimizer(object):
         self.residual = residual
         self.error = error
 
+    def calc_error(self, theta):
+        residuals = self.residual.compute(theta)
+        return self.error.compute(residuals)
+
     def optimize(self):
         raise NotImplementedError()
 
@@ -20,9 +24,9 @@ class Optimizer(BaseOptimizer):
         last_error = float('inf')
         for i in range(max_iter):
             d = self.updater.compute(theta)
-            residuals = self.residual.compute(theta)
-            current_error = self.error.compute(residuals)
             print("iteration: {:>8d}  error: {}".format(i, current_error))
+            current_error = self.calc_error(theta)
+
             if current_error >= last_error:
                 return theta
 
