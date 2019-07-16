@@ -12,6 +12,7 @@ from vitamine.optimization.errors import BaseError, SumRobustifiedNormError
 from vitamine.optimization.functions import Function
 from vitamine.optimization.residuals import BaseResidual
 from vitamine.optimization.optimizers import Optimizer
+from vitamine.optimization.transformers import BaseTransformer
 
 from vitamine.projection.projections import PerspectiveProjection
 
@@ -24,7 +25,7 @@ class RigidTransform(Function):
         return transform_each(rodrigues(omegas), translations, points)
 
 
-class Transformer(Function):
+class Transformer(BaseTransformer):
     def __init__(self, n_viewpoints, n_points, camera_parameters, converter):
         self.transform = RigidTransform()
         self.reshape1 = Reshape((n_viewpoints * n_points, 3))
