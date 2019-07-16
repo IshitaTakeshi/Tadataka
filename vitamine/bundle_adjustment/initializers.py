@@ -24,7 +24,7 @@ class PointInitializer(object):
 
     def initialize(self):
         if self.initial_points is not None:
-            return initial_points
+            return self.initial_points
 
         mask, viewpoint1, viewpoint2 = select_initial_viewpoints(
             self.keypoints

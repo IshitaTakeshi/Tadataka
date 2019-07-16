@@ -24,8 +24,9 @@ class Optimizer(BaseOptimizer):
         last_error = float('inf')
         for i in range(max_iter):
             d = self.updater.compute(theta)
-            print("iteration: {:>8d}  error: {}".format(i, current_error))
+
             current_error = self.calc_error(theta)
+            print("iteration: {:>8d}  error: {}".format(i, current_error))
 
             if current_error >= last_error:
                 return theta
