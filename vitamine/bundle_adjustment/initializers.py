@@ -1,10 +1,9 @@
 from autograd import numpy as np
-
-from vitamine.bundle_adjustment.mask import (
-    keypoint_mask, point_mask, fill_masked
-)
 from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
+from vitamine.bundle_adjustment.mask import fill_masked
+from vitamine.bundle_adjustment.pnp import estimate_poses
 
+from vitamine.bundle_adjustment.mask import keypoint_mask
 from vitamine.optimization.initializers import BaseInitializer
 
 
@@ -17,11 +16,16 @@ def select_initial_viewpoints(keypoints):
 
 
 class PointInitializer(object):
-    def __init__(self, keypoints, K):
+    def __init__(self, keypoints, K, initial_points=None):
+        self.initial_points = initial_points
+
         self.keypoints = keypoints
         self.K = K
 
     def initialize(self):
+        if self.initial_points is not None:
+            return initial_points
+
         mask, viewpoint1, viewpoint2 = select_initial_viewpoints(
             self.keypoints
         )
@@ -37,45 +41,40 @@ class PointInitializer(object):
 
 
 class PoseInitializer(object):
-    def __init__(self, keypoints, K):
+    def __init__(self, keypoints, K,
+                 initial_omegas=None, initial_translations=None):
+        self.initial_omegas = initial_omegas
+        self.initial_translations = initial_translations
+
         self.keypoints = keypoints
         self.K = K
 
     def initialize(self, points):
-        # at least 4 corresponding points have to be found
-        # between keypoitns and 3D poitns
-        required_correspondences = 4
+        initial_omegas = self.initial_omegas
+        initial_translations = self.initial_translations
 
-        # TODO make independent from cv2
-        import cv2
-        n_viewpoints = self.keypoints.shape[0]
+        if initial_omegas is not None and initial_translations is not None:
+            return initial_omegas, initial_translations
 
-        omegas = np.empty((n_viewpoints, 3))
-        translations = np.empty((n_viewpoints, 3))
+        omegas, translations = estimate_poses(points, self.keypoints, self.K)
 
-        masks = np.logical_and(
-            point_mask(points),
-            keypoint_mask(self.keypoints)
-        )
-        for i in range(n_viewpoints):
-            if np.sum(masks[i]) < required_correspondences:
-                omegas[i] = np.nan
-                translations[i] = np.nan
-                continue
+        if initial_omegas is not None:
+            return initial_omegas, translations
 
-            retval, rvec, tvec = cv2.solvePnP(
-                points[masks[i]], self.keypoints[i, masks[i]],
-                self.K, np.zeros(4)
-            )
-            omegas[i] = rvec.flatten()
-            translations[i] = tvec.flatten()
+        if initial_translations is not None:
+            return omegas, initial_translations
+
         return omegas, translations
 
 
 class Initializer(BaseInitializer):
-    def __init__(self, keypoints, K):
-        self.point_initializer = PointInitializer(keypoints, K)
-        self.pose_initializer = PoseInitializer(keypoints, K)
+    def __init__(self, keypoints, K,
+                 initial_omegas=None, initial_translations=None,
+                 initial_points=None):
+        self.point_initializer = PointInitializer(
+            keypoints, K, initial_points)
+        self.pose_initializer = PoseInitializer(
+            keypoints, K, initial_omegas, initial_translations)
 
     def initialize(self):
         """
@@ -84,7 +83,6 @@ class Initializer(BaseInitializer):
         keypoints : np.ndarray
             A set of keypoints of shape (n_viewpoints, 2)
         """
-
         points = self.point_initializer.initialize()
         omegas, translations = self.pose_initializer.initialize(points)
         return omegas, translations, points

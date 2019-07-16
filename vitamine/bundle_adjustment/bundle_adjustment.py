@@ -77,7 +77,8 @@ class BundleAdjustmentSolver(object):
 
 
 class BundleAdjustment(object):
-    def __init__(self, keypoints, camera_parameters):
+    def __init__(self, keypoints, camera_parameters,
+                 initial_pose=None, initial_points=None):
         """
         keypoints: np.ndarray
             Keypoint coordinates of shape (n_viewpoints, n_points, 2)
