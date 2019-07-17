@@ -105,24 +105,3 @@ def plot3d(P: np.ndarray, do_annotate=False, color=None, elev=45, azim=0):
     ax.set_zlabel('z axis')
     ax.view_init(elev, azim)
     set_aspect_equal(ax)
-
-
-def plot_result(X, viewpoints):
-    # Define a color for each point
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    V = viewpoints
-    ax.scatter(V[:, 0], V[:, 1], V[:, 2],
-               c='r', marker='s', label='viewpoints')
-
-    color = object_color(X)
-    ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=color)
-
-    ax.set_xlabel('x axis')
-    ax.set_ylabel('y axis')
-    ax.set_zlabel('z axis')
-    ax.legend()
-
-    set_aspect_equal(ax)
