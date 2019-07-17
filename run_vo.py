@@ -71,7 +71,7 @@ def plot_observations(observations):
 
 
 class VisualOdometryAnimation(object):
-    def __init__(self, fig, ax, frames, interval=10000):
+    def __init__(self, fig, ax, frames, interval=100):
         self.ax = ax
         self.animation = FuncAnimation(fig, self.animate, frames=frames,
                                        interval=interval)
@@ -113,6 +113,6 @@ ax.set_xlim([-10, 10])
 ax.set_ylim([-10, 10])
 ax.set_zlim([-10, 30])
 
-animation = VisualOdometryAnimation(fig, ax, vo.frames)
+animation = VisualOdometryAnimation(fig, ax, vo.frames, interval=100)
 animation.plot()
 
