@@ -35,6 +35,7 @@ class Transformer(BaseTransformer):
 
     def compute(self, params):
         omegas, translations, points = self.converter.from_params(params)
+
         points = self.transform.compute(omegas, translations, points)
         points = self.reshape1.compute(points)
         keypoints = self.projection.compute(points)
@@ -78,13 +79,17 @@ class BundleAdjustmentSolver(object):
 
 class BundleAdjustment(object):
     def __init__(self, keypoints, camera_parameters,
-                 initial_pose=None, initial_points=None):
+                 initial_omegas=None, initial_translations=None,
+                 initial_points=None):
         """
         keypoints: np.ndarray
             Keypoint coordinates of shape (n_viewpoints, n_points, 2)
         """
 
-        self.initializer = Initializer(keypoints, camera_parameters.matrix)
+        self.initializer = Initializer(keypoints, camera_parameters.matrix,
+                                       initial_omegas, initial_translations,
+                                       initial_points)
+
         n_viewpoints, n_points = keypoints.shape[0:2]
         self.converter = ParameterConverter(n_viewpoints, n_points)
 
