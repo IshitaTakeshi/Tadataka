@@ -13,7 +13,7 @@ from vitamine.rigid.rotation import rodrigues
 
 
 def generate_poses(n_viewpoints):
-    omegas = np.zeros((n_viewpoints, 3))  # np.random.uniform(-1, 1, (n_viewpoints, 3))
+    omegas = np.zeros((n_viewpoints, 3))
 
     translations = np.vstack((
         np.zeros(n_viewpoints),
@@ -29,9 +29,65 @@ def set_invisible(observations, masks):
     return observations
 
 
-window_size = 8
-points_true = corridor(width=2, height=4, length=2)
+class VisualOdometry(object):
+    def __init__(self, observations, window_size, start=0, end=None):
+        n_observations = observations.shape[0]
+        self.observations = observations
+        self.window_size = window_size
+        self.start = start
+        self.end = n_observations if end is None else max(n_observations, end)
+        assert(self.start < self.end)
+
+    def frames(self):
+        for i in range(self.start, self.end-self.window_size+1):
+            yield self.estimate(i)
+
+    def estimate(self, i):
+        ba = BundleAdjustment(
+            self.observations[i:i+self.window_size],
+            camera_parameters,
+            # initial_omegas=omegas,
+            # initial_translations=translations,
+            # initial_points=points
+        )
+        return ba.optimize()
+
+
+from matplotlib.animation import FuncAnimation
+from matplotlib import pyplot as plt
+from vitamine.visualization.visualizers import set_aspect_equal, object_color
+
+
+def plot_observations(observations):
+    N = observations.shape[0]
+    nrows = 2
+    ncols = N // nrows if N % nrows == 0 else N // nrows + 1
+    fig, axes = plt.subplots(ncols, nrows)
+    for i, ax in enumerate(axes.flatten()):
+        P = observations[i]
+        print("i : ", np.all(np.isnan(P)))
+        ax.scatter(P[:, 0], P[:, 1])
+    plt.show()
+
+
+class VisualOdometryAnimation(object):
+    def __init__(self, fig, ax, frames, interval=10000):
+        self.ax = ax
+        self.animation = FuncAnimation(fig, self.animate, frames=frames,
+                                       interval=interval)
+
+    def animate(self, args):
+        omegas, translations, points = args
+        return self.ax.scatter(points[:, 0], points[:, 1], points[:, 2])
+
+    def plot(self):
+        plt.show()
+
+
 omegas_true, translations_true = generate_poses(n_viewpoints=12)
+
+points_true = corridor(width=2, height=4, length=2)
+n_points = points_true.shape[0]
 
 camera_parameters = CameraParameters(
     focal_length=[1., 1.],
@@ -39,22 +95,24 @@ camera_parameters = CameraParameters(
 )
 projection = PerspectiveProjection(camera_parameters)
 
-
 observations, masks = generate_observations(
     rodrigues(omegas_true), translations_true, points_true, projection)
 observations = set_invisible(observations, masks)
 
-N = observations.shape[0]
-for i in range(0, N-window_size+1):
-    ba = BundleAdjustment(
-        observations[i:i+window_size],
-        camera_parameters
-    )
-    omegas, translations, points = ba.optimize()
+vo = VisualOdometry(observations, window_size=8)
 
 
-from matplotlib import pyplot as plt
-from vitamine.visualization.visualizers import plot3d
-plot3d(points_true)
-plot3d(points)
-plt.show()
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.set_xlabel('x axis')
+ax.set_ylabel('y axis')
+ax.set_zlabel('z axis')
+set_aspect_equal(ax)
+ax.set_xlim([-10, 10])
+ax.set_ylim([-10, 10])
+ax.set_zlim([-10, 30])
+
+animation = VisualOdometryAnimation(fig, ax, vo.frames)
+animation.plot()
+
