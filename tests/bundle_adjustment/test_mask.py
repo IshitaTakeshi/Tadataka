@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from vitamine.bundle_adjustment.mask import (
-    mask, keypoint_mask, point_mask, pose_mask, fill_masked
+    compute_mask, keypoint_mask, point_mask, pose_mask, fill_masked
 )
 
 
@@ -15,7 +15,7 @@ def test_mask():
     ])
 
     expected = np.array([True, False, False, False])
-    assert_array_equal(mask(array), expected)
+    assert_array_equal(compute_mask(array), expected)
 
 
 def test_keypoint_mask():
