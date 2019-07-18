@@ -50,13 +50,26 @@ class Transformer(BaseTransformer):
 
 
 class MaskedResidual(BaseResidual):
-    def __init__(self, y, transformer, masks):
+    def __init__(self, y, transformer, converter):
         super().__init__(y, transformer)
-        self.masks = masks
+        self.converter = converter
 
     def compute(self, theta):
-        residual = super().compute(theta)
-        residual = residual[self.masks]
+        x = self.transformer.compute(theta)
+
+        # FIXME just not wise
+        y = self.y[self.converter.pose_mask]
+        y = y[:, self.converter.point_mask]
+
+        residual = y - x
+        mask = keypoint_mask(residual)
+
+        # ndim of residual will be reduced from 3 to 2
+        residual = residual[mask]
+        # but explicitly reshape it
+        residual = residual.reshape(-1, 2)
+
+        assert(np.all(~np.isnan(residual)))
         return residual
 
 
@@ -64,7 +77,7 @@ class BundleAdjustmentSolver(object):
     def __init__(self, residual):
         robustifier = SquaredRobustifier()
         updater = GaussNewtonUpdater(residual, robustifier)
-        error = Error(robustifier)
+        error = SumRobustifiedNormError(robustifier)
         self.optimizer = Optimizer(updater, residual, error)
 
     def solve(self, initial_params):
@@ -84,13 +97,10 @@ class BundleAdjustment(object):
                                        initial_omegas, initial_translations,
                                        initial_points)
 
-        n_viewpoints, n_points = keypoints.shape[0:2]
-        self.converter = ParameterConverter(n_viewpoints, n_points)
+        self.converter = ParameterConverter()
+        transformer = Transformer(camera_parameters, self.converter)
+        residual = MaskedResidual(keypoints, transformer, self.converter)
 
-        transformer = Transformer(n_viewpoints, n_points, camera_parameters,
-                                  self.converter)
-        residual = MaskedResidual(keypoints, transformer,
-                                  keypoint_mask(keypoints))
         self.solver = BundleAdjustmentSolver(residual)
 
     def optimize(self):
