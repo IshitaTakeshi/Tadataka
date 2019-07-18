@@ -26,33 +26,27 @@ class RigidTransform(Function):
 
 
 class Transformer(BaseTransformer):
-    def __init__(self, n_viewpoints, n_points, camera_parameters, converter):
-        self.transform = RigidTransform()
-        self.reshape1 = Reshape((n_viewpoints * n_points, 3))
-        self.projection = PerspectiveProjection(camera_parameters)
-        self.reshape2 = Reshape((n_viewpoints, n_points, 2))
+    def __init__(self, camera_parameters, converter):
         self.converter = converter
+
+        self.transform = RigidTransform()
+        self.projection = PerspectiveProjection(camera_parameters)
 
     def compute(self, params):
         omegas, translations, points = self.converter.from_params(params)
 
+        N = self.converter.n_valid_viewpoints
+        M = self.converter.n_valid_points
+
         points = self.transform.compute(omegas, translations, points)
-        points = self.reshape1.compute(points)
+
+        points = points.reshape((N * M, 3))
+
         keypoints = self.projection.compute(points)
-        keypoints = self.reshape2.compute(keypoints)
+
+        keypoints = keypoints.reshape((N, M, 2))
+
         return keypoints
-
-
-class Error(Function):
-    def __init__(self, robustifier):
-        super().__init__()
-
-        self.reshape = Reshape((-1, 2))
-        self.error = SumRobustifiedNormError(robustifier)
-
-    def compute(self, residual):
-        residual = self.reshape.compute(residual)
-        return self.error.compute(residual)
 
 
 class MaskedResidual(BaseResidual):
