@@ -33,11 +33,13 @@ def estimate_poses(points, keypoints, K):
     for i in range(n_viewpoints):
         mask = masks[i]
 
+        # np.sum(mask) is the number of 3D / 2D correspondences
         if np.sum(mask) < min_correspondences:
             omegas[i] = np.nan
             translations[i] = np.nan
             continue
 
-        omegas[i], translations[i] = solve_pnp(
-            points[mask], keypoints[i, mask], K)
+        # use only non nan elements to perform PnP
+        X, P = points[mask], keypoints[i, mask]
+        omegas[i], translations[i] = solve_pnp(X, P, K)
     return omegas, translations
