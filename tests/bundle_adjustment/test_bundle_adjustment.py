@@ -4,7 +4,7 @@ from numpy.testing import assert_array_almost_equal
 from vitamine.camera import CameraParameters
 from vitamine.bundle_adjustment.parameters import ParameterConverter
 from vitamine.bundle_adjustment.bundle_adjustment import (
-    Transformer, MaskedResidual, BundleAdjustmentSolver, BundleAdjustment)
+    Transformer, MaskedResidual, BundleAdjustmentSolver)
 
 
 def test_transformer():
@@ -41,3 +41,5 @@ def test_transformer():
          [3 / 2, -3]]
     ])
     assert_array_almost_equal(transformer.compute(params), expected)
+
+
