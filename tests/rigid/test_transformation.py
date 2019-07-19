@@ -1,5 +1,5 @@
 from autograd import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from vitamine.rigid.transformation import (
     inv_transform_each, transform_each, world_to_camera)
@@ -133,11 +133,6 @@ def test_poses_from_world():
         inv_transform_each(rotations, camera_locations, points),
         expected
     )
-
-    # rotations = np.swapaxes(rotations, 1, 2)
-    # translations = np.array(
-    #     [-np.dot(R, c) for R, c in zip(rotations, camera_locations)]
-    # )
 
     rotations, translations = world_to_camera(rotations, camera_locations)
     assert_array_almost_equal(
