@@ -14,6 +14,15 @@ class ParameterConverter(object):
             points[self.point_mask].flatten()
         ))
 
+    def mask_keypoints(self, keypoints):
+        """
+        Remove keypoint elements where the estimated projection becomes nan
+        """
+        # FIXME just not clever
+        keypoints = keypoints[self.pose_mask]
+        keypoints = keypoints[:, self.point_mask]
+        return keypoints
+
     def from_params(self, params):
         assert(params.shape[0] == self.ndim)
 

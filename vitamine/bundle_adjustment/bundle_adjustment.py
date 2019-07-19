@@ -40,39 +40,25 @@ class Transformer(BaseTransformer):
         omegas, translations, points = self.converter.from_params(params)
 
         points = self.transform.compute(omegas, translations, points)
-
         points = self.reshape1.compute(points)
-
         keypoints = self.projection.compute(points)
-
         keypoints = self.reshape2.compute(keypoints)
-
         return keypoints
 
 
 class MaskedResidual(BaseResidual):
-    def __init__(self, y, transformer, converter):
-        super().__init__(y, transformer)
-        self.pose_mask = converter.pose_mask
-        self.point_mask = converter.point_mask
-
     def compute(self, theta):
-        x = self.transformer.compute(theta)
+        residual = super().compute(theta)
 
-        # FIXME just not clever
-        y = self.y[self.pose_mask]
-        y = y[:, self.point_mask]
-
-        residual = y - x
         mask = keypoint_mask(residual)
 
-        # ndim of residual will be reduced from 3 to 2
+        # ndim of residual will be reduced from 3 to 2 by masking
         residual = residual[mask]
-        # but explicitly reshape it
-        residual = residual.reshape(-1, 2)
-
         assert(np.all(~np.isnan(residual)))
-        return residual
+
+        # but explicitly reshape it
+        # Because expcilit is better than implicit
+        return residual.reshape(-1, 2)
 
 
 class BundleAdjustmentSolver(object):
@@ -97,9 +83,10 @@ def bundle_adjustment(keypoints, camera_parameters,
                               initial_points)
 
     params = converter.to_params(*initializer.initialize())
+    keypoints = converter.mask_keypoints(keypoints)
 
     transformer = Transformer(camera_parameters, converter)
-    residual = MaskedResidual(keypoints, transformer, converter)
+    residual = MaskedResidual(keypoints, transformer)
 
     solver = BundleAdjustmentSolver(residual).solve(params)
     return converter.from_params(params)
