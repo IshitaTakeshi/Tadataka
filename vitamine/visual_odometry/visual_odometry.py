@@ -1,4 +1,4 @@
-from vitamine.bundle_adjustment.bundle_adjustment import BundleAdjustment
+from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment
 
 
 class VisualOdometry(object):
@@ -11,16 +11,15 @@ class VisualOdometry(object):
         self.end = n_observations if end is None else max(n_observations, end)
         assert(self.start < self.end)
 
-    def frames(self):
+    def sequence(self):
         for i in range(self.start, self.end-self.window_size+1):
             yield self.estimate(i)
 
     def estimate(self, i):
-        ba = BundleAdjustment(
+        return bundle_adjustment(
             self.observations[i:i+self.window_size],
             self.camera_parameters,
             # initial_omegas=omegas,
             # initial_translations=translations,
             # initial_points=points
         )
-        return ba.optimize()

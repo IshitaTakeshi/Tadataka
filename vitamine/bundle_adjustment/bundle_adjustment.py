@@ -28,23 +28,24 @@ class RigidTransform(Function):
 class Transformer(BaseTransformer):
     def __init__(self, camera_parameters, converter):
         self.converter = converter
+        N = self.converter.n_valid_viewpoints
+        M = self.converter.n_valid_points
 
         self.transform = RigidTransform()
+        self.reshape1 = Reshape((N * M, 3))
         self.projection = PerspectiveProjection(camera_parameters)
+        self.reshape2 = Reshape((N, M, 2))
 
     def compute(self, params):
         omegas, translations, points = self.converter.from_params(params)
 
-        N = self.converter.n_valid_viewpoints
-        M = self.converter.n_valid_points
-
         points = self.transform.compute(omegas, translations, points)
 
-        points = points.reshape((N * M, 3))
+        points = self.reshape1.compute(points)
 
         keypoints = self.projection.compute(points)
 
-        keypoints = keypoints.reshape((N, M, 2))
+        keypoints = self.reshape2.compute(keypoints)
 
         return keypoints
 
@@ -52,14 +53,15 @@ class Transformer(BaseTransformer):
 class MaskedResidual(BaseResidual):
     def __init__(self, y, transformer, converter):
         super().__init__(y, transformer)
-        self.converter = converter
+        self.pose_mask = converter.pose_mask
+        self.point_mask = converter.point_mask
 
     def compute(self, theta):
         x = self.transformer.compute(theta)
 
-        # FIXME just not wise
-        y = self.y[self.converter.pose_mask]
-        y = y[:, self.converter.point_mask]
+        # FIXME just not clever
+        y = self.y[self.pose_mask]
+        y = y[:, self.point_mask]
 
         residual = y - x
         mask = keypoint_mask(residual)
@@ -84,28 +86,20 @@ class BundleAdjustmentSolver(object):
         return self.optimizer.optimize(initial_params)
 
 
-class BundleAdjustment(object):
-    def __init__(self, keypoints, camera_parameters,
-                 initial_omegas=None, initial_translations=None,
-                 initial_points=None):
-        """
-        keypoints: np.ndarray
-            Keypoint coordinates of shape (n_viewpoints, n_points, 2)
-        """
+def bundle_adjustment(keypoints, camera_parameters,
+                      initial_omegas=None, initial_translations=None,
+                      initial_points=None):
 
-        self.initializer = Initializer(keypoints, camera_parameters.matrix,
-                                       initial_omegas, initial_translations,
-                                       initial_points)
+    converter = ParameterConverter()
 
-        self.converter = ParameterConverter()
-        transformer = Transformer(camera_parameters, self.converter)
-        residual = MaskedResidual(keypoints, transformer, self.converter)
+    initializer = Initializer(keypoints, camera_parameters.matrix,
+                              initial_omegas, initial_translations,
+                              initial_points)
 
-        self.solver = BundleAdjustmentSolver(residual)
+    params = converter.to_params(*initializer.initialize())
 
-    def optimize(self):
-        params = self.initializer.initialize()
-        params = self.converter.to_params(*params)
-        assert(np.all(~np.isnan(params)))
-        params = self.solver.solve(params)
-        return self.converter.from_params(params)
+    transformer = Transformer(camera_parameters, converter)
+    residual = MaskedResidual(keypoints, transformer, converter)
+
+    solver = BundleAdjustmentSolver(residual).solve(params)
+    return converter.from_params(params)
