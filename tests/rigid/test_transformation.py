@@ -1,7 +1,9 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
 
-from vitamine.rigid.transformation import transform_each, inv_transform_each
+from vitamine.rigid.transformation import (
+    inv_transform_each, transform_each, world_to_camera)
+
 
 def test_transform_each():
     points = np.array([
@@ -86,3 +88,59 @@ def test_inv_transform_each():
 
     assert_array_equal(inv_transform_each(rotations, translations, points),
                        expected)
+
+
+def test_poses_from_world():
+    # we describe rotations below according to the right hand rule
+    # along with the camera_locations in the world coordinate system
+
+    rotations = np.array([
+        # rotate camera 90 degrees along the axis [0, 1, 0]
+        [[0, 0, 1],
+         [0, 1, 0],
+         [-1, 0, 0]],
+        # rotate camera 45 degrees along the axis [1, 0, 0]
+        [[1, 0, 0],
+         [0, 1, -1],
+         [0, 1, 1]]
+    ])
+
+    camera_locations = np.array([
+        [1, 0, 0],  # move 1.0 to the right
+        [0, 0, -1]  # move 1.0 to the back
+    ])
+
+    points = np.array([
+        [0, 0, 0],
+        [-1, 0, 0],
+        [0, 0, 1],
+        [1, 0, -0.5]
+    ])
+
+    # relative point coordinates from each camera
+    expected = np.array([
+        [[0, 0, -1],
+         [0, 0, -2],
+         [-1, 0, -1],
+         [0.5, 0, 0]],
+        [[0, 1, 1],
+         [-1, 1, 1],
+         [0, 2, 2],
+         [1, 0.5, 0.5]]
+    ])
+
+    assert_array_almost_equal(
+        inv_transform_each(rotations, camera_locations, points),
+        expected
+    )
+
+    # rotations = np.swapaxes(rotations, 1, 2)
+    # translations = np.array(
+    #     [-np.dot(R, c) for R, c in zip(rotations, camera_locations)]
+    # )
+
+    rotations, translations = world_to_camera(rotations, camera_locations)
+    assert_array_almost_equal(
+        transform_each(rotations, translations, points),
+        expected
+    )
