@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
-from vitamine.bundle_adjustment.bundle_adjustment import BundleAdjustment
+from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment
 from vitamine.camera import CameraParameters
 from vitamine.dataset.points import cubic_lattice
 from vitamine.dataset.observations import (
@@ -32,8 +32,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from vitamine.visualization.visualizers import plot3d
 
-ba = BundleAdjustment(observations, camera_parameters)
-omegas, translations, points = ba.optimize()
+omegas, translations, points = bundle_adjustment(observations, camera_parameters)
 
 plot3d(points_true)
 plot3d(points)
