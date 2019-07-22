@@ -17,12 +17,12 @@ from vitamine.optimization.transformers import BaseTransformer
 from vitamine.projection.projections import PerspectiveProjection
 
 from vitamine.rigid.rotation import rodrigues
-from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_all
 
 
 class RigidTransform(Function):
     def compute(self, omegas, translations, points):
-        return transform_each(rodrigues(omegas), translations, points)
+        return transform_all(rodrigues(omegas), translations, points)
 
 
 class Transformer(BaseTransformer):

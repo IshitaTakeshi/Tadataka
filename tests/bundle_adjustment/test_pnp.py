@@ -4,14 +4,14 @@ from numpy.testing import (assert_array_equal, assert_array_almost_equal,
 
 from vitamine.bundle_adjustment.pnp import estimate_poses
 from vitamine.camera import CameraParameters
-from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_all
 from vitamine.rigid.rotation import rodrigues
 from vitamine.projection.projections import PerspectiveProjection
 
 
 def test_initialize():
     def project(rotations, translations, points, projection):
-        points = transform_each(rotations, translations, points)
+        points = transform_all(rotations, translations, points)
         keypoints = projection.compute(points.reshape(-1, 3))
         keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
         return keypoints

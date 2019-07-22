@@ -5,7 +5,7 @@ from vitamine.camera import CameraParameters
 from vitamine.projection.projections import PerspectiveProjection
 from vitamine.dataset.observations import (
     generate_translations, generate_observations)
-from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_all
 
 
 points = np.array([
@@ -37,7 +37,7 @@ assert((np.linalg.det(rotations) == 1).all())
 def test_generate_translations():
     def run(offset):
         translations = generate_translations(rotations, points, offset)
-        P = transform_each(rotations, translations, points)
+        P = transform_all(rotations, translations, points)
         P = P.reshape(-1, 3)
         # check z >= offset for (x, y, z) in P
         # HACK preferable to use 'assert_array_less' instead of 'assert'

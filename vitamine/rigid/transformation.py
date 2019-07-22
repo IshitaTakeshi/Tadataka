@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 
-def transform_each(rotations, translations, points):
+def transform_all(rotations, translations, points):
     # same as computing
     # for R, t in zip(rotations, translations):
     #     for p in points:
@@ -28,7 +28,7 @@ def transform_each(rotations, translations, points):
     return points
 
 
-def inv_transform_each(rotations, translations, points):
+def inv_transform_all(rotations, translations, points):
     assert(rotations.shape[0] == translations.shape[0])
     assert(rotations.shape[1:3] == (3, 3))
     assert(translations.shape[1] == 3)

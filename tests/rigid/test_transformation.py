@@ -2,10 +2,10 @@ from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from vitamine.rigid.transformation import (
-    inv_transform_each, transform_each, world_to_camera)
+    inv_transform_all, transform_all, world_to_camera)
 
 
-def test_transform_each():
+def test_transform_all():
     points = np.array([
         [1, 2, 5],
         [4, -2, 3],
@@ -35,11 +35,11 @@ def test_transform_each():
          [-2, 5, 6]]   # [-6,  0,  0] + [ 4,  5,  6]
     ])
 
-    assert_array_equal(transform_each(rotations, translations, points),
+    assert_array_equal(transform_all(rotations, translations, points),
                        expected)
 
 
-def test_inv_transform_each():
+def test_inv_transform_all():
     points = np.array([
         [1, 2, 5],
         [4, -2, 3],
@@ -86,7 +86,7 @@ def test_inv_transform_each():
          [0, -5, 4]]
     ])
 
-    assert_array_equal(inv_transform_each(rotations, translations, points),
+    assert_array_equal(inv_transform_all(rotations, translations, points),
                        expected)
 
 
@@ -130,12 +130,12 @@ def test_poses_from_world():
     ])
 
     assert_array_almost_equal(
-        inv_transform_each(rotations, camera_locations, points),
+        inv_transform_all(rotations, camera_locations, points),
         expected
     )
 
     rotations, translations = world_to_camera(rotations, camera_locations)
     assert_array_almost_equal(
-        transform_each(rotations, translations, points),
+        transform_all(rotations, translations, points),
         expected
     )

@@ -7,7 +7,7 @@ from vitamine.dataset.observations import (
     generate_observations, generate_translations
 )
 from vitamine.projection.projections import PerspectiveProjection
-from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_all
 from vitamine.rigid.rotation import rodrigues
 
 

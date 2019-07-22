@@ -1,7 +1,7 @@
 import numpy as np
 
 from vitamine.rigid.rotation import rodrigues
-from vitamine.rigid.transformation import transform_each
+from vitamine.rigid.transformation import transform_all
 
 
 def generate_observations(rotations, translations, points, projection):
@@ -13,7 +13,7 @@ def generate_observations(rotations, translations, points, projection):
     n_points = points.shape[0]
     n_viewpoints = rotations.shape[0]
 
-    points = transform_each(rotations, translations, points)
+    points = transform_all(rotations, translations, points)
 
     positive_depth_mask = points[:, :, 2] > 0
 
