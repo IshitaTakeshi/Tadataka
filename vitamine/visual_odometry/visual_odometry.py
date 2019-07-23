@@ -1,4 +1,8 @@
 from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment
+from vitamine.bundle_adjustment.initializers import (
+    PoseInitializer, PointInitializer)
+from vitamine.bundle_adjustment.parameters import (
+    ParameterMask, from_params, to_params)
 
 
 class VisualOdometry(object):
@@ -12,14 +16,39 @@ class VisualOdometry(object):
         assert(self.start < self.end)
 
     def sequence(self):
-        for i in range(self.start, self.end-self.window_size+1):
-            yield self.estimate(i)
+        K = self.camera_parameters.matrix
 
-    def estimate(self, i):
-        return bundle_adjustment(
-            self.observations[i:i+self.window_size],
-            self.camera_parameters,
-            # initial_omegas=omegas,
-            # initial_translations=translations,
-            # initial_points=points
-        )
+        initial_omegas = None
+        initial_translations = None
+        initial_points = None
+
+        for i in range(self.start, self.end-self.window_size+1):
+            keypoints = self.observations[i:i+self.window_size]
+
+            if initial_points is None:
+                point_initializer = PointInitializer(keypoints, K)
+                initial_points = point_initializer.initialize()
+
+            if initial_omegas is None and initial_translations is None:
+                pose_initializer = PoseInitializer(keypoints, K)
+                initial_omegas, initial_translations =\
+                    pose_initializer.initialize(initial_points)
+
+            mask = ParameterMask(initial_omegas, initial_translations,
+                                 initial_points)
+            omegas, translations, points = mask.get_masked()
+            params = to_params(omegas, translations, points)
+
+            keypoints = mask.mask_keypoints(keypoints)
+
+            params = bundle_adjustment(keypoints, params,
+                                       mask.n_valid_viewpoints,
+                                       mask.n_valid_points,
+                                       self.camera_parameters)
+
+            omegas, translations, points =\
+                from_params(params, mask.n_valid_viewpoints, mask.n_valid_points)
+
+            initial_omegas, initial_translations, initial_points =\
+                mask.fill(omegas, translations, points)
+            yield omegas, translations, points
