@@ -16,16 +16,11 @@ def select_initial_viewpoints(keypoints):
 
 
 class PointInitializer(object):
-    def __init__(self, keypoints, K, initial_points=None):
-        self.initial_points = initial_points
-
+    def __init__(self, keypoints, K):
         self.keypoints = keypoints
         self.K = K
 
     def initialize(self):
-        if self.initial_points is not None:
-            return self.initial_points
-
         mask, viewpoint1, viewpoint2 = select_initial_viewpoints(
             self.keypoints
         )
@@ -41,36 +36,19 @@ class PointInitializer(object):
 
 
 class PoseInitializer(object):
-    def __init__(self, keypoints, K,
-                 initial_omegas=None, initial_translations=None):
-        self.initial_omegas = initial_omegas
-        self.initial_translations = initial_translations
-
+    def __init__(self, keypoints, K):
         self.keypoints = keypoints
         self.K = K
 
     def initialize(self, points):
-        initial_omegas = self.initial_omegas
-        initial_translations = self.initial_translations
-
-        if initial_omegas is not None and initial_translations is not None:
-            return initial_omegas, initial_translations
-
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
-
-        if initial_omegas is not None:
-            return initial_omegas, translations
-
-        if initial_translations is not None:
-            return omegas, initial_translations
-
         return omegas, translations
 
 
 class Initializer(BaseInitializer):
     def __init__(self, keypoints, K,
-                 initial_omegas=None, initial_translations=None,
-                 initial_points=None):
+                 initial_omegas, initial_translations,
+                 initial_points):
         self.point_initializer = PointInitializer(
             keypoints, K, initial_points)
         self.pose_initializer = PoseInitializer(
