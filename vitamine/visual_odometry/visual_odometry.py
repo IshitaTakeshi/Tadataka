@@ -29,10 +29,9 @@ class VisualOdometry(object):
                 point_initializer = PointInitializer(keypoints, K)
                 initial_points = point_initializer.initialize()
 
-            if initial_omegas is None and initial_translations is None:
-                pose_initializer = PoseInitializer(keypoints, K)
-                initial_omegas, initial_translations =\
-                    pose_initializer.initialize(initial_points)
+            pose_initializer = PoseInitializer(keypoints, K)
+            initial_omegas, initial_translations =\
+                pose_initializer.initialize(initial_points)
 
             mask = ParameterMask(initial_omegas, initial_translations,
                                  initial_points)
