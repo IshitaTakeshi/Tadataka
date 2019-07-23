@@ -1,7 +1,6 @@
 from autograd import numpy as np
 
 from vitamine.bundle_adjustment.initializers import Initializer
-from vitamine.bundle_adjustment.parameters import ParameterConverter
 from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
 
 from vitamine.optimization.robustifiers import SquaredRobustifier
@@ -18,6 +17,7 @@ from vitamine.projection.projections import PerspectiveProjection
 
 from vitamine.rigid.rotation import rodrigues
 from vitamine.rigid.transformation import transform_all
+from vitamine.bundle_adjustment.parameters import from_params
 
 
 class RigidTransform(Function):
@@ -26,10 +26,12 @@ class RigidTransform(Function):
 
 
 class Transformer(BaseTransformer):
-    def __init__(self, camera_parameters, converter):
-        self.converter = converter
-        N = self.converter.n_valid_viewpoints
-        M = self.converter.n_valid_points
+    def __init__(self, camera_parameters, n_valid_viewpoints, n_valid_points):
+        self.n_valid_viewpoints = n_valid_viewpoints
+        self.n_valid_points = n_valid_points
+
+        N = self.n_valid_viewpoints
+        M = self.n_valid_points
 
         self.transform = RigidTransform()
         self.reshape1 = Reshape((N * M, 3))
@@ -37,7 +39,8 @@ class Transformer(BaseTransformer):
         self.reshape2 = Reshape((N, M, 2))
 
     def compute(self, params):
-        omegas, translations, points = self.converter.from_params(params)
+        omegas, translations, points =\
+            from_params(params, self.n_valid_viewpoints, self.n_valid_points)
 
         points = self.transform.compute(omegas, translations, points)
         points = self.reshape1.compute(points)
@@ -72,21 +75,11 @@ class BundleAdjustmentSolver(object):
         return self.optimizer.optimize(initial_params)
 
 
-def bundle_adjustment(keypoints, camera_parameters,
-                      initial_omegas=None, initial_translations=None,
-                      initial_points=None):
-
-    converter = ParameterConverter()
-
-    initializer = Initializer(keypoints, camera_parameters.matrix,
-                              initial_omegas, initial_translations,
-                              initial_points)
-
-    params = converter.to_params(*initializer.initialize())
-    keypoints = converter.mask_keypoints(keypoints)
-
-    transformer = Transformer(camera_parameters, converter)
+def bundle_adjustment(keypoints, initial_params,
+                      n_valid_viewpoints, n_valid_points, camera_parameters):
+    transformer = Transformer(camera_parameters,
+                              n_valid_viewpoints, n_valid_points)
     residual = MaskedResidual(keypoints, transformer)
 
-    solver = BundleAdjustmentSolver(residual).solve(params)
-    return converter.from_params(params)
+    solver = BundleAdjustmentSolver(residual)
+    return solver.solve(initial_params)
