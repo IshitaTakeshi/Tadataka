@@ -75,6 +75,7 @@ def plot2d(P: np.ndarray, do_annotate=False, color=None):
     ax.set_xlabel('x axis')
     ax.set_ylabel('y axis')
     ax.set_aspect('equal', 'datalim')
+    return ax
 
 
 def plot3d(P: np.ndarray, do_annotate=False, color=None, elev=45, azim=0):
@@ -105,3 +106,4 @@ def plot3d(P: np.ndarray, do_annotate=False, color=None, elev=45, azim=0):
     ax.set_zlabel('z axis')
     ax.view_init(elev, azim)
     set_aspect_equal(ax)
+    return ax
