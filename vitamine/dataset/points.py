@@ -79,7 +79,7 @@ def donut(inner_r, outer_r, height=5, point_density=24, n_viewpoints=61):
     camera_locations[:, 1] = camera_y
 
     camera_rotations = rodrigues(
-        np.vstack((np.zeros(n_viewpoints), thetas, np.zeros(n_viewpoints))).T
+        np.vstack((np.zeros(n_viewpoints), -thetas, np.zeros(n_viewpoints))).T
     )
 
     return camera_rotations, camera_locations, points
