@@ -11,10 +11,10 @@ def cameras_poly3d(camera_rotations, camera_locations):
     # by [serenity](https://stackoverflow.com/users/2666859/serenity)
 
     v = np.array([
-        [-0.5, -0.5, 1],
-        [+0.5, -0.5, 1],
-        [+0.5, +0.5, 1],
-        [-0.5, +0.5, 1],
+        [-0.5, -0.5, 1.5],
+        [+0.5, -0.5, 1.5],
+        [+0.5, +0.5, 1.5],
+        [-0.5, +0.5, 1.5],
         [0, 0, 0]
     ])
 
