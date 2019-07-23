@@ -1,10 +1,10 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_almost_equal
 
+from vitamine.bundle_adjustment.parameters import to_params
 from vitamine.camera import CameraParameters
-from vitamine.bundle_adjustment.parameters import ParameterConverter
 from vitamine.bundle_adjustment.bundle_adjustment import (
-    Transformer, MaskedResidual, BundleAdjustmentSolver, bundle_adjustment)
+    Transformer, MaskedResidual, BundleAdjustmentSolver)
 
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
@@ -55,11 +55,8 @@ keypoints_true = np.array([
 
 
 def test_transformer():
-    converter = ParameterConverter()
-
-    params = converter.to_params(omegas_true, translations_true, points_true)
-
-    transformer = Transformer(camera_parameters, converter)
+    params = to_params(omegas_true, translations_true, points_true)
+    transformer = Transformer(camera_parameters, 2, 9)
     assert_array_almost_equal(transformer.compute(params), keypoints_true)
 
 
