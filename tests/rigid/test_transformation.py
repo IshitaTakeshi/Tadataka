@@ -2,7 +2,7 @@ from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from vitamine.rigid.transformation import (
-    inv_transform_all, transform_all, world_to_camera)
+    inv_transform_all, transform_all, world_to_camera, camera_to_world)
 
 
 def test_transform_all():
@@ -90,19 +90,19 @@ def test_inv_transform_all():
                        expected)
 
 
-def test_poses_from_world():
+def test_convert_coordinates():
     # we describe rotations below according to the right hand rule
     # along with the camera_locations in the world coordinate system
 
-    rotations = np.array([
+    camera_rotations = np.array([
         # rotate camera 90 degrees along the axis [0, 1, 0]
         [[0, 0, 1],
          [0, 1, 0],
          [-1, 0, 0]],
         # rotate camera 45 degrees along the axis [1, 0, 0]
         [[1, 0, 0],
-         [0, 1, -1],
-         [0, 1, 1]]
+         [0, 1 / np.sqrt(2), -1 / np.sqrt(2)],
+         [0, 1 / np.sqrt(2), 1 / np.sqrt(2)]]
     ])
 
     camera_locations = np.array([
@@ -110,32 +110,27 @@ def test_poses_from_world():
         [0, 0, -1]  # move 1.0 to the back
     ])
 
-    points = np.array([
-        [0, 0, 0],
-        [-1, 0, 0],
-        [0, 0, 1],
-        [1, 0, -0.5]
-    ])
+    rotations, translations = world_to_camera(camera_rotations, camera_locations)
 
-    # relative point coordinates from each camera
+    expected = np.array([
+        [0, 0, -1],
+        [0, 1 / np.sqrt(2), 1 / np.sqrt(2)]
+    ])
+    assert_array_equal(translations, expected)
+
     expected = np.array([
         [[0, 0, -1],
-         [0, 0, -2],
-         [-1, 0, -1],
-         [0.5, 0, 0]],
-        [[0, 1, 1],
-         [-1, 1, 1],
-         [0, 2, 2],
-         [1, 0.5, 0.5]]
+         [0, 1, 0],
+         [1, 0, 0]],
+        [[1, 0, 0],
+         [0, 1 / np.sqrt(2), 1 / np.sqrt(2)],
+         [0, -1 / np.sqrt(2), 1 / np.sqrt(2)]]
     ])
 
-    assert_array_almost_equal(
-        inv_transform_all(rotations, camera_locations, points),
-        expected
-    )
+    assert_array_equal(rotations, expected)
 
-    rotations, translations = world_to_camera(rotations, camera_locations)
-    assert_array_almost_equal(
-        transform_all(rotations, translations, points),
-        expected
-    )
+    camera_rotations_, camera_locations_ =\
+        camera_to_world(rotations, translations)
+
+    assert_array_almost_equal(camera_rotations_, camera_rotations)
+    assert_array_almost_equal(camera_locations_, camera_locations)
