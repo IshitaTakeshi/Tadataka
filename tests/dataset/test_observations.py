@@ -1,5 +1,6 @@
 import numpy as np
-from numpy.testing import assert_array_less, assert_array_equal
+from numpy.testing import (assert_array_less, assert_array_equal,
+                           assert_array_almost_equal)
 
 from vitamine.camera import CameraParameters
 from vitamine.projection.projections import PerspectiveProjection
@@ -63,7 +64,7 @@ def test_generate_observations():
          [1 / -1, -2 / -1]],
     ])
 
-    assert_array_equal(observations, expected)
+    assert_array_almost_equal(observations, expected)
 
     expected = np.array([[False, True, True], [False, False, False]])
     assert_array_equal(positive_depth_mask, expected)

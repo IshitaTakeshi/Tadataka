@@ -3,10 +3,13 @@ from autograd import numpy as np
 from vitamine.optimization.functions import Function
 
 
+EPSILON = 1e-16
+
+
 def pi(P):
     Z = P[:, [2]]
     XY = P[:, 0:2]
-    return XY / Z
+    return XY / (Z + EPSILON)
 
 
 class BaseProjection(Function):
