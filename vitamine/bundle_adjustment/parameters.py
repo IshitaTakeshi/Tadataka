@@ -3,36 +3,56 @@ from autograd import numpy as np
 from vitamine.bundle_adjustment.mask import pose_mask, point_mask, fill_masked
 
 
-class ParameterConverter(object):
-    def to_params(self, omegas, translations, points):
+def to_params(omegas, translations, points):
+    return np.concatenate((
+        omegas.flatten(),
+        translations.flatten(),
+        points.flatten()
+    ))
+
+
+def from_params(params, n_valid_viewpoints, n_valid_points):
+    N = n_valid_viewpoints
+    M = n_valid_points
+
+    assert(params.shape[0] == N * 6 + M * 3)
+
+    omegas = params[0:3*N].reshape((N, 3))
+    translations = params[3*N:6*N].reshape((N, 3))
+    points = params[6*N:6*N+3*M].reshape((M, 3))
+
+    return omegas, translations, points
+
+
+class ParameterMask(object):
+    def __init__(self, omegas, translations, points):
+        self.omegas = omegas
+        self.translations = translations
+        self.points = points
+
         self.pose_mask = pose_mask(omegas, translations)
         self.point_mask = point_mask(points)
 
-        return np.concatenate((
-            omegas[self.pose_mask].flatten(),
-            translations[self.pose_mask].flatten(),
-            points[self.point_mask].flatten()
-        ))
+    def get_masked(self):
+        omegas, translations = self.mask_poses(self.omegas, self.translations)
+        points = self.mask_points(self.points)
+        return omegas, translations, points
+
+    def mask_poses(self, omegas, translations):
+        return omegas[self.pose_mask], translations[self.pose_mask]
+
+    def mask_points(self, points):
+        return points[self.point_mask]
 
     def mask_keypoints(self, keypoints):
-        """
-        Remove keypoint elements where the estimated projection becomes nan
-        """
-        # FIXME just not clever
         keypoints = keypoints[self.pose_mask]
         keypoints = keypoints[:, self.point_mask]
         return keypoints
 
-    def from_params(self, params):
-        assert(params.shape[0] == self.ndim)
-
-        N = self.n_valid_viewpoints
-        M = self.n_valid_points
-
-        omegas = params[0:3*N].reshape((N, 3))
-        translations = params[3*N:6*N].reshape((N, 3))
-        points = params[6*N:6*N+3*M].reshape((M, 3))
-
+    def fill(self, omegas, translations, points):
+        omegas = fill_masked(omegas, self.pose_mask)
+        translations = fill_masked(translations, self.pose_mask)
+        points = fill_masked(points, self.point_mask)
         return omegas, translations, points
 
     @property
@@ -42,7 +62,3 @@ class ParameterConverter(object):
     @property
     def n_valid_points(self):
         return np.sum(self.point_mask)
-
-    @property
-    def ndim(self):
-        return self.n_valid_viewpoints * 6 + self.n_valid_points * 3
