@@ -1,6 +1,9 @@
 from autograd import numpy as np
 
-from vitamine.bundle_adjustment.initializers import Initializer
+from vitamine.bundle_adjustment.initializers import (
+    PoseInitializer, PointInitializer)
+from vitamine.bundle_adjustment.parameters import (
+    ParameterMask, from_params, to_params)
 from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
 
 from vitamine.optimization.robustifiers import SquaredRobustifier
@@ -17,7 +20,6 @@ from vitamine.projection.projections import PerspectiveProjection
 
 from vitamine.rigid.rotation import rodrigues
 from vitamine.rigid.transformation import transform_all
-from vitamine.bundle_adjustment.parameters import from_params
 
 
 class RigidTransform(Function):
@@ -75,7 +77,7 @@ class BundleAdjustmentSolver(object):
         return self.optimizer.optimize(initial_params)
 
 
-def bundle_adjustment(keypoints, initial_params,
+def bundle_adjustment_core(keypoints, initial_params,
                       n_valid_viewpoints, n_valid_points, camera_parameters):
     transformer = Transformer(camera_parameters,
                               n_valid_viewpoints, n_valid_points)
@@ -83,3 +85,28 @@ def bundle_adjustment(keypoints, initial_params,
 
     solver = BundleAdjustmentSolver(residual)
     return solver.solve(initial_params)
+
+
+def bundle_adjustment(keypoints, camera_parameters):
+    K = camera_parameters.matrix
+
+    point_initializer = PointInitializer(keypoints, K)
+    initial_points = point_initializer.initialize()
+
+    pose_initializer = PoseInitializer(keypoints, K)
+    initial_omegas, initial_translations =\
+        pose_initializer.initialize(initial_points)
+
+    mask = ParameterMask(initial_omegas, initial_translations,
+                         initial_points)
+    params = to_params(*mask.get_masked())
+    keypoints = mask.mask_keypoints(keypoints)
+
+    params = bundle_adjustment_core(keypoints, params,
+                                    mask.n_valid_viewpoints,
+                                    mask.n_valid_points,
+                                    camera_parameters)
+
+    omegas, translations, points =\
+        from_params(params, mask.n_valid_viewpoints, mask.n_valid_points)
+    return omegas, translations, points
