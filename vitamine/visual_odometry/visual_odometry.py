@@ -1,4 +1,6 @@
-from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment
+from autograd import numpy as np
+
+from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment_core
 from vitamine.bundle_adjustment.initializers import (
     PoseInitializer, PointInitializer)
 from vitamine.bundle_adjustment.parameters import (
@@ -35,15 +37,13 @@ class VisualOdometry(object):
 
             mask = ParameterMask(initial_omegas, initial_translations,
                                  initial_points)
-            omegas, translations, points = mask.get_masked()
-            params = to_params(omegas, translations, points)
-
+            params = to_params(*mask.get_masked())
             keypoints = mask.mask_keypoints(keypoints)
 
-            params = bundle_adjustment(keypoints, params,
-                                       mask.n_valid_viewpoints,
-                                       mask.n_valid_points,
-                                       self.camera_parameters)
+            params = bundle_adjustment_core(keypoints, params,
+                                            mask.n_valid_viewpoints,
+                                            mask.n_valid_points,
+                                            self.camera_parameters)
 
             omegas, translations, points =\
                 from_params(params, mask.n_valid_viewpoints, mask.n_valid_points)
