@@ -11,14 +11,19 @@ from vitamine.visualization.cameras import cameras_poly3d
 
 
 class VisualOdometryAnimation(object):
-    def __init__(self, fig, ax, frames, interval=100):
+    def __init__(self, fig, ax, frames, interval=100, camera_scale=1.0):
         self.ax = ax
         self.animation = FuncAnimation(fig, self.animate, frames=frames,
                                        interval=interval)
+        self.camera_scale = camera_scale
 
     def animate(self, args):
         omegas, translations, points = args
-        cameras = cameras_poly3d(rodrigues(omegas), translations)
+        cameras = cameras_poly3d(
+            rodrigues(omegas),
+            translations,
+            self.camera_scale
+        )
         points_ = self.ax.scatter(
             points[:, 0], points[:, 1], points[:, 2],
             c=object_color(points)

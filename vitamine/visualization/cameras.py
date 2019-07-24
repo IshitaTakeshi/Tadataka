@@ -5,7 +5,7 @@ import numpy as np
 from vitamine.rigid.transformation import transform_all
 
 
-def cameras_poly3d(camera_rotations, camera_locations):
+def cameras_poly3d(camera_rotations, camera_locations, scale=1.0):
     # this code is the modified version of
     # [an answer](https://stackoverflow.com/a/44920709)
     # by [serenity](https://stackoverflow.com/users/2666859/serenity)
@@ -18,7 +18,7 @@ def cameras_poly3d(camera_rotations, camera_locations):
         [0, 0, 0]
     ])
 
-    V = transform_all(camera_rotations, camera_locations, v)
+    V = transform_all(camera_rotations, camera_locations, v * scale)
 
     verts = []
     for v in V:
