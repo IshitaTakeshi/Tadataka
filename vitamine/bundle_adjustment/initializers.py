@@ -7,27 +7,20 @@ from vitamine.bundle_adjustment.mask import keypoint_mask
 from vitamine.optimization.initializers import BaseInitializer
 
 
-def select_initial_viewpoints(keypoints):
-    masks = keypoint_mask(keypoints)
-    n_visible = np.sum(masks, axis=1)
-    viewpoint1, viewpoint2 = np.argsort(n_visible)[::-1][0:2]
-    mask = np.logical_and(masks[viewpoint1], masks[viewpoint2])
-    return mask, viewpoint1, viewpoint2
-
-
 class PointInitializer(object):
-    def __init__(self, keypoints, K):
+    def __init__(self, keypoints, K, viewpoint1, viewpoint2):
         self.keypoints = keypoints
         self.K = K
+        self.viewpoint1 = viewpoint1
+        self.viewpoint2 = viewpoint2
 
     def initialize(self):
-        mask, viewpoint1, viewpoint2 = select_initial_viewpoints(
-            self.keypoints
-        )
+        masks = keypoint_mask(self.keypoints)
+        mask = np.logical_and(masks[self.viewpoint1], masks[self.viewpoint2])
 
         R, t, points_ = two_view_reconstruction(
-            self.keypoints[viewpoint1, mask],
-            self.keypoints[viewpoint2, mask],
+            self.keypoints[self.viewpoint1, mask],
+            self.keypoints[self.viewpoint2, mask],
             self.K
         )
 
@@ -41,8 +34,7 @@ class PoseInitializer(object):
         self.K = K
 
     def initialize(self, points):
-        omegas, translations = estimate_poses(points, self.keypoints, self.K)
-        return omegas, translations
+        return estimate_poses(points, self.keypoints, self.K)
 
 
 class Initializer(BaseInitializer):
