@@ -53,10 +53,6 @@ def inv_transform_all(rotations, translations, points):
     return points - translations
 
 
-def transpose_each(rotations):
-    return np.swapaxes(rotations, 1, 2)
-
-
 def rotate_each(rotations, points):
     # the computation is same as below
     # [np.dot(R, p) for R, p in zip(rotations, points)
@@ -65,46 +61,6 @@ def rotate_each(rotations, points):
     assert(points.shape[1] == 3)
 
     return np.einsum('ijk,ik->ij', rotations, points)
-
-
-def convert_coordinates(R, t):
-    R = transpose_each(R)
-    t = -rotate_each(R, t)
-    return R, t
-
-
-def world_to_camera(camera_rotations, camera_locations):
-    """
-    Given rotations and camera locations in the world coordinate system,
-    return rotations and translations for rigid transformation
-
-    camera_rotations:
-        Camera rotations in the world coordinate system
-    camera_locations:
-        Camera locations in the world coordinate system
-    """
-
-    rotations, translations =\
-        convert_coordinates(camera_rotations, camera_locations)
-    return rotations, translations
-
-
-def camera_to_world(rotations, translations):
-    """
-    Given rotations and translations in the camera coordinate system,
-    return camera rotations and locations
-
-    rotations:
-        Relative rotations of the world coordinate system
-        seen from cameras
-    translations:
-        Relative locations of the world origin
-    """
-
-    camera_rotations, camera_locations =\
-        convert_coordinates(rotations, translations)
-    return camera_rotations, camera_locations
-
 
 
 def transform(R, t, X):
