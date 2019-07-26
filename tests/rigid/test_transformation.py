@@ -1,8 +1,8 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from vitamine.rigid.transformation import (
-    inv_transform_all, transform_all, world_to_camera, camera_to_world)
+from vitamine.rigid.transformation import inv_transform_all, transform_all
+from vitamine.rigid.coordinates import world_to_camera, camera_to_world
 
 
 def test_transform_all():
@@ -126,7 +126,6 @@ def test_convert_coordinates():
          [0, 1 / np.sqrt(2), 1 / np.sqrt(2)],
          [0, -1 / np.sqrt(2), 1 / np.sqrt(2)]]
     ])
-
     assert_array_equal(rotations, expected)
 
     camera_rotations_, camera_locations_ =\
