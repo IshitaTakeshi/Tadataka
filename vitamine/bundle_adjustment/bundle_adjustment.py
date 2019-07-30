@@ -78,35 +78,11 @@ class BundleAdjustmentSolver(object):
 
 
 def bundle_adjustment_core(keypoints, initial_params,
-                      n_valid_viewpoints, n_valid_points, camera_parameters):
+                           n_valid_viewpoints, n_valid_points,
+                           camera_parameters):
     transformer = Transformer(camera_parameters,
                               n_valid_viewpoints, n_valid_points)
     residual = MaskedResidual(keypoints, transformer)
 
     solver = BundleAdjustmentSolver(residual)
     return solver.solve(initial_params)
-
-
-def bundle_adjustment(keypoints, camera_parameters):
-    K = camera_parameters.matrix
-
-    point_initializer = PointInitializer(keypoints, K)
-    initial_points = point_initializer.initialize()
-
-    pose_initializer = PoseInitializer(keypoints, K)
-    initial_omegas, initial_translations =\
-        pose_initializer.initialize(initial_points)
-
-    mask = ParameterMask(initial_omegas, initial_translations,
-                         initial_points)
-    params = to_params(*mask.get_masked())
-    keypoints = mask.mask_keypoints(keypoints)
-
-    params = bundle_adjustment_core(keypoints, params,
-                                    mask.n_valid_viewpoints,
-                                    mask.n_valid_points,
-                                    camera_parameters)
-
-    omegas, translations, points =\
-        from_params(params, mask.n_valid_viewpoints, mask.n_valid_points)
-    return omegas, translations, points
