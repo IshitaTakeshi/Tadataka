@@ -121,20 +121,20 @@ def extract_poses(E):
     return R1, R2, t1, t2
 
 
-def points_from_pose(keypoints0, keypoints1, R1, t1, K):
+def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
     """
     Reconstruct 3D points from 2 camera poses.
     The first camera pose is assumed to be R = identity, t = zeros.
     """
 
     assert(keypoints0.shape == keypoints1.shape)
-    N = keypoints0.shape[0]
+    n_points = keypoints0.shape[0]
 
-    points = np.empty((N, 3))
+    points = np.empty((n_points, 3))
     depths_are_valid = True
-    for i in range(N):
+    for i in range(n_points):
         points[i], depth0, depth1 = linear_triangulation(
-            keypoints0[i], keypoints1[i], R1, t1, K)
+            R0, R1, t0, t1, keypoints0[i], keypoints1[i], K)
 
         depth_is_valid = depth0 > 0 and depth1 > 0
         depths_are_valid = depths_are_valid and depth_is_valid
