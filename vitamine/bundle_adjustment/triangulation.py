@@ -53,7 +53,7 @@ def fundamental_to_essential(F, K0, K1=None):
 
 
 # TODO compute multiple points
-def linear_triangulation(point0, point1, R1, t1, K):
+def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1, K):
     def calc_depth(P, x):
         return np.dot(P[2], x)
 
@@ -63,13 +63,11 @@ def linear_triangulation(point0, point1, R1, t1, K):
         T[0:3, 3] = t
         return T
 
-    R0, t0 = np.identity(3), np.zeros(3)
-
     P0 = np.dot(K, motion_matrix(R0, t0))
     P1 = np.dot(K, motion_matrix(R1, t1))
 
-    x0, y0 = point0
-    x1, y1 = point1
+    x0, y0 = keypoints0
+    x1, y1 = keypoints1
 
     # See section 12.2 for details
     A = np.vstack([
