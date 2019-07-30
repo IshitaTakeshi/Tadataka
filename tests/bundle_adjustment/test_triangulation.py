@@ -200,7 +200,7 @@ def test_initializers():
     keypoints = projection.compute(points.reshape(-1, 3))
     keypoints = keypoints.reshape(*points.shape[0:2], 2)
 
-    point_initializer = PointInitializer(keypoints, K, 0, 1)
+    point_initializer = PointInitializer(keypoints[0], keypoints[1], K)
     points_pred = point_initializer.initialize()
     assert_equal(points_pred.shape, X_true.shape)
 
