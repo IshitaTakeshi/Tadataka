@@ -16,8 +16,8 @@ class InitialViewpointFinder(object):
         return viewpoint1, viewpoint2
 
 
-def estimate_pose(points, keypoints_, K):
-    omega, translation = estimate_pose(points, keypoints_, self.K)
+def estimate_pose_(points, keypoints_, K):
+    omega, translation = estimate_pose(points, keypoints_, K)
     return rodrigues(omega.reshape(1, -1))[0], translation
 
 
@@ -35,33 +35,38 @@ def select_next_viewpoint(points, keypoints, used_viewpoints):
     raise ValueError
 
 
-class Initializer(object):
-    def __init__(self, keypoints, K, viewpoint_finder):
+class PointUpdater(object):
+    def __init__(self, keypoints, K):
         self.keypoints = keypoints
-        self.viewpoint_finder = viewpoint_finder
         self.K = K
 
-    def update(self, points, used_viewpoints):
-        K = self.K
-        next_viewpoint = select_next_viewpoint(points, self.keypoints,
-                                               used_viewpoints)
+    def update(self, points, viewpoints, next_viewpoint):
+        assert(next_viewpoint not in viewpoints)
+
         next_keypoints = self.keypoints[next_viewpoint]
 
-        R0, t0 = estimate_pose(points, next_keypoints, self.K)
+        R0, t0 = estimate_pose_(points, next_keypoints, self.K)
 
-        # run triangulation for all used viewpoints
-        for viewpoint in used_viewpoints:
+        for viewpoint in viewpoints:
             keypoints_ = self.keypoints[viewpoint]
+
+            R1, t1 = estimate_pose_(points, keypoints_, self.K)
+
             mask = correspondence_mask(next_keypoints, keypoints_)
 
-            R1, t1 = estimate_pose(points, keypoints_, self.K)
-            points_, depths_are_valid = points_from_known_poses(
-                R0, R1, t0, t1, next_keypoints[mask], keypoints_[mask], self.K)
-            points[mask] = points_
+            # HACK should we check 'depths_are_valid' ?
+            points[mask], depths_are_valid = points_from_known_poses(
+                R0, R1, t0, t1,
+                next_keypoints[mask], keypoints_[mask], self.K
+            )
+        return points
 
-        used_viewpoints.add(next_viewpoint)
 
-        return points, used_viewpoints
+class Initializer(object):
+    def __init__(self, keypoints, K):
+        self.keypoints = keypoints
+        self.K = K
+        self.updater = PointUpdater(self.keypoints, self.K)
 
     def initialize(self, viewpoint1, viewpoint2):
         assert(viewpoint1 != viewpoint2)
@@ -70,10 +75,8 @@ class Initializer(object):
         assert(0 <= viewpoint1 < n_viewpoints)
         assert(0 <= viewpoint2 < n_viewpoints)
 
-        mask = correspondence_mask(
-            self.keypoints[viewpoint1],
-            self.keypoints[viewpoint2]
-        )
+        mask = correspondence_mask(self.keypoints[viewpoint1],
+                                   self.keypoints[viewpoint2])
 
         # create the initial points used to determine relative poses of
         # other viewpoints than viewpoint1 and viewpoint2
@@ -88,7 +91,12 @@ class Initializer(object):
         used_viewpoints = {viewpoint1, viewpoint2}
 
         while len(used_viewpoints) < n_viewpoints:
-            points, used_viewpoints = self.update(points, used_viewpoints)
+            next_viewpoint = select_next_viewpoint(points, self.keypoints,
+                                                   used_viewpoints)
+            points = self.updater.update(points, used_viewpoints,
+                                         next_viewpoint)
+            used_viewpoints.add(next_viewpoint)
+
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
         return omegas, translations, points
 
