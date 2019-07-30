@@ -141,21 +141,26 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
     return points, depths_are_valid
 
 
-def two_view_reconstruction(keypoints0, keypoints1, K):
+def points_from_unknown_poses(keypoints0, keypoints1, K):
+    """
+    keypoints[01].shape == (n_points, 2)
+    """
     assert(keypoints0.shape == keypoints1.shape)
+
+    R0, t0 = np.identity(3), np.zeros(3)
 
     F = estimate_fundamental(keypoints0, keypoints1)
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    for R, t in itertools.product((R1, R2), (t1, t2)):
-        X, depths_are_valid = points_from_pose(
-            keypoints0, keypoints1, R, t, K)
+    for R_, t_ in itertools.product((R1, R2), (t1, t2)):
+        X, depths_are_valid = points_from_known_poses(
+            R0, R_, t0, t_, keypoints0, keypoints1, K)
 
         # only 1 pair (R, t) among the candidates has to be
         # the correct pair, not more nor less
         if depths_are_valid:
-            return R, t, X
+            return R_, t_, X
 
     # should not reach here
     raise ValueError("Keypoints may contain points where the depth of "
