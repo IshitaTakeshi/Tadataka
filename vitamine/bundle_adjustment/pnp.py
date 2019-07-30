@@ -1,4 +1,4 @@
-from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
+from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask, compute_mask
 
 from autograd import numpy as np
 
@@ -13,33 +13,38 @@ def solve_pnp(points, keypoints, K):
     return rvec, tvec
 
 
-def estimate_poses(points, keypoints, K):
+def estimate_pose(points, keypoints, K):
+    # keypoints.shape == (n_points, 2)
+    assert(keypoints.shape[0] == points.shape[0])
+    assert(keypoints.shape[1] == 2)
+    assert(points.shape[1] == 3)
+
     # at least 'min_correspondences' corresponding points
     # have to be found between keypoitns and 3D poitns
     # to perform PnP
+
     min_correspondences = 4
 
-    # masks.shape == (n_viewpoints, points)
-    # indicates which 3D point to ignore / use from each viewpoint
-    masks = np.logical_and(
+    # mask indicates which 3D point to ignore / use from each viewpoint
+    mask = np.logical_and(
         point_mask(points),
-        keypoint_mask(keypoints)
+        compute_mask(keypoints)
     )
 
+    if np.sum(mask) < min_correspondences:
+        return np.full(3, np.nan), np.full(3, np.nan)
+
+    # use only non nan elements to perform PnP
+    X, P = points[mask], keypoints[mask]
+    return solve_pnp(X, P, K)
+
+
+def estimate_poses(points, keypoints, K):
     n_viewpoints = keypoints.shape[0]
 
     omegas = np.empty((n_viewpoints, 3))
     translations = np.empty((n_viewpoints, 3))
-    for i in range(n_viewpoints):
-        mask = masks[i]
 
-        # np.sum(mask) is the number of 3D / 2D correspondences
-        if np.sum(mask) < min_correspondences:
-            omegas[i] = np.nan
-            translations[i] = np.nan
-            continue
-
-        # use only non nan elements to perform PnP
-        X, P = points[mask], keypoints[i, mask]
-        omegas[i], translations[i] = solve_pnp(X, P, K)
+    for i, keypoints_ in enumerate(keypoints):
+        omegas[i], translations[i] = estimate_pose(points, keypoints_, K)
     return omegas, translations
