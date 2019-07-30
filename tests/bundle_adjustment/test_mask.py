@@ -2,7 +2,8 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from vitamine.bundle_adjustment.mask import (
-    compute_mask, keypoint_mask, point_mask, pose_mask, fill_masked
+    compute_mask, keypoint_mask, point_mask, pose_mask,
+    correspondence_mask, fill_masked
 )
 
 
@@ -67,6 +68,24 @@ def test_pose_mask():
     expected = np.array([True, False, False, False])
     assert_array_equal(pose_mask(omegas, translations), expected)
 
+
+def test_correspondence_mask():
+    keypoints1 = np.array([
+        [np.nan, np.nan],
+        [0, 1],
+        [2, 3],
+        [np.nan, np.nan],
+        [4, 5]
+    ])
+    keypoints2 = np.array([
+        [np.nan, np.nan],
+        [0, 1],
+        [2, 3],
+        [4, 5],
+        [np.nan, np.nan]
+    ])
+    expected = np.array([False, True, True, False, False])
+    assert_array_equal(correspondence_mask(keypoints1, keypoints2), expected)
 
 def test_fill_masked():
     array = np.arange(6).reshape(3, 2)
