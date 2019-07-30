@@ -127,7 +127,12 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
     The first camera pose is assumed to be R = identity, t = zeros.
     """
 
+    assert(R0.shape == (3, 3))
+    assert(R1.shape == (3, 3))
+    assert(t0.shape == (3,))
+    assert(t1.shape == (3,))
     assert(keypoints0.shape == keypoints1.shape)
+
     n_points = keypoints0.shape[0]
 
     points = np.empty((n_points, 3))
