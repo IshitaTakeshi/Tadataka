@@ -1,6 +1,6 @@
 from autograd import numpy as np
-from vitamine.bundle_adjustment.triangulation import two_view_reconstruction
-from vitamine.bundle_adjustment.mask import fill_masked
+from vitamine.bundle_adjustment.triangulation import points_from_unknown_poses
+from vitamine.bundle_adjustment.mask import fill_masked, correspondence_mask
 from vitamine.bundle_adjustment.pnp import estimate_poses
 
 from vitamine.bundle_adjustment.mask import keypoint_mask
@@ -8,24 +8,20 @@ from vitamine.optimization.initializers import BaseInitializer
 
 
 class PointInitializer(object):
-    def __init__(self, keypoints, K, viewpoint1, viewpoint2):
-        self.keypoints = keypoints
+    def __init__(self, keypoints1, keypoints2, K):
+        self.mask = correspondence_mask(keypoints1, keypoints2)
+        self.keypoints1 = keypoints1[self.mask]
+        self.keypoints2 = keypoints2[self.mask]
         self.K = K
-        self.viewpoint1 = viewpoint1
-        self.viewpoint2 = viewpoint2
 
     def initialize(self):
-        masks = keypoint_mask(self.keypoints)
-        mask = np.logical_and(masks[self.viewpoint1], masks[self.viewpoint2])
-
-        R, t, points_ = two_view_reconstruction(
-            self.keypoints[self.viewpoint1, mask],
-            self.keypoints[self.viewpoint2, mask],
+        R, t, points_ = points_from_unknown_poses(
+            self.keypoints1,
+            self.keypoints2,
             self.K
         )
 
-        points = fill_masked(points_, mask)
-        return points
+        return fill_masked(points_, self.mask)
 
 
 class PoseInitializer(object):
