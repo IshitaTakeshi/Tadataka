@@ -16,80 +16,90 @@ class InitialViewpointFinder(object):
         return viewpoint1, viewpoint2
 
 
+def estimate_pose(points, keypoints_, K):
+    omega, translation = estimate_pose(points, keypoints_, self.K)
+    return rodrigues(omega.reshape(1, -1))[0], translation
+
+
+def select_next_viewpoint(points, keypoints, used_viewpoints):
+    assert(isinstance(used_viewpoints, set))
+
+    count = count_correspondences(points, keypoints)
+
+    # sort viewpoints in the descending order by correspondences
+    viewpoints = np.argsort(count)[::-1]
+    for v in viewpoints:
+        # return the first element not contained in 'used_viewpoints'
+        if v not in used_viewpoints:
+            return v
+    raise ValueError
+
+
 class Initializer(object):
-    def __init__(self, keypoints, K):
+    def __init__(self, keypoints, K, viewpoint_finder):
         self.keypoints = keypoints
-        self.finder = InitialViewpointFinder(keypoints)
+        self.viewpoint_finder = viewpoint_finder
         self.K = K
 
-    def select_next_view(self, all_points, used_viewpoints):
-        count = count_correspondences(all_points, self.keypoints)
-
-        # sort viewpoints in the descending order by correspondences
-        viewpoints = np.argsort(count)[::-1]
-
-        # remove used viewpoints from the candidates
-        return np.setdiff1d(viewpoints, used_viewpoints)[0]
-
-    def estimate_pose(self, points, keypoints_):
-        omega, translation = estimate_pose(points, keypoints_, self.K)
-        return rodrigues(omega.reshape(1, -1))[0], translation
-
-    def update(self, all_points, used_viewpoints):
+    def update(self, points, used_viewpoints):
         K = self.K
-        next_view = self.select_next_view(all_points, used_viewpoints)
-        next_keypoints = self.keypoints[next_view]
+        next_viewpoint = select_next_viewpoint(points, self.keypoints,
+                                               used_viewpoints)
+        next_keypoints = self.keypoints[next_viewpoint]
 
-        R0, t0 = self.estimate_pose(all_points, next_keypoints)
+        R0, t0 = estimate_pose(points, next_keypoints, self.K)
 
         # run triangulation for all used viewpoints
         for viewpoint in used_viewpoints:
             keypoints_ = self.keypoints[viewpoint]
             mask = correspondence_mask(next_keypoints, keypoints_)
 
-            R1, t1 = self.estimate_pose(all_points, keypoints_)
-            points, depths_are_valid = points_from_known_poses(
-                R0, R1, t0, t1,
-                next_keypoints[mask], keypoints_[mask], self.K
-            )
-            all_points[mask] = points
+            R1, t1 = estimate_pose(points, keypoints_, self.K)
+            points_, depths_are_valid = points_from_known_poses(
+                R0, R1, t0, t1, next_keypoints[mask], keypoints_[mask], self.K)
+            points[mask] = points_
 
-        used_viewpoints.append(next_view)
+        used_viewpoints.add(next_viewpoint)
 
-        return all_points, used_viewpoints
+        return points, used_viewpoints
 
-    def initialize(self):
-        viewpoint1, viewpoint2 = self.finder.compute()
+    def initialize(self, viewpoint1, viewpoint2):
+        assert(viewpoint1 != viewpoint2)
+
+        n_viewpoints = self.keypoints.shape[0]
+        assert(0 <= viewpoint1 < n_viewpoints)
+        assert(0 <= viewpoint2 < n_viewpoints)
 
         mask = correspondence_mask(
             self.keypoints[viewpoint1],
             self.keypoints[viewpoint2]
         )
 
-        R, t, points = points_from_unknown_poses(
+        # create the initial points used to determine relative poses of
+        # other viewpoints than viewpoint1 and viewpoint2
+        R, t, points_ = points_from_unknown_poses(
             self.keypoints[viewpoint1, mask],
             self.keypoints[viewpoint2, mask],
             self.K
         )
-        all_points = fill_masked(points, mask)
+        points = fill_masked(points_, mask)
 
-        n_viewpoints = self.keypoints.shape[0]
-        used_viewpoints = [viewpoint1, viewpoint2]
+        # represented in a set
+        used_viewpoints = {viewpoint1, viewpoint2}
 
         while len(used_viewpoints) < n_viewpoints:
-            all_points, used_viewpoints = self.update(
-                all_points, used_viewpoints)
-        omegas, translations = estimate_poses(all_points,
-                                              self.keypoints, self.K)
-        return omegas, translations, all_points
+            points, used_viewpoints = self.update(points, used_viewpoints)
+        omegas, translations = estimate_poses(points, self.keypoints, self.K)
+        return omegas, translations, points
 
-        #   all_points = points_from_unknown_poses(viewpoint1, viewpoint2)
+
+        #   points = points_from_unknown_poses(viewpoint1, viewpoint2)
         #   used_viewpoints = [viewpoint1, viewpoint2]
         #   while len(used_viewpoints) < n_viewpoints:
-        #       next_view = select_next_view(all_points, used_viewpoints)
+        #       next_viewpoint = select_next_viewpoint(points, used_viewpoints)
         #       for viewpoint in used_viewpoints:#
-        #           points = points_from_known_poses(next_view, viewpoint)
-        #           all_points = merge(all_points, points)
-        #       used_viewpoints.append(next_view)
+        #           points_ = points_from_known_poses(next_viewpoint, viewpoint)
+        #           points = merge(points, points_)
+        #       used_viewpoints.append(next_viewpoint)
 
         # run PnP to estimate relative poses of cameras from the point cloud
