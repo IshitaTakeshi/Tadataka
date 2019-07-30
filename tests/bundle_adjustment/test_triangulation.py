@@ -170,9 +170,7 @@ def test_points_from_known_poses():
         [0, 0, 1],
         [0, 1, 0],
     ])
-    t = np.array([
-        [0, 1, 0]
-    ])
+    t = np.array([0, 1, 0])
 
     # obviously points are in front of the both camers (depth > 0)
     _, depths_are_valid = points_from_known_poses(
@@ -183,9 +181,7 @@ def test_points_from_known_poses():
     )
     assert(depths_are_valid)
 
-    t = np.array([
-        [0, 0, -2]
-    ])
+    t = np.array([0, 0, -2])
 
     # points[1] is behind the 2nd camera
     _, depths_are_valid = points_from_known_poses(
