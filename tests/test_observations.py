@@ -35,3 +35,16 @@ def test_observations():
     with pytest.raises(IndexError):
         observations.__getitem__(-1)
         observations.__getitem__(3)
+
+
+    assert_array_equal(
+        list(observations),
+        np.array([
+            [[0, 0, 2],
+             [1, 2, 3]],
+            [[1, 2, 3],
+             [2, 4, 6]],
+            [[2, 4, 6],
+             [3, 6, 9]]
+        ])
+    )
