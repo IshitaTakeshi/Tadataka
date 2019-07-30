@@ -11,7 +11,7 @@ from vitamine.rigid.rotation import tangent_so3, rodrigues
 from vitamine.rigid.transformation import transform, transform_all
 from vitamine.bundle_adjustment.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
-    projection_matrix, linear_triangulation, points_from_pose)
+    projection_matrix, linear_triangulation, points_from_known_poses)
 from vitamine.bundle_adjustment.initializers import (
     PointInitializer, PoseInitializer)
 
@@ -107,9 +107,11 @@ def test_fundamental_to_essential():
 
 
 def test_linear_triangulation():
-    R, t = rotations[0], translations[0]
-    keypoints0 = projection.compute(X_true)
-    keypoints1 = projection.compute(transform(R, t, X_true))
+    R0, t0 = rotations[0], translations[0]
+    R1, t1 = rotations[1], translations[1]
+
+    keypoints0 = projection.compute(transform(R0, t0, X_true))
+    keypoints1 = projection.compute(transform(R1, t1, X_true))
 
     K = camera_parameters.matrix
 
@@ -117,10 +119,10 @@ def test_linear_triangulation():
     for i in range(N):
         x_true = X_true[i]
         x, depth0, depth1 = linear_triangulation(
-            keypoints0[i], keypoints1[i], R, t, K)
+            R0, R1, t0, t1, keypoints0[i], keypoints1[i], K)
         assert_array_almost_equal(x, x_true)
-        assert_equal(depth0, x[2])
-        assert_equal(depth1, x[1] + t[2])
+        assert_equal(depth0, x[1] + t0[2])
+        assert_equal(depth1, -x[1] + t1[2])
 
 
 def test_extract_poses():
@@ -149,7 +151,7 @@ def test_extract_poses():
         test(R, t)
 
 
-def test_points_from_pose():
+def test_points_from_known_poses():
     camera_parameters = CameraParameters(
         focal_length=[1., 1.],
         offset=[0., 0.]
@@ -173,27 +175,24 @@ def test_points_from_pose():
     ])
 
     # obviously points are in front of the both camers (depth > 0)
-    _, depths_are_valid = points_from_pose(
+    _, depths_are_valid = points_from_known_poses(
+        np.identity(3), R, np.zeros(3), t,
         projection.compute(points),
         projection.compute(np.dot(R, points.T).T + t),
-        R, t, K
+        K
     )
     assert(depths_are_valid)
 
-    R = np.array([
-        [-1, 0, 0],
-        [0, 0, 1],
-        [0, 1, 0],
-    ])
     t = np.array([
         [0, 0, -2]
     ])
 
     # points[1] is behind the 2nd camera
-    _, depths_are_valid = points_from_pose(
+    _, depths_are_valid = points_from_known_poses(
+        np.identity(3), R, np.zeros(3), t,
         projection.compute(points),
         projection.compute(np.dot(R, points.T).T + t),
-        R, t, K
+        K
     )
     assert(not depths_are_valid)
 
