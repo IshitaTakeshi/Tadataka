@@ -94,8 +94,8 @@ class VisualOdometry(object):
         np.set_printoptions(suppress=True)
 
         while self.observer.is_running():
-            omegas_, translations_ = omegas[:-1], translations[:-1]
-            keypoints_ = keypoints[:-1]
+            omegas_, translations_ = omegas[1:], translations[1:]
+            keypoints_ = keypoints[1:]
 
             new_keypoints = self.observer.request()
             new_omega, new_translation = estimate_pose(points, new_keypoints,
