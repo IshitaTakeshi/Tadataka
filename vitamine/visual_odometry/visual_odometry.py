@@ -28,46 +28,69 @@ def count_redundancy(keypoints):
 
 
 class VisualOdometry(object):
-    def __init__(self, observations, camera_parameters, window_size, start=0, end=None):
-        n_observations = observations.shape[0]
+    def __init__(self, observations, camera_parameters):
         self.observations = observations
         self.camera_parameters = camera_parameters
-        self.window_size = window_size
-        self.start = start
-        self.end = n_observations if end is None else max(n_observations, end)
-        assert(self.start < self.end)
+
+    def local_ba(self, omegas, translations, points, keypoints):
+        local_ba = LocalBundleAdjustment(omegas, translations, points,
+                                         self.camera_parameters)
+        omegas, translations, points = local_ba.compute(keypoints)
+        return omegas, translations, points
 
     def sequence(self):
         K = self.camera_parameters.matrix
+        map_ = Map()
 
-        initial_omegas = None
-        initial_translations = None
-        initial_points = None
+        # keypoints.shape == (window_size, n_points, 2)
+        keypoints = self.observations[0]
+        initializer = Initializer(keypoints, K)
+        omegas, translations, points = initializer.initialize(0, 1)
 
-        for i in range(self.start, self.end-self.window_size+1):
-            keypoints = self.observations[i:i+self.window_size]
+        omegas, translations, points = self.local_ba(
+            omegas, translations, points, keypoints)
 
-            if initial_points is None:
-                point_initializer = PointInitializer(keypoints, K)
-                initial_points = point_initializer.initialize()
+        map_.add(0, *camera_to_world(omegas, translations), points)
 
-            pose_initializer = PoseInitializer(keypoints, K)
-            initial_omegas, initial_translations =\
-                pose_initializer.initialize(initial_points)
+        # plot(map_)
 
-            mask = ParameterMask(initial_omegas, initial_translations,
-                                 initial_points)
-            params = to_params(*mask.get_masked())
-            keypoints = mask.mask_keypoints(keypoints)
+        updater = PointUpdater(K)
+        for i, keypoints in enumerate(self.observations):
+            print("i =", i)
 
-            params = bundle_adjustment_core(keypoints, params,
-                                            mask.n_valid_viewpoints,
-                                            mask.n_valid_points,
-                                            self.camera_parameters)
+            # # shift local
+            # omegas[:-1] = omegas[1:]
+            # translations[:-1] = translations[1:]
 
-            omegas, translations, points =\
-                from_params(params, mask.n_valid_viewpoints, mask.n_valid_points)
+            # # update the latest
+            # omegas[-1], translations[-1] = estimate_pose(points, keypoints[-1], K)
 
-            initial_omegas, initial_translations, initial_points =\
-                mask.fill(omegas, translations, points)
-            yield omegas, translations, points
+            points = updater.update(points, keypoints[:-1], keypoints[-1])
+            omegas, translations = estimate_poses(points, keypoints, K)
+            print("omegas")
+            print(omegas)
+
+            omegas, translations, points = self.local_ba(
+                omegas, translations, points, keypoints)
+
+            map_.add(i + 1, *camera_to_world(omegas, translations), points)
+
+            # plot(map_)
+
+
+def plot(map_):
+    from vitamine.visualization.visualizers import plot3d
+    from vitamine.visualization.cameras import cameras_poly3d
+    from matplotlib import pyplot as plt
+
+    camera_omegas, camera_locations, global_points = map_.get()
+
+    point_mask_ = point_mask(global_points)
+    pose_mask_ = pose_mask(camera_omegas, camera_locations)
+
+    ax = plot3d(global_points[point_mask_])
+    ax.add_collection3d(
+        cameras_poly3d(rodrigues(camera_omegas[pose_mask_]),
+                       camera_locations[pose_mask_])
+    )
+    plt.show()
