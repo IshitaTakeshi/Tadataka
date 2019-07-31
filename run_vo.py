@@ -11,7 +11,7 @@ from vitamine.projection.projections import PerspectiveProjection
 from vitamine.rigid.transformation import transform_all
 from vitamine.rigid.coordinates import world_to_camera
 from vitamine.rigid.rotation import rodrigues
-from vitamine.observations import Observations
+from vitamine.observations import DummyObserver
 from vitamine.visualization.visual_odometry import VisualOdometryAnimation
 from vitamine.visual_odometry.visual_odometry import VisualOdometry
 from vitamine.visualization.visualizers import set_aspect_equal, plot3d
@@ -41,7 +41,8 @@ camera_parameters = CameraParameters(
 projection = PerspectiveProjection(camera_parameters)
 
 camera_rotations, camera_locations, points_true =\
-    donut(inner_r=8, outer_r=12, height=5, point_density=24, n_viewpoints=13)
+    donut(inner_r=8, outer_r=12, height=5, point_density=48, n_viewpoints=24)
+
 rotations_true, translations_true =\
     world_to_camera(camera_rotations, camera_locations)
 
@@ -50,7 +51,7 @@ observations, masks = generate_observations(
 observations = set_invisible(observations, masks)
 
 vo = VisualOdometry(
-    Observations(observations, window_size=8),
+    DummyObserver(observations),
     camera_parameters
 )
 
