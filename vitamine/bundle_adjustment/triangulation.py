@@ -4,8 +4,10 @@ import numpy as np
 from numpy.linalg import inv
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
 from vitamine.matrix import solve_linear
 from vitamine.rigid.rotation import tangent_so3
+from vitamine.assertion import check_non_nan
 
 
 # Equation numbers are the ones in Multiple View Geometry
@@ -153,6 +155,9 @@ def points_from_unknown_poses(keypoints0, keypoints1, K):
     assert(keypoints0.shape == keypoints1.shape)
 
     R0, t0 = np.identity(3), np.zeros(3)
+
+    check_non_nan(keypoints0)
+    check_non_nan(keypoints1)
 
     F = estimate_fundamental(keypoints0, keypoints1)
     E = fundamental_to_essential(F, K)

@@ -1,6 +1,8 @@
 from autograd import jacobian
 from autograd import numpy as np
 
+from vitamine.assertion import check_non_nan
+
 
 class GradientBasedUpdater(object):
     def flattened_residual(self, theta):
@@ -24,6 +26,8 @@ class GaussNewtonUpdater(GradientBasedUpdater):
         r = self.flattened_residual(theta)
         J = self.jacobian(theta)
 
+        check_non_nan(r)
+        check_non_nan(J)
         assert(np.ndim(r) == 1)
 
         # residuals can be a multi-dimensonal array so flatten them

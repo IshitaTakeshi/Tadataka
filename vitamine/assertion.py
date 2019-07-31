@@ -1,6 +1,13 @@
+from autograd import numpy as np
+
+
+def check_non_nan(array):
+    assert(np.all(~np.isnan(array)))
+
 
 def check_points(points):
     assert(points.shape[1] == 3)
+
 
 def check_poses(omegas, translations):
     assert(omegas.shape[0] == translations.shape[0])

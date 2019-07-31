@@ -1,5 +1,7 @@
 from autograd import numpy as np
 
+from vitamine.assertion import check_non_nan
+
 from vitamine.bundle_adjustment.initializers import (
     PoseInitializer, PointInitializer)
 from vitamine.bundle_adjustment.parameters import (
@@ -59,7 +61,8 @@ class MaskedResidual(BaseResidual):
 
         # ndim of residual will be reduced from 3 to 2 by masking
         residual = residual[mask]
-        assert(np.all(~np.isnan(residual)))
+
+        check_non_nan(residual)
 
         # but explicitly reshape it
         # Because expcilit is better than implicit
