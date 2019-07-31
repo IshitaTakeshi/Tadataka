@@ -36,13 +36,20 @@ def select_next_viewpoint(points, keypoints, used_viewpoints):
 
 
 class PointUpdater(object):
-    def __init__(self, K):
+    def __init__(self, existing_keypoints, K):
+
+        self.existing_keypoints = existing_keypoints
         self.K = K
 
-    def update(self, points, existing_keypoints, new_keypoints):
+    def update(self, points, new_keypoints):
+        n_points = points.shape[0]
+
+        assert(self.existing_keypoints.shape[1:] == (n_points, 2))
+        assert(new_keypoints.shape == (n_points, 2))
+
         R0, t0 = estimate_pose_(points, new_keypoints, self.K)
 
-        for keypoints_ in existing_keypoints:
+        for keypoints_ in self.existing_keypoints:
             R1, t1 = estimate_pose_(points, keypoints_, self.K)
 
             mask = correspondence_mask(new_keypoints, keypoints_)
@@ -59,7 +66,6 @@ class Initializer(object):
     def __init__(self, keypoints, K):
         self.keypoints = keypoints
         self.K = K
-        self.updater = PointUpdater(K)
 
     def initialize(self, viewpoint1, viewpoint2):
         assert(viewpoint1 != viewpoint2)
@@ -86,10 +92,12 @@ class Initializer(object):
         while len(used_viewpoints) < n_viewpoints:
             next_viewpoint = select_next_viewpoint(points, self.keypoints,
                                                    used_viewpoints)
-            points = self.updater.update(
-                points,
+            updater = PointUpdater(
                 self.keypoints[sorted(list(used_viewpoints))],
-                self.keypoints[next_viewpoint])
+                self.K
+            )
+            points = updater.update(points, self.keypoints[next_viewpoint])
+
             used_viewpoints.add(next_viewpoint)
 
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
