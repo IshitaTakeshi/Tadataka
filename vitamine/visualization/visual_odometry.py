@@ -19,10 +19,7 @@ class VisualOdometryAnimation(object):
         self.camera_scale = camera_scale
 
     def animate(self, args):
-        omegas, translations, points = args
-
-        camera_rotations, camera_locations =\
-            camera_to_world(rodrigues(omegas), translations)
+        camera_rotations, camera_locations, points = args
 
         cameras = cameras_poly3d(camera_rotations, camera_locations,
                                  self.camera_scale)
