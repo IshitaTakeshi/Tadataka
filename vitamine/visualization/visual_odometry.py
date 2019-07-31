@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from vitamine.rigid.transformation import inv_transform_all
 from vitamine.rigid.rotation import rodrigues
+from vitamine.rigid.coordinates import camera_to_world
 from vitamine.visualization.visualizers import object_color
 from vitamine.visualization.cameras import cameras_poly3d
 
@@ -19,15 +20,14 @@ class VisualOdometryAnimation(object):
 
     def animate(self, args):
         omegas, translations, points = args
-        cameras = cameras_poly3d(
-            rodrigues(omegas),
-            translations,
-            self.camera_scale
-        )
-        points_ = self.ax.scatter(
-            points[:, 0], points[:, 1], points[:, 2],
-            c=object_color(points)
-        )
+
+        camera_rotations, camera_locations =\
+            camera_to_world(rodrigues(omegas), translations)
+
+        cameras = cameras_poly3d(camera_rotations, camera_locations,
+                                 self.camera_scale)
+        points_ = self.ax.scatter(points[:, 0], points[:, 1], points[:, 2],
+                                  c=object_color(points))
         return cameras, points_
 
     def plot(self):
