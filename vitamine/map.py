@@ -18,18 +18,19 @@ def expand_array(array, expected_size, constant=np.nan):
 class Map(object):
     def __init__(self):
         self.is_initialized = False
+        self.frame_index = 0
 
-    def add(self, frame_index, camera_omegas, camera_locations, points):
+    def add(self, camera_omegas, camera_locations, points):
         if not self.is_initialized:
-            self.initialize(frame_index, camera_omegas, camera_locations, points)
+            self.initialize(camera_omegas, camera_locations, points)
             self.is_initialized = True
             return
 
-        self.add_poses(frame_index, camera_omegas, camera_locations)
+        self.frame_index += 1
+        self.add_poses(camera_omegas, camera_locations, self.frame_index)
         self.add_points(points)
 
-    def initialize(self, frame_index, camera_omegas, camera_locations, points):
-        assert(frame_index == 0)
+    def initialize(self, camera_omegas, camera_locations, points):
         check_poses(camera_omegas, camera_locations)
         check_points(points)
 
@@ -37,7 +38,7 @@ class Map(object):
         self.camera_locations = camera_locations
         self.points = points
 
-    def add_poses(self, frame_index, camera_omegas, camera_locations):
+    def add_poses(self, camera_omegas, camera_locations, frame_index):
         check_poses(camera_omegas, camera_locations)
 
         mask = pose_mask(camera_omegas, camera_locations)
