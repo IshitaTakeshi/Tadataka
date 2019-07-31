@@ -9,3 +9,22 @@ class Observations(object):
         if i < 0 or self.end < i:
              raise IndexError("Index {} is out of bounds".format(i))
         return self.observations[i:i+self.window_size]
+
+
+class BaseObserver(object):
+    def request(self):
+        raise NotImplementedError()
+
+
+class DummyObserver(BaseObserver):
+    def __init__(self, observations):
+        self.observations = observations
+        self.index = 0
+
+    def request(self):
+        keypoints_ = self.observations[self.index]
+        self.index += 1
+        return keypoints_
+
+    def is_running(self):
+        return self.index < self.observations.shape[0]
