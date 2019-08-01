@@ -11,7 +11,8 @@ from vitamine.rigid.rotation import tangent_so3, rodrigues
 from vitamine.rigid.transformation import transform, transform_all
 from vitamine.bundle_adjustment.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
-    projection_matrix, linear_triangulation, points_from_known_poses)
+    projection_matrix, linear_triangulation, points_from_known_poses,
+    MultipleTriangulation)
 from vitamine.bundle_adjustment.initializers import (
     PointInitializer, PoseInitializer)
 
@@ -213,4 +214,44 @@ def test_initializers():
     assert_array_almost_equal(
         keypoints,
         projection.compute(P.reshape(-1, 3)).reshape(keypoints.shape)
+    )
+
+
+def test_multiple_triangulation():
+    points = transform_all(rotations, translations, X_true)
+    keypoints = projection.compute(points.reshape(-1, 3))
+    keypoints = keypoints.reshape(*points.shape[0:2], 2)
+    keypoints[0][[0, 3, 8]] = np.nan
+    keypoints[1][[2, 3, 9]] = np.nan
+    keypoints[2][[2, 3, 8]] = np.nan
+
+    # compare the 2nd viewpoint to 0th and 1st
+    triangulation = MultipleTriangulation(
+        rotations[0:2],
+        translations[0:2],
+        keypoints[0:2],
+        camera_parameters.matrix
+    )
+
+    expected = np.array([
+        # 0th point can be reconstructed by
+        # triangulating 1st and 2nd viewpoint
+        X_true[0],
+        X_true[1],
+        # 2nd, 3rd and 8th point is never reconstructed
+        [np.nan, np.nan, np.nan],
+        [np.nan, np.nan, np.nan],
+        X_true[4],
+        X_true[5],
+        X_true[6],
+        X_true[7],
+        [np.nan, np.nan, np.nan],
+        # 9th point can be reconstructed by
+        # triangulating 0th and 2nd viewpoint
+        X_true[9]
+    ])
+
+    assert_array_almost_equal(
+        triangulation.triangulate(rotations[2], translations[2], keypoints[2]),
+        expected
     )

@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from vitamine.matrix import solve_linear
 from vitamine.rigid.rotation import tangent_so3
 from vitamine.assertion import check_non_nan
+from vitamine.bundle_adjustment.mask import correspondence_mask
 
 
 # Equation numbers are the ones in Multiple View Geometry
@@ -175,3 +176,28 @@ def points_from_unknown_poses(keypoints0, keypoints1, K):
     # should not reach here
     raise ValueError("Keypoints may contain points where the depth of "
                      "the corresponding 3D point is <= 0")
+
+
+class MultipleTriangulation(object):
+    def __init__(self, rotations, translations, keypoints, K):
+        self.rotations = rotations
+        self.translations = translations
+        self.keypoints = keypoints
+        self.K = K
+
+    def triangulate(self, R0, t0, new_keypoints):
+        n_viewpoints, n_points = self.keypoints.shape[0:2]
+
+        points = np.full((n_points, 3), np.nan)
+        for i in range(n_viewpoints):
+            R1, t1 = self.rotations[i], self.translations[i]
+            keypoints_ = self.keypoints[i]
+
+            mask = correspondence_mask(new_keypoints, keypoints_)
+
+            # HACK Should we check 'depths_are_valid' ?
+            points[mask], depths_are_valid = points_from_known_poses(
+                R0, R1, t0, t1,
+                new_keypoints[mask], keypoints_[mask], self.K
+            )
+        return points
