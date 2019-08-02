@@ -9,6 +9,7 @@ from vitamine.matrix import solve_linear
 from vitamine.rigid.rotation import tangent_so3
 from vitamine.assertion import check_non_nan
 from vitamine.bundle_adjustment.mask import correspondence_mask
+from vitamine.rigid.rotation import rodrigues
 
 
 # Equation numbers are the ones in Multiple View Geometry
@@ -178,7 +179,7 @@ def points_from_unknown_poses(keypoints0, keypoints1, K):
                      "the corresponding 3D point is <= 0")
 
 
-class MultipleTriangulation(object):
+class MultipleTriangulationImpl(object):
     def __init__(self, rotations, translations, keypoints, K):
         self.rotations = rotations
         self.translations = translations
@@ -201,3 +202,13 @@ class MultipleTriangulation(object):
                 new_keypoints[mask], keypoints_[mask], self.K
             )
         return points
+
+
+class MultipleTriangulation(object):
+    def __init__(self, omegas, translations, keypoints, K):
+        self.triangulation = MultipleTriangulationImpl(
+            rodrigues(omegas), translations, keypoints, K)
+
+    def triangulate(self, omega, translation, new_keypoints):
+        R = rodrigues(omega.reshape(1, -1))[0]
+        return self.triangulation.triangulate(R, translation, new_keypoints)
