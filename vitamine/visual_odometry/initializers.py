@@ -81,19 +81,19 @@ class Initializer(object):
             used_keypoints = self.keypoints[sorted(used_viewpoints)]
 
             omegas, translations = estimate_poses(
-                points, used_keypoints, self.K)
+                all_points, used_keypoints, self.K)
             triangulation = MultipleTriangulation(
                 rodrigues(omegas), translations,
                 used_keypoints,
                 self.K
             )
 
-            new_viewpoint = select_new_viewpoint(points, self.keypoints,
+            new_viewpoint = select_new_viewpoint(all_points, self.keypoints,
                                                  used_viewpoints)
             assert(new_viewpoint not in used_viewpoints)
             new_keypoints = self.keypoints[new_viewpoint]
 
-            omega, translation = estimate_pose(points, new_keypoints, self.K)
+            omega, translation = estimate_pose(all_points, new_keypoints, self.K)
             points = triangulation.triangulate(
                 rodrigues(omega.reshape(1, -1))[0],
                 translation,
@@ -104,9 +104,5 @@ class Initializer(object):
 
             all_points = update(all_points, points)
 
-            from vitamine.visualization.map import plot_map
-            from vitamine.rigid.coordinates import camera_to_world
-            plot_map(*camera_to_world(omegas, translations), all_points)
-
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
-        return omegas, translations, points
+        return omegas, translations, all_points
