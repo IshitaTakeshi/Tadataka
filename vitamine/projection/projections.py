@@ -9,7 +9,7 @@ EPSILON = 1e-16
 def pi(P):
     Z = P[:, [2]]
     XY = P[:, 0:2]
-    return XY / (Z + EPSILON)
+    return XY / Z
 
 
 class BaseProjection(Function):

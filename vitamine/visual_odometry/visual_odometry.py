@@ -78,28 +78,19 @@ class VisualOdometry(object):
             omegas_, translations_ = omegas[1:], translations[1:]
             keypoints_ = keypoints[1:]
 
+            triangulation = MultipleTriangulation(omegas_, translations_,
+                                                  keypoints_, self.K)
+
             new_keypoints = self.observer.request()
             new_omega, new_translation = estimate_pose(points, new_keypoints,
                                                        self.K)
+            points = triangulation.triangulate(new_omega, new_translation,
+                                               new_keypoints)
 
-            triangulation = MultipleTriangulation(
-                rodrigues(omegas_),
-                translations_,
-                keypoints_,
-                self.K
-            )
-
-            points = triangulation.triangulate(
-                rodrigues(new_omega.reshape(1, -1))[0],
-                new_translation,
-                new_keypoints
-            )
-
-            omegas[:-1] = omegas_
-            omegas[-1] = new_omega
-            translations[:-1] = translations_
-            translations[-1] = new_translation
+            omegas[:-1], translations[:-1] = omegas_, translations_
             keypoints[:-1] = keypoints_
+
+            omegas[-1], translations[-1] = new_omega, new_translation
             keypoints[-1] = new_keypoints
 
             omegas, translations, points = self.refine(
