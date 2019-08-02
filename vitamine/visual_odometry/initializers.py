@@ -36,10 +36,6 @@ def select_new_viewpoint(points, keypoints, used_viewpoints):
     raise ValueError
 
 
-def create_empty(shape):
-    return np.full(shape, np.nan)
-
-
 def update(all_points, points):
     mask = point_mask(points)
     all_points[mask] = points[mask]
@@ -104,5 +100,6 @@ class Initializer(object):
 
             used_viewpoints.add(new_viewpoint)
 
-        omegas, translations = estimate_poses(points, self.keypoints, self.K)
+        omegas, translations = estimate_poses(all_points, self.keypoints,
+                                              self.K)
         return omegas, translations, all_points
