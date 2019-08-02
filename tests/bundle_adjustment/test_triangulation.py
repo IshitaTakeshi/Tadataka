@@ -34,12 +34,12 @@ rotations = np.array([
     [[1, 0, 0],
      [0, 0, -1],
      [0, 1, 0]],
-    [[0, 0, 1],
-     [-1, 0, 0],
-     [0, -1, 0]],
+    [[1 / np.sqrt(2), -1 / np.sqrt(2), 0],
+     [1 / np.sqrt(2), 1 / np.sqrt(2), 0],
+     [0, 0, 1]],
     [[1, 0, 0],
      [0, 1, 0],
-     [0, 0, 1]]
+     [0, 0, 1]],
 ])
 
 translations = np.array([
@@ -123,7 +123,7 @@ def test_linear_triangulation():
             R0, R1, t0, t1, keypoints0[i], keypoints1[i], K)
         assert_array_almost_equal(x, x_true)
         assert_equal(depth0, x[1] + t0[2])
-        assert_equal(depth1, -x[1] + t1[2])
+        assert_equal(depth1, x[2] + t1[2])
 
 
 def test_extract_poses():
@@ -218,16 +218,23 @@ def test_initializers():
 
 
 def test_multiple_triangulation():
-    points = transform_all(rotations, translations, X_true)
+    omegas = np.array([
+        [np.pi / 2, 0, 0],
+        [0, 0, np.pi / 4],
+        [0, 0, 0]
+    ])
+
+    points = transform_all(rodrigues(omegas), translations, X_true)
     keypoints = projection.compute(points.reshape(-1, 3))
     keypoints = keypoints.reshape(*points.shape[0:2], 2)
     keypoints[0][[0, 3, 8]] = np.nan
     keypoints[1][[2, 3, 9]] = np.nan
     keypoints[2][[2, 3, 8]] = np.nan
 
+
     # compare the 2nd viewpoint to 0th and 1st
     triangulation = MultipleTriangulation(
-        rotations[0:2],
+        omegas[0:2],
         translations[0:2],
         keypoints[0:2],
         camera_parameters.matrix
@@ -252,6 +259,6 @@ def test_multiple_triangulation():
     ])
 
     assert_array_almost_equal(
-        triangulation.triangulate(rotations[2], translations[2], keypoints[2]),
+        triangulation.triangulate(omegas[2], translations[2], keypoints[2]),
         expected
     )
