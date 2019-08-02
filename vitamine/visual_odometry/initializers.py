@@ -1,7 +1,8 @@
 from autograd import numpy as np
 from vitamine.bundle_adjustment.triangulation import (
-    points_from_unknown_poses, points_from_known_poses)
-from vitamine.bundle_adjustment.mask import correspondence_mask, fill_masked
+    points_from_unknown_poses, points_from_known_poses, MultipleTriangulation)
+from vitamine.bundle_adjustment.mask import (
+    correspondence_mask, fill_masked, point_mask)
 from vitamine.bundle_adjustment.pnp import estimate_pose, estimate_poses
 from vitamine.correspondences import count_correspondences
 from vitamine.rigid.rotation import rodrigues
@@ -21,7 +22,7 @@ def estimate_pose_(points, keypoints_, K):
     return rodrigues(omega.reshape(1, -1))[0], translation
 
 
-def select_next_viewpoint(points, keypoints, used_viewpoints):
+def select_new_viewpoint(points, keypoints, used_viewpoints):
     assert(isinstance(used_viewpoints, set))
 
     count = count_correspondences(points, keypoints)
@@ -35,31 +36,14 @@ def select_next_viewpoint(points, keypoints, used_viewpoints):
     raise ValueError
 
 
-class PointUpdater(object):
-    def __init__(self, existing_keypoints, K):
+def create_empty(shape):
+    return np.full(shape, np.nan)
 
-        self.existing_keypoints = existing_keypoints
-        self.K = K
 
-    def update(self, points, new_keypoints):
-        n_points = points.shape[0]
-
-        assert(self.existing_keypoints.shape[1:] == (n_points, 2))
-        assert(new_keypoints.shape == (n_points, 2))
-
-        R0, t0 = estimate_pose_(points, new_keypoints, self.K)
-
-        for keypoints_ in self.existing_keypoints:
-            R1, t1 = estimate_pose_(points, keypoints_, self.K)
-
-            mask = correspondence_mask(new_keypoints, keypoints_)
-
-            # HACK should we check 'depths_are_valid' ?
-            points[mask], depths_are_valid = points_from_known_poses(
-                R0, R1, t0, t1,
-                new_keypoints[mask], keypoints_[mask], self.K
-            )
-        return points
+def update(all_points, points):
+    mask = point_mask(points)
+    all_points[mask] = points[mask]
+    return all_points
 
 
 class Initializer(object):
@@ -89,16 +73,40 @@ class Initializer(object):
         # represented in a set
         used_viewpoints = {viewpoint1, viewpoint2}
 
+        all_points = create_empty((self.keypoints.shape[1], 3))
+        all_points = update(all_points, points)
+
+        omegas, translations = None, None
         while len(used_viewpoints) < n_viewpoints:
-            next_viewpoint = select_next_viewpoint(points, self.keypoints,
-                                                   used_viewpoints)
-            updater = PointUpdater(
-                self.keypoints[sorted(list(used_viewpoints))],
+            used_keypoints = self.keypoints[sorted(used_viewpoints)]
+
+            omegas, translations = estimate_poses(
+                points, used_keypoints, self.K)
+            triangulation = MultipleTriangulation(
+                rodrigues(omegas), translations,
+                used_keypoints,
                 self.K
             )
-            points = updater.update(points, self.keypoints[next_viewpoint])
 
-            used_viewpoints.add(next_viewpoint)
+            new_viewpoint = select_new_viewpoint(points, self.keypoints,
+                                                 used_viewpoints)
+            assert(new_viewpoint not in used_viewpoints)
+            new_keypoints = self.keypoints[new_viewpoint]
+
+            omega, translation = estimate_pose(points, new_keypoints, self.K)
+            points = triangulation.triangulate(
+                rodrigues(omega.reshape(1, -1))[0],
+                translation,
+                new_keypoints
+            )
+
+            used_viewpoints.add(new_viewpoint)
+
+            all_points = update(all_points, points)
+
+            from vitamine.visualization.map import plot_map
+            from vitamine.rigid.coordinates import camera_to_world
+            plot_map(*camera_to_world(omegas, translations), all_points)
 
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
         return omegas, translations, points
