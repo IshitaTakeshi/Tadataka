@@ -37,12 +37,15 @@ class VisualOdometry(object):
         self.window_size = window_size
         self.K = self.camera_parameters.matrix
 
-    def initialize(self):
+    def initialize_keypoints(self):
         keypoints = []
         for i in range(self.window_size):
             keypoints_ = self.observer.request()
             keypoints.append(keypoints_)
-        keypoints = np.array(keypoints)
+        return np.array(keypoints)
+
+    def initialize(self):
+        keypoints = self.initialize_keypoints()
 
         # keypoints.shape == (window_size, n_points, 2)
         initializer = Initializer(keypoints, self.K)
