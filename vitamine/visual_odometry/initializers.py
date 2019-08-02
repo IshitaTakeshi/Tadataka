@@ -46,6 +46,31 @@ def update(all_points, points):
     return all_points
 
 
+def triangulate_new(current_pints, existing_keypoints, new_keypoints, K):
+    # poses are already estimated in the previous iteration
+    # but we estimate them again for robustness
+    omegas, translations = estimate_poses(current_pints, existing_keypoints, K)
+    triangulation = MultipleTriangulation(rodrigues(omegas), translations,
+                                          existing_keypoints, K)
+
+    omega, translation = estimate_pose(current_pints, new_keypoints, K)
+    R = rodrigues(omega.reshape(1, -1))[0]
+
+    points = triangulation.triangulate(R, translation, new_keypoints)
+    return points
+
+
+def initial_points(keypoints1, keypoints2, K):
+    mask = correspondence_mask(keypoints1, keypoints2)
+
+    # create the initial points used to determine relative poses of
+    # other viewpoints than viewpoint1 and viewpoint2
+    R, t, points_ = points_from_unknown_poses(keypoints1[mask],
+                                              keypoints2[mask],
+                                              K)
+    return fill_masked(points_, mask)
+
+
 class Initializer(object):
     def __init__(self, keypoints, K):
         self.keypoints = keypoints
@@ -58,51 +83,26 @@ class Initializer(object):
         assert(0 <= viewpoint1 < n_viewpoints)
         assert(0 <= viewpoint2 < n_viewpoints)
 
-        mask = correspondence_mask(self.keypoints[viewpoint1],
-                                   self.keypoints[viewpoint2])
-
-        # create the initial points used to determine relative poses of
-        # other viewpoints than viewpoint1 and viewpoint2
-        R, t, points_ = points_from_unknown_poses(
-            self.keypoints[viewpoint1, mask],
-            self.keypoints[viewpoint2, mask],
-            self.K
-        )
-        points = fill_masked(points_, mask)
+        all_points = initial_points(self.keypoints[viewpoint1],
+                                    self.keypoints[viewpoint2],
+                                    self.K)
 
         # represented in a set
         used_viewpoints = {viewpoint1, viewpoint2}
 
-        all_points = create_empty((self.keypoints.shape[1], 3))
-        all_points = update(all_points, points)
-
-        omegas, translations = None, None
         while len(used_viewpoints) < n_viewpoints:
-            used_keypoints = self.keypoints[sorted(used_viewpoints)]
-
-            omegas, translations = estimate_poses(
-                all_points, used_keypoints, self.K)
-            triangulation = MultipleTriangulation(
-                rodrigues(omegas), translations,
-                used_keypoints,
-                self.K
-            )
-
             new_viewpoint = select_new_viewpoint(all_points, self.keypoints,
                                                  used_viewpoints)
             assert(new_viewpoint not in used_viewpoints)
-            new_keypoints = self.keypoints[new_viewpoint]
 
-            omega, translation = estimate_pose(all_points, new_keypoints, self.K)
-            points = triangulation.triangulate(
-                rodrigues(omega.reshape(1, -1))[0],
-                translation,
-                new_keypoints
-            )
-
-            used_viewpoints.add(new_viewpoint)
+            points = triangulate_new(all_points,
+                                     self.keypoints[sorted(used_viewpoints)],
+                                     self.keypoints[new_viewpoint],
+                                     self.K)
 
             all_points = update(all_points, points)
+
+            used_viewpoints.add(new_viewpoint)
 
         omegas, translations = estimate_poses(points, self.keypoints, self.K)
         return omegas, translations, all_points
