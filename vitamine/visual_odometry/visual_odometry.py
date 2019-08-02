@@ -116,24 +116,3 @@ class VisualOdometry(object):
 
             global_map.add(*camera_to_world(omegas, translations), points)
 
-            print("camera_omegas")
-            print(global_map.camera_omegas)
-            plot(global_map)
-
-
-def plot(map_):
-    from vitamine.visualization.visualizers import plot3d
-    from vitamine.visualization.cameras import cameras_poly3d
-    from matplotlib import pyplot as plt
-
-    camera_omegas, camera_locations, global_points = map_.get()
-
-    point_mask_ = point_mask(global_points)
-    pose_mask_ = pose_mask(camera_omegas, camera_locations)
-
-    ax = plot3d(global_points[point_mask_])
-    ax.add_collection3d(
-        cameras_poly3d(rodrigues(camera_omegas[pose_mask_]),
-                       camera_locations[pose_mask_])
-    )
-    plt.show()
