@@ -2,7 +2,6 @@ import itertools
 
 import numpy as np
 from numpy.linalg import inv
-from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from vitamine.matrix import solve_linear
@@ -140,14 +139,16 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
     n_points = keypoints0.shape[0]
 
     points = np.empty((n_points, 3))
-    depths_are_valid = True
+
+    n_valid_depth = 0
     for i in range(n_points):
         points[i], depth0, depth1 = linear_triangulation(
             R0, R1, t0, t1, keypoints0[i], keypoints1[i], K)
 
         depth_is_valid = depth0 > 0 and depth1 > 0
-        depths_are_valid = depths_are_valid and depth_is_valid
-    return points, depths_are_valid
+        if depth_is_valid:
+            n_valid_depth += 1
+    return points, n_valid_depth
 
 
 def points_from_unknown_poses(keypoints0, keypoints1, K):
@@ -165,18 +166,19 @@ def points_from_unknown_poses(keypoints0, keypoints1, K):
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
-    for R_, t_ in itertools.product((R1, R2), (t1, t2)):
-        X, depths_are_valid = points_from_known_poses(
+    n_max_valid_depth = -1
+    argmax_R, argmax_t, argmax_X = None, None, None
+
+    for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
+        X, n_valid_depth = points_from_known_poses(
             R0, R_, t0, t_, keypoints0, keypoints1, K)
 
         # only 1 pair (R, t) among the candidates has to be
         # the correct pair, not more nor less
-        if depths_are_valid:
-            return R_, t_, X
-
-    # should not reach here
-    raise ValueError("Keypoints may contain points where the depth of "
-                     "the corresponding 3D point is <= 0")
+        if n_valid_depth > n_max_valid_depth:
+            n_max_valid_depth = n_valid_depth
+            argmax_R, argmax_t, argmax_X = R_, t_, X
+    return argmax_R, argmax_t, argmax_X
 
 
 class MultipleTriangulationImpl(object):
@@ -196,8 +198,7 @@ class MultipleTriangulationImpl(object):
 
             mask = correspondence_mask(new_keypoints, keypoints_)
 
-            # HACK Should we check 'depths_are_valid' ?
-            points[mask], depths_are_valid = points_from_known_poses(
+            points[mask], n_valid_depth = points_from_known_poses(
                 R0, R1, t0, t1,
                 new_keypoints[mask], keypoints_[mask], self.K
             )
