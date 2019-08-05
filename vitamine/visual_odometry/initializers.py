@@ -73,21 +73,25 @@ class Initializer(object):
         used_viewpoints = {viewpoint1, viewpoint2}
 
         while len(used_viewpoints) < n_viewpoints:
+            # select a viewpoint other than used_viewpoints
             new_viewpoint = select_new_viewpoint(all_points, self.keypoints,
                                                  used_viewpoints)
             assert(new_viewpoint not in used_viewpoints)
 
             used_keypoints = self.keypoints[sorted(used_viewpoints)]
 
-            triangulation = MultipleTriangulation(
-                *estimate_poses(all_points, used_keypoints, self.K),
-                used_keypoints, self.K)
+            # triangulate the new viewpoint with existing viewpoints
+            omegas, translations = estimate_poses(all_points, used_keypoints,
+                                                  self.K)
+            triangulation = MultipleTriangulation(omegas, translations,
+                                                  used_keypoints, self.K)
 
             new_keypoints = self.keypoints[new_viewpoint]
 
-            points = triangulation.triangulate(
-                *estimate_pose(all_points, new_keypoints, self.K),
-                new_keypoints)
+            omega, translation = estimate_pose(all_points, new_keypoints,
+                                               self.K)
+            points = triangulation.triangulate(omega, translation,
+                                               new_keypoints)
 
             all_points = update(all_points, points)
 
