@@ -164,6 +164,7 @@ def test_points_from_known_poses():
     points = np.array([
         [-1, 3, 2],
         [1, 1, 1],
+        [0, 4, 8]
     ])
 
     R = np.array([
@@ -174,24 +175,26 @@ def test_points_from_known_poses():
     t = np.array([0, 1, 0])
 
     # obviously points are in front of the both camers (depth > 0)
-    _, depths_are_valid = points_from_known_poses(
+    _, n_valid_depth = points_from_known_poses(
         np.identity(3), R, np.zeros(3), t,
         projection.compute(points),
         projection.compute(np.dot(R, points.T).T + t),
         K
     )
-    assert(depths_are_valid)
+
+    assert_equal(n_valid_depth, 3)
 
     t = np.array([0, 0, -2])
 
     # points[1] is behind the 2nd camera
-    _, depths_are_valid = points_from_known_poses(
+    _, n_valid_depth = points_from_known_poses(
         np.identity(3), R, np.zeros(3), t,
         projection.compute(points),
         projection.compute(np.dot(R, points.T).T + t),
         K
     )
-    assert(not depths_are_valid)
+
+    assert_equal(n_valid_depth, 2)
 
 
 def test_initializers():
@@ -230,7 +233,6 @@ def test_multiple_triangulation():
     keypoints[0][[0, 3, 8]] = np.nan
     keypoints[1][[2, 3, 9]] = np.nan
     keypoints[2][[2, 3, 8]] = np.nan
-
 
     # compare the 2nd viewpoint to 0th and 1st
     triangulation = MultipleTriangulation(
