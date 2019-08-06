@@ -37,5 +37,5 @@ def test_match_matrix_generator():
             [3, np.nan, 1, 0],
             [2, np.nan, 4, 3],
             [np.nan, 1, 2, 2]
-        ])
+        ]).T
     )

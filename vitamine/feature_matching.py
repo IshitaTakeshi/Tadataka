@@ -64,7 +64,7 @@ class MatchMatrixGenerator(object):
     # We formulate a redundant matrix from the given arguments
     #
     # redundant representation:
-    #       0    1    2    3     # view index
+    #       0    1    2    3     # viewpoint index
     #   0  [0    0    nan  nan]
     #   1  [1    2    nan  nan]
     #   2  [1    nan  0    nan]
@@ -94,6 +94,7 @@ class MatchMatrixGenerator(object):
     # like below
 
     # compact representation:
+    #       0    1    2    3     # viewpoint index
     #   0  [0    0    nan  nan]
     #   1  [1    2    0    1  ]
     #   2  [3    nan  1    nan]
@@ -103,6 +104,7 @@ class MatchMatrixGenerator(object):
     # are compressed into the 1st row in the compact representation.
     # The 4th row and 6th row in the redundant form are combined into
     # the 3rd row of the compact form in the same manner.
+    # The compact matrix is transposed before returning.
 
     def __init__(self):
         self.rows = []
@@ -129,4 +131,4 @@ class MatchMatrixGenerator(object):
         cols = np.array(self.cols)
         data = np.array(self.data)
         rows, cols, data = reduce_redundancy(rows, cols, data)
-        return to_matrix(rows, cols, data)
+        return to_matrix(rows, cols, data).T
