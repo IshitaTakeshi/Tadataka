@@ -63,9 +63,6 @@ def test_match_matrix():
     match_matrix.add(2, 3,
                      np.array([[4, 3]]))
 
-    print("matrix")
-    print(match_matrix.matrix())
-
     assert_array_equal(
         match_matrix.matrix(),
         np.array([
