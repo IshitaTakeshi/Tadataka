@@ -8,7 +8,7 @@ from skimage.feature import match_descriptors
 from matplotlib import pyplot as plt
 
 from vitamine.flow_estimation.keypoints import (
-    MatchOneToMany, extract_keypoints, MatchMatrix)
+    MatchOneToMany, extract_keypoints)
 
 
 def test_match_one_to_many():
@@ -36,40 +36,3 @@ def test_match_one_to_many():
 
     expected = ground_truth_keypoints()
     assert_array_equal(matcher.compute(images), expected)
-
-
-def test_match_matrix():
-    match_matrix = MatchMatrix()
-
-    match_matrix.add(0, 1,
-                     np.array([[0, 0],
-                               [1, 2]]))
-
-    match_matrix.add(0, 2,
-                     np.array([[1, 0],
-                               [3, 1]]))
-
-    match_matrix.add(0, 3,
-                     np.array([[3, 0],
-                               [2, 3]]))
-
-    match_matrix.add(1, 2,
-                     np.array([[1, 2]]))
-
-    match_matrix.add(1, 3,
-                     np.array([[2, 1],
-                               [1, 2]]))
-
-    match_matrix.add(2, 3,
-                     np.array([[4, 3]]))
-
-    assert_array_equal(
-        match_matrix.matrix(),
-        np.array([
-            [0, 0, np.nan, np.nan],
-            [1, 2, 0, 1],
-            [3, np.nan, 1, 0],
-            [2, np.nan, 4, 3],
-            [np.nan, 1, 2, 2]
-        ])
-    )
