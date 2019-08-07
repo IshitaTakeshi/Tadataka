@@ -8,6 +8,7 @@ from skimage.feature import peak_local_max
 # so that autograd available for all numpy functions
 from autograd import numpy as np
 
+from vitamine.coordinates import yx_to_xy
 from vitamine.optimization.array_utils import Flatten
 from vitamine.optimization.robustifiers import (
     GemanMcClureRobustifier, SquaredRobustifier)
@@ -87,15 +88,6 @@ def predict(keypoints1, keypoints2, initial_theta):
     return optimizer.optimize(initial_theta, max_iter=1000)
 
 
-def yx_to_xy(coordinates):
-    return coordinates[:, [1, 0]]
-
-
-def xy_to_yx(coordinates):
-    # this is identical to 'yx_to_xy' but I prefer to name expilictly
-    return yx_to_xy(coordinates)
-
-
 def estimate_affine_transformation(image1, image2):
     """
     Esitmate the affine transformation from image1 to image2
@@ -149,7 +141,6 @@ def test_extrema_tracker(image, keypoints):
     plt.show()
 
 
-
 def extract_local_maximums(image):
     curvature = image_curvature(image)
     # Comparison between image_max and im to find the coordinates of local maxima
@@ -173,8 +164,6 @@ def extract_local_maximums(image):
     ax[2].set_title('Peak local max')
 
     plt.show()
-
-
 
 
 if __name__ == "__main__":
