@@ -16,7 +16,7 @@ def grad_y(image):
     return ndimage.sobel(image, axis=1, mode=sobel_mode)
 
 
-def image_curvature(image):
+def compute_image_curvature(image):
     gx = grad_x(image)
     gy = grad_y(image)
 
