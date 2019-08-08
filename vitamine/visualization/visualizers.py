@@ -1,4 +1,4 @@
-import numpy as np
+from autograd import numpy as np
 
 from matplotlib.animation import FuncAnimation
 from matplotlib.font_manager import FontProperties

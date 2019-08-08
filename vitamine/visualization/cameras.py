@@ -1,6 +1,7 @@
+from autograd import numpy as np
+
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import numpy as np
 
 from vitamine.rigid.transformation import transform_all
 

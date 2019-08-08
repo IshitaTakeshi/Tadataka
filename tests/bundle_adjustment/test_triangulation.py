@@ -1,9 +1,9 @@
 import itertools
 
-import numpy as np
+from autograd import numpy as np
 from numpy.testing import (assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
-from numpy.linalg import inv, norm
+from autograd.numpy.linalg import inv, norm
 
 from vitamine.projection.projections import PerspectiveProjection
 from vitamine.camera import CameraParameters
