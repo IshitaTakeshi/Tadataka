@@ -10,7 +10,7 @@ def test_neighbors():
     # 'Neighbors' reuqires an image shape which is in
     # the (height, width) order, whereras the points and
     # their neighbors below are in (x, y)
-    width, height = 4, 3
+    width, height = 5, 4
     neighbors = Neighbors((height, width))
 
     # the case all neighbors fit in the image range
@@ -28,6 +28,14 @@ def test_neighbors():
         # [0, 4], [1, 4], [2, 4]
     ])
     assert_array_equal(neighbors.get(np.array([1, 3])), expected)
+
+    # [5, y] are removed because they are out of the image range
+    expected = np.array([
+        [3, 1], [4, 1], # [5, 1],
+        [3, 2], [4, 2], # [5, 2],
+        [3, 3], [4, 3], # [5, 3]
+    ])
+    assert_array_equal(neighbors.get(np.array([4, 2])), expected)
 
 
 def test_regularizer():
