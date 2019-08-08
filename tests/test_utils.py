@@ -1,6 +1,6 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
-from vitamine.util import is_in_image_range
+from vitamine.utils import is_in_image_range
 
 
 def test_is_in_image_range():
