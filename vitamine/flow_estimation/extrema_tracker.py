@@ -66,18 +66,26 @@ class Maximizer(object):
             p = p_new
         return p
 
+def isint(array):
+    return array.dtype.kind == 'i'
+
 
 class ExtremaTracker(object):
-    def __init__(self, image, keypoints, lambda_):
+    """ Optimize equation (5) """
+    def __init__(self, image_curvature, initial_coordinates, lambda_):
+        assert(isint(initial_coordinates))
         self.lambda_ = lambda_
-        self.curvature = image_curvature(image)
-        self.keypoints = keypoints
+        self.curvature = image_curvature
+        self.initial_coordinates = initial_coordinates
         self.image_shape = self.curvature.shape[0:2]
 
     def optimize(self):
-        coordinates = np.empty(self.keypoints.shape)
-        for i in range(self.keypoints.shape[0]):
-            p0 = self.keypoints[i]
+        """
+        Return corrected point coordinates
+        """
+        coordinates = np.empty(self.initial_coordinates.shape)
+        for i in range(self.initial_coordinates.shape[0]):
+            p0 = self.initial_coordinates[i]
             energy = Energy(self.curvature, Regularizer(p0), self.lambda_)
             maximizer = Maximizer(energy, self.image_shape)
             coordinates[i] = maximizer.search(p0)
