@@ -4,6 +4,7 @@ from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
                              BRIEF)
 from skimage import transform
 
+from vitamine.coordinates import yx_to_xy
 
 extractor = BRIEF(mode="uniform")
 
@@ -13,7 +14,7 @@ def extract_keypoints(image):
     extractor.extract(image, keypoints)
     keypoints = keypoints[extractor.mask]
     descriptors = extractor.descriptors
-    return keypoints, descriptors
+    return yx_to_xy(keypoints), descriptors
 
 
 def match(descriptors0, descriptors1):
