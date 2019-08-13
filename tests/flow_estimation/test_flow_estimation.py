@@ -35,9 +35,9 @@ def test_transformer():
 def test_estimate_affine_transform():
     def test(keypoints1, A_true, b_true):
         keypoints2 = np.dot(A_true, keypoints1.T).T + b_true
-        A_pred, b_pred = estimate_affine_transform(keypoints1, keypoints2)
-        assert_array_almost_equal(A_true, A_pred)
-        assert_array_almost_equal(b_true, b_pred)
+        transform = estimate_affine_transform(keypoints1, keypoints2)
+        assert_array_almost_equal(A_true, transform.A)
+        assert_array_almost_equal(b_true, transform.b)
 
     # random keypoints bofore transformation
     keypoints = np.array([
