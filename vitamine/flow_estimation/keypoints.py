@@ -32,26 +32,6 @@ def match(descriptors0, descriptors1):
                              metric="hamming", cross_check=False)
 
 
-from matplotlib import pyplot as plt
-from skimage.feature import plot_matches
-
-
-def plot(image0, image1, keypoints0, keypoints1, matches01):
-    fig = plt.figure()
-
-    ax = fig.add_subplot(211)
-    ax.axis("off")
-    ax.imshow(image0)
-
-    ax = fig.add_subplot(212)
-    ax.axis("off")
-    ax.imshow(image1)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plot_matches(ax, image0, image1, keypoints0, keypoints1, matches01)
-
-
 class MatchOneToMany(object):
     def __init__(self, base_image):
         self.keypoints0, self.descriptors0 = extract_keypoints(base_image)
