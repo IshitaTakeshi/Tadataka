@@ -49,11 +49,12 @@ def predict(keypoints1, keypoints2, initial_theta):
     return optimizer.optimize(initial_theta, max_iter=1000)
 
 
-def estimate_affine_transform(keypoints1, keypoints2):
+def estimate_affine_transform(src, dst):
+    assert(src.shape == dst.shape)
+
     initial_theta = initialize_theta()
-    theta_pred = predict(keypoints1, keypoints2, initial_theta)
+    theta_pred = predict(src, dst, initial_theta)
     A, b = theta_to_affine_params(theta_pred)
-    return A, b
     return AffineTransform(A, b)
 
 
