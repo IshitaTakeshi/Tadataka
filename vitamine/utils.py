@@ -1,12 +1,8 @@
 from autograd import numpy as np
 
 
-def from_2d(x):
-    return x.flatten()
-
-
-def to_2d(x):
-    return x.reshape(-1, 2)
+def round_int(X):
+    return np.round(X, 0).astype(np.int64)
 
 
 def is_in_image_range(keypoints, image_shape):
