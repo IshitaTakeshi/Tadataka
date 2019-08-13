@@ -15,6 +15,10 @@ from vitamine.optimization.errors import SumRobustifiedNormError
 # P[:, 1] contains y coordinates
 
 
+def affine_params_to_theta(A, b):
+    return np.concatenate((A.flatten(), b.flatten()))
+
+
 def theta_to_affine_params(theta):
     A = np.reshape(theta[0:4], (2, 2))
     b = theta[4:6]
@@ -60,7 +64,4 @@ def initialize_theta(initial_A=None, initial_b=None):
     if initial_b is None:
         initial_b = np.zeros(2)
 
-    return np.concatenate((
-        initial_A.flatten(),
-        initial_b.flatten()
-    ))
+    return affine_params_to_theta(initial_A, initial_b)

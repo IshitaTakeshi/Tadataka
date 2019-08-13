@@ -1,6 +1,7 @@
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from vitamine.flow_estimation.flow_estimation import (
-    estimate_affine_transform, AffineTransformer, predict)
+    estimate_affine_transform, AffineTransformer, predict,
+    affine_params_to_theta, theta_to_affine_params)
 from autograd import numpy as np
 
 
@@ -69,3 +70,21 @@ def test_estimate_affine_transform():
     b_true = np.array([8, -2])
 
     test(keypoints, A_true, b_true)
+
+
+def test_affine_params_to_theta():
+    A = np.array([[0, 1],
+                  [2, 3]])
+    b = np.array([4, 5])
+    theta = affine_params_to_theta(A, b)
+    assert_array_equal(theta, np.arange(6))
+
+
+def test_theta_to_affine_params():
+    A, b = theta_to_affine_params(np.arange(6))
+
+    assert_array_equal(A,
+                       np.array([[0, 1],
+                                 [2, 3]]))
+
+    assert_array_equal(b, np.array([4, 5]))
