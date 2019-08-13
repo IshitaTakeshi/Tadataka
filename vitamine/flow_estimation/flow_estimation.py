@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 from vitamine.optimization.functions import Function
-from vitamine.matrix import affine_trasform
+from vitamine.transform import AffineTransform
 from vitamine.optimization.residuals import BaseResidual
 from vitamine.optimization.robustifiers import (
     GemanMcClureRobustifier, SquaredRobustifier)
@@ -27,7 +27,7 @@ class AffineTransformer(Function):
 
     def compute(self, theta):
         A, b = theta_to_affine_params(theta)
-        return affine_trasform(self.keypoints, A, b)
+        return AffineTransform(A, b).transform(self.keypoints)
 
 
 def predict(keypoints1, keypoints2, initial_theta):
@@ -50,6 +50,7 @@ def estimate_affine_transform(keypoints1, keypoints2):
     theta_pred = predict(keypoints1, keypoints2, initial_theta)
     A, b = theta_to_affine_params(theta_pred)
     return A, b
+    return AffineTransform(A, b)
 
 
 def initialize_theta(initial_A=None, initial_b=None):
