@@ -7,6 +7,12 @@ from skimage import transform
 from vitamine.coordinates import yx_to_xy
 
 
+brief = BRIEF(
+    descriptor_size=512,
+    patch_size=64,
+    mode="uniform",
+    sigma=0.1
+)
 
 
 def extract_brief(image):
@@ -19,7 +25,7 @@ def extract_brief(image):
 
 def extract_orb(image):
     from skimage.feature import ORB
-    orb = ORB(n_keypoints=200, fast_threshold=0.12)
+    orb = ORB(n_keypoints=100)
     orb.detect_and_extract(image)
     return yx_to_xy(orb.keypoints), orb.descriptors
 
