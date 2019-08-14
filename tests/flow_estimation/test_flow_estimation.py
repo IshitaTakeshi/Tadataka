@@ -25,12 +25,6 @@ def test_transformer():
     ])
     assert_array_equal(transformer.compute(theta), expected)
 
-    from autograd import jacobian
-    J = jacobian(transformer.compute)(theta)
-    print("J")
-    print(J)
-
-
 
 def test_estimate_affine_transform():
     def test(keypoints1, A_true, b_true):
