@@ -66,6 +66,7 @@ class Maximizer(object):
             p = p_new
         return p
 
+
 def isint(array):
     return array.dtype.kind == 'i'
 
@@ -83,7 +84,7 @@ class ExtremaTracker(object):
         """
         Return corrected point coordinates
         """
-        coordinates = np.empty(self.initial_coordinates.shape)
+        coordinates = np.empty(self.initial_coordinates.shape, dtype=np.int64)
         for i in range(self.initial_coordinates.shape[0]):
             p0 = self.initial_coordinates[i]
             energy = Energy(self.curvature, Regularizer(p0), self.lambda_)
