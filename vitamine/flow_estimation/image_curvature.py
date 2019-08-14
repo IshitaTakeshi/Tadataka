@@ -9,11 +9,19 @@ sobel_mode = "reflect"
 
 
 def grad_x(image):
-    return ndimage.sobel(image, axis=0, mode=sobel_mode)
+    return ndimage.sobel(image, axis=1, mode=sobel_mode)
 
 
 def grad_y(image):
-    return ndimage.sobel(image, axis=1, mode=sobel_mode)
+    return ndimage.sobel(image, axis=0, mode=sobel_mode)
+
+
+# it is very hard to test 'compute_image_curvature'
+# so separate the grad computation from it
+def compute_curvature(fx, fy, fxx, fxy, fyx, fyy):
+    f2y = fy * fy
+    f2x = fx * fx
+    return f2y * fxx - fx * fy * fxy - fy * fx * fyx + f2x * fyy
 
 
 def compute_image_curvature(image):
@@ -25,7 +33,4 @@ def compute_image_curvature(image):
     gyx = grad_x(gy)
     gyy = grad_y(gy)
 
-    g2y = gy * gy
-    g2x = gx * gx
-
-    return g2y * gxx - gx * gy * gxy - gy * gx * gyx + g2x * gyy
+    return compute_curvature(gx, gy, gxx, gxy, gyx, gyy)
