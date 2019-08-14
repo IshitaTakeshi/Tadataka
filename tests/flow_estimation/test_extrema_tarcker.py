@@ -1,5 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
+from skimage.color import rgb2gray
+from skimage.data import astronaut
 
 from vitamine.optimization.robustifiers import SquaredRobustifier
 from vitamine.flow_estimation.extrema_tracker import (
@@ -96,3 +98,44 @@ def test_maximizer():
     maximizer = Maximizer(Energy2(), (100, 100), max_iter=10)
     assert_array_equal(maximizer.search(np.array([4, 3])),
                        np.array([4, 3]))
+
+
+def test_extrema_tracker():
+    # diff to 8 neighbors
+    diffs = np.array([
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1], [0, 1],
+        [1, -1], [1, 0], [1, 1]
+    ])
+
+    # this is the image itself but use it as a curvature
+    curvature = rgb2gray(astronaut())
+
+    # coordinates are represented in [xs, ys] format
+    initial_coordinates = np.array([
+        [10, 20],
+        [30, 40],
+        [60, 50],
+        [40, 30]
+    ])
+
+    lambda_ = 0.0
+
+    # disable regularization
+    extrema_tracker = ExtremaTracker(curvature, initial_coordinates, lambda_)
+    coordinates = extrema_tracker.optimize()
+
+    # the resulting points should have the maxium energies
+    # compared to their local neighbors
+    for p in coordinates:
+        energy = Energy(curvature, Regularizer(p), lambda_)
+        E0 = energy.compute(p.reshape(1, -1))[0]
+        E = energy.compute(p + diffs)
+        assert((E0 >= E).all())
+
+    # apply regularization very strongly
+    extrema_tracker = ExtremaTracker(curvature, initial_coordinates,
+                                     lambda_=1e8)
+    coordinates = extrema_tracker.optimize()
+    # the points should not move from the initial values
+    assert_array_equal(coordinates, initial_coordinates)
