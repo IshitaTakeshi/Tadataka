@@ -1,6 +1,5 @@
 from autograd import numpy as np
 from vitamine.optimization.robustifiers import GemanMcClureRobustifier
-from vitamine.flow_estimation.image_curvature import compute_image_curvature
 from vitamine.utils import is_in_image_range
 
 
@@ -36,6 +35,8 @@ class Regularizer(object):
 
 class Energy(object):
     def __init__(self, curvature, regularizer, lambda_):
+        assert(np.ndim(curvature) == 2)
+
         self.curvature = curvature
         self.regularizer = regularizer
         self.lambda_ = lambda_

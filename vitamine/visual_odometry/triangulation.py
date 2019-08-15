@@ -5,6 +5,9 @@ from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
 
 
 def triangulation(image1, image2, K):
+    assert(np.ndim(image1) == 2)
+    assert(np.ndim(image2) == 2)
+
     estimator = AffineTransformEstimator()
     affine_transform = estimator.estimate(image1, image2)
 
@@ -19,4 +22,5 @@ def triangulation(image1, image2, K):
         local_maximums2,
         K
     )
+
     return points
