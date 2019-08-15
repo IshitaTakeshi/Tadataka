@@ -71,14 +71,20 @@ def isint(array):
     return array.dtype.kind == 'i'
 
 
+# FIXME pass 'initial_coordinates' to ExtremaTracker.optimize,
+# not to ExtremaTracker.__init__
 class ExtremaTracker(object):
     """ Optimize equation (5) """
     def __init__(self, image_curvature, initial_coordinates, lambda_):
         assert(isint(initial_coordinates))
-        self.lambda_ = lambda_
+
         self.curvature = image_curvature
-        self.initial_coordinates = initial_coordinates
         self.image_shape = self.curvature.shape[0:2]
+
+        assert(is_in_image_range(initial_coordinates, self.image_shape).all())
+
+        self.initial_coordinates = initial_coordinates
+        self.lambda_ = lambda_
 
     def optimize(self):
         """
