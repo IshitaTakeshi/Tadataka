@@ -14,7 +14,7 @@ def extract_local_maximums(curvature):
     return yx_to_xy(local_maximums)
 
 
-def extrema_tracking(curvature1, curvature2, affine_transform):
+def extrema_tracking(curvature1, curvature2, affine_transform, lambda_):
     image_shape = curvature1.shape[0:2]
 
     local_maximums1 = extract_local_maximums(curvature1)
@@ -29,12 +29,56 @@ def extrema_tracking(curvature1, curvature2, affine_transform):
     local_maximums1 = local_maximums1[mask]
     local_maximums2 = local_maximums2[mask]
 
-    tracker = ExtremaTracker(curvature2, local_maximums2, lambda_=0.1)
+    tracker = ExtremaTracker(curvature2, local_maximums2, lambda_)
     local_maximums2 = tracker.optimize()
 
     assert(is_in_image_range(local_maximums2, image_shape).all())
 
     return local_maximums1, local_maximums2
+
+
+class TwoViewExtremaTracker(object):
+    def __init__(self, affine_transform, curvature1, lambda_):
+        self.image_shape = curvature1.shape[0:2]
+        self.curvature1 = curvature1
+        self.lambda_ = lambda_
+        self.affine = affine_transform
+
+    def track(self, local_maximums):
+        local_maximums = self.affine.transform(local_maximums)
+        local_maximums = round_int(local_maximums)
+
+        # correct the coordinate if local maximum is in the image range
+        # leave it otherwise
+        mask = is_in_image_range(local_maximums, self.image_shape)
+
+        tracker = ExtremaTracker(self.curvature1, local_maximums[mask],
+                                 self.lambda_)
+        local_maximums[mask] = tracker.optimize()
+
+        return local_maximums
+
+
+def propagate(local_maximums, affines, curvatures, lambda_):
+    assert(len(affines) == len(curvatures))
+
+    image_shape = curvatures[0].shape[0:2]
+
+    N = len(curvatures)
+
+    L = np.full((N+1, *local_maximums.shape), np.nan)
+    L[0] = local_maximums
+
+    for i in range(N):
+        # note that local_maximums is always non nan
+        tracker = TwoViewExtremaTracker(affines[i], curvatures[i], lambda_)
+
+        local_maximums = tracker.track(local_maximums)
+
+        mask = is_in_image_range(local_maximums, image_shape)
+
+        L[i+1, mask] = local_maximums[mask]
+    return L
 
 
 class MultipleViewExtremaTracker(object):
@@ -45,38 +89,14 @@ class MultipleViewExtremaTracker(object):
         self.curvatures = [compute_image_curvature(I) for I in images]
         self.lambda_ = lambda_
 
-    def estimate_next(self, local_maximums, image1, image2, curvature2):
-        estimator = AffineTransformEstimator()
-        affine = estimator.estimate(image1, image2)
-
-        local_maximums = affine.transform(local_maximums)
-        local_maximums = round_int(local_maximums)
-
-        # correct the coordinate if local maximum is in the image range
-        # leave it otherwise
-        mask = is_in_image_range(local_maximums, self.image_shape)
-        tracker = ExtremaTracker(curvature2, local_maximums[mask], self.lambda_)
-        local_maximums[mask] = tracker.optimize()
-
-        return local_maximums
-
     def track(self):
-        n_images = len(self.images)
+        images = self.images
+
+        N = len(images)
+        e = AffineTransformEstimator()
+        affines = [e.estimate(images[i], images[i+1]) for i in range(0, N-1)]
 
         local_maximums = extract_local_maximums(self.curvatures[0])
 
-        L = np.full((n_images, *local_maximums.shape), np.nan)
-        L[0] = local_maximums
-
-        for i in range(0, n_images-1):
-            local_maximums = self.estimate_next(
-                local_maximums,
-                self.images[i],
-                self.images[i+1],
-                self.curvatures[i+1]
-            )
-
-            mask = is_in_image_range(local_maximums, self.image_shape)
-
-            L[i+1, mask] = local_maximums[mask]
-        return L
+        return propagate(local_maximums, affines,
+                         self.curvatures[1:], self.lambda_)
