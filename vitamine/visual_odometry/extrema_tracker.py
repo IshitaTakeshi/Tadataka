@@ -38,7 +38,7 @@ def extrema_tracking(curvature1, curvature2, affine_transform, lambda_):
 
 
 class TwoViewExtremaTracker(object):
-    def __init__(self, affine_transform, curvature1, lambda_):
+    def __init__(self, curvature1, affine_transform, lambda_):
         self.image_shape = curvature1.shape[0:2]
         self.curvature1 = curvature1
         self.lambda_ = lambda_
@@ -59,7 +59,7 @@ class TwoViewExtremaTracker(object):
         return local_maximums
 
 
-def propagate(local_maximums, affines, curvatures, lambda_):
+def propagate(local_maximums, curvatures, affines, lambda_):
     assert(len(affines) == len(curvatures))
 
     image_shape = curvatures[0].shape[0:2]
@@ -71,7 +71,7 @@ def propagate(local_maximums, affines, curvatures, lambda_):
 
     for i in range(N):
         # note that local_maximums is always non nan
-        tracker = TwoViewExtremaTracker(affines[i], curvatures[i], lambda_)
+        tracker = TwoViewExtremaTracker(curvatures[i], affines[i], lambda_)
 
         local_maximums = tracker.track(local_maximums)
 
