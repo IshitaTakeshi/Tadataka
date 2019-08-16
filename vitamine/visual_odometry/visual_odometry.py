@@ -93,6 +93,22 @@ def init_curvatures(images):
     return [compute_image_curvature(image) for image in images]
 
 
+class NewPoseEstimator(object):
+    def __init__(self, points, two_view_tracker, K, lambda_):
+        # estimate the affine transform
+        # from the latest image in the window to the new image
+
+        # estimate the camera pose of the new (n-th) viewpoint
+        self.points = points
+        self.tracker = two_view_tracker
+
+        self.K = K
+
+    def estimate(self, last_keypoints):
+        new_keypoints = self.tracker.track(last_keypoints)
+        return estimate_pose(self.points, new_keypoints, self.K)
+
+
 class VisualOdometry(object):
     def __init__(self, observer, camera_parameters, window_size=8):
         self.observer = observer
