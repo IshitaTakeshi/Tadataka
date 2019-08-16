@@ -123,6 +123,13 @@ class VisualOdometry(object):
         omegas, translations, points = local_ba.compute(keypoints)
         return omegas, translations, points
 
+    def estimate_new_pose(self, points, last_keypoints, new_curvature, new_affine):
+        tracker = TwoViewExtremaTracker(new_curvature, new_affine,
+                                        self.lambda_)
+        estimator = NewPoseEstimator(points, tracker,
+                                     self.K, self.lambda_)
+        return estimator.estimate(last_keypoints)
+
     def sequence(self):
         affine_estimator = AffineTransformEstimator()
 
