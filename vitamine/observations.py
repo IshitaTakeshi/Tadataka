@@ -1,3 +1,6 @@
+from skimage.color import rgb2gray
+
+
 class Observations(object):
     def __init__(self, observations, window_size):
         self.observations = observations
@@ -31,3 +34,23 @@ class DummyObserver(BaseObserver):
 
     def is_running(self):
         return self.index < self.observations.shape[0]
+
+
+class ImageObserver(object):
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.index = 0
+
+    def request(self):
+        image = self.dataset[self.index].image
+        self.index += 1
+        return image
+
+    def is_running(self):
+        return self.index < len(self.dataset)
+
+
+class GrayImageObserver(ImageObserver):
+    def request(self):
+        image = super().request()
+        return rgb2gray(image)
