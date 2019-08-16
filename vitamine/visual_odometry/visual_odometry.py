@@ -142,29 +142,25 @@ class VisualOdometry(object):
             tracker.track(current_keypoints[-1, mask]),
             self.K)
 
-        affine = affines[0]
-
         omegas = slide_window(omegas, new_omega)
         translations = slide_window(translations, new_translation)
         images = slide_window(images, new_image)
         curvatures = slide_window(curvatures, new_curvature)
         affines = slide_window(affines, new_affine)
 
-        added_keypoints = filter_unobserved(extract_local_maximums(curvatures[0]),
-                                            affine, image_shape)
-        added_keypoint_matrix = propagate(added_keypoints, affines,
-                                          curvatures[1:], self.lambda_)
+        keypoints = propagate(extract_local_maximums(curvatures[0]), affines,
+                              curvatures[1:], self.lambda_)
 
         triangulation = MultipleTriangulation(
             omegas[:-1],
             translations[:-1],
-            added_keypoint_matrix[:-1],
+            keypoints[:-1],
             self.K
         )
         added_points = triangulation.triangulate(
             omegas[-1],
             translations[-1],
-            added_keypoint_matrix[-1]
+            keypoints[-1]
         )
 
         # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
