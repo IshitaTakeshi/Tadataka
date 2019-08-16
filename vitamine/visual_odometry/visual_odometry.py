@@ -136,59 +136,50 @@ class VisualOdometry(object):
         global_map = Map()
 
         images = pool_images(self.observer, self.window_size)
+        curvatures = init_curvatures(images)
+        affines = init_affines(images, affine_estimator)
+        image_shape = images[0].shape[0:2]
 
-        # current_keypoints.shape == (window_size, n_points, 2)
-        current_keypoints = MultipleViewExtremaTracker(images).track()
+        keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
 
-        omegas, translations, points =\
-            init_poses_and_points(current_keypoints, self.K)
+        omegas, translations, points = init_poses_and_points(keypoints, self.K)
 
         # omegas, translations, points = self.refine(
         #     omegas, translations, points, keypoint_matrix)
 
-        affines = init_affines(images, affine_estimator)
-        curvatures = init_curvatures(images)
-        image_shape = images[0].shape[0:2]
 
-        new_image = self.observer.request()
-        new_curvature = compute_image_curvature(new_image)
+        while self.observer.is_running():
+            new_image = self.observer.request()
+            new_curvature = compute_image_curvature(new_image)
+            new_affine = affine_estimator.estimate(images[-1], new_image)
 
-        # estimate the affine transform
-        # from the latest image in the window to the new image
-        new_affine = affine_estimator.estimate(images[-1], new_image)
+            new_omega, new_translation = self.estimate_new_pose(
+                points, keypoints[-1], new_curvature, new_affine)
 
-        # estimate the camera pose of the new (n-th) viewpoint
-        tracker = TwoViewExtremaTracker(new_affine, new_curvature, self.lambda_)
-        mask = compute_mask(current_keypoints[-1])
-        new_omega, new_translation = estimate_pose(
-            points[mask],
-            tracker.track(current_keypoints[-1, mask]),
-            self.K)
+            omegas = slide_window(omegas, new_omega)
+            translations = slide_window(translations, new_translation)
+            images = slide_window(images, new_image)
+            curvatures = slide_window(curvatures, new_curvature)
+            affines = slide_window(affines, new_affine)
 
-        omegas = slide_window(omegas, new_omega)
-        translations = slide_window(translations, new_translation)
-        images = slide_window(images, new_image)
-        curvatures = slide_window(curvatures, new_curvature)
-        affines = slide_window(affines, new_affine)
+            keypoints = multiple_view_keypoints(curvatures, affines,
+                                                self.lambda_)
 
-        keypoints = propagate(extract_local_maximums(curvatures[0]), affines,
-                              curvatures[1:], self.lambda_)
+            triangulation = MultipleTriangulation(
+                omegas[:-1],
+                translations[:-1],
+                keypoints[:-1],
+                self.K
+            )
+            points = triangulation.triangulate(
+                omegas[-1],
+                translations[-1],
+                keypoints[-1]
+            )
+            print(points)
+            # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
 
-        triangulation = MultipleTriangulation(
-            omegas[:-1],
-            translations[:-1],
-            keypoints[:-1],
-            self.K
-        )
-        added_points = triangulation.triangulate(
-            omegas[-1],
-            translations[-1],
-            keypoints[-1]
-        )
-
-        # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
-
-        # global_map.add(*camera_to_world(omegas, translations), added_points)
-        # plot_map(global_map.camera_omegas,
-        #          global_map.camera_locations,
-        #          global_map.points)
+            # global_map.add(*camera_to_world(omegas, translations), added_points)
+            # plot_map(global_map.camera_omegas,
+            #          global_map.camera_locations,
+            #          global_map.points)
