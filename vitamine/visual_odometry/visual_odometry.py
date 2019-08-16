@@ -9,7 +9,7 @@ from vitamine.bundle_adjustment.triangulation import (
 from vitamine.visual_odometry.local_ba import LocalBundleAdjustment
 from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
 from vitamine.visual_odometry.extrema_tracker import (
-    MultipleViewExtremaTracker, TwoViewExtremaTracker, extract_local_maximums, propagate)
+    multiple_view_keypoints, TwoViewExtremaTracker)
 from vitamine.bundle_adjustment.mask import pose_mask, point_mask
 from vitamine.bundle_adjustment.pnp import estimate_pose
 from vitamine.rigid.coordinates import camera_to_world
