@@ -153,6 +153,7 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
 
 def points_from_unknown_poses(keypoints0, keypoints1, K):
     """
+    Reconstruct 3D points from non nan keypoints obtained from 2 views
     keypoints[01].shape == (n_points, 2)
     """
     assert(keypoints0.shape == keypoints1.shape)
@@ -210,6 +211,6 @@ class MultipleTriangulation(object):
         self.triangulation = MultipleTriangulationImpl(
             rodrigues(omegas), translations, keypoints, K)
 
-    def triangulate(self, omega, translation, new_keypoints):
-        R = rodrigues(omega.reshape(1, -1))[0]
-        return self.triangulation.triangulate(R, translation, new_keypoints)
+    def triangulate(self, new_omega, new_translation, new_keypoints):
+        R = rodrigues(new_omega.reshape(1, -1))[0]
+        return self.triangulation.triangulate(R, new_translation, new_keypoints)
