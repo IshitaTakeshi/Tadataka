@@ -81,22 +81,6 @@ def propagate(local_maximums, affines, curvatures, lambda_):
     return L
 
 
-class MultipleViewExtremaTracker(object):
-    def __init__(self, images, lambda_=0.1):
-        self.images = images
-        self.image_shape = self.images[0].shape
-
-        self.curvatures = [compute_image_curvature(I) for I in images]
-        self.lambda_ = lambda_
-
-    def track(self):
-        images = self.images
-
-        N = len(images)
-        e = AffineTransformEstimator()
-        affines = [e.estimate(images[i], images[i+1]) for i in range(0, N-1)]
-
-        local_maximums = extract_local_maximums(self.curvatures[0])
-
-        return propagate(local_maximums, affines,
-                         self.curvatures[1:], self.lambda_)
+def multiple_view_keypoints(curvatures, affines, lambda_):
+    return propagate(extract_local_maximums(curvatures[0]),
+                     curvatures[1:], affines, lambda_)
