@@ -79,19 +79,14 @@ def init_affines(images, affine_estimator):
     return [f(images[i], images[i+1]) for i in range(0, len(images)-1)]
 
 
-def initialize(images, K):
-    keypoint_matrix = MultipleViewExtremaTracker(images).track()
-    # keypoints.shape == (n_viewpoints, n_points, 2)
-
-    initializer = Initializer(keypoint_matrix, K)
+def init_poses_and_points(keypoints, K):
+    initializer = Initializer(keypoints, K)
 
     omegas, translations, points = initializer.initialize(0, 1)
 
-    check_keypoints(keypoint_matrix, omegas, translations, points)
+    check_keypoints(keypoints, omegas, translations, points)
 
-    # omegas, translations, points = self.refine(
-    #     omegas, translations, points, keypoint_matrix)
-    return omegas, translations, points, keypoint_matrix
+    return omegas, translations, points
 
 
 def init_curvatures(images):
@@ -118,7 +113,16 @@ class VisualOdometry(object):
         global_map = Map()
 
         images = pool_images(self.observer, self.window_size)
-        omegas, translations, points, current_keypoints = initialize(images, self.K)
+
+        # current_keypoints.shape == (window_size, n_points, 2)
+        current_keypoints = MultipleViewExtremaTracker(images).track()
+
+        omegas, translations, points =\
+            init_poses_and_points(current_keypoints, self.K)
+
+        # omegas, translations, points = self.refine(
+        #     omegas, translations, points, keypoint_matrix)
+
         affines = init_affines(images, affine_estimator)
         curvatures = init_curvatures(images)
         image_shape = images[0].shape[0:2]
