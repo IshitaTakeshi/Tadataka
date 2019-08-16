@@ -88,9 +88,9 @@ class Initializer(object):
 
             new_keypoints = self.keypoints[new_viewpoint]
 
-            omega, translation = estimate_pose(all_points, new_keypoints,
-                                               self.K)
-            points = triangulation.triangulate(omega, translation,
+            new_omega, new_translation = estimate_pose(all_points, new_keypoints,
+                                                       self.K)
+            points = triangulation.triangulate(new_omega, new_translation,
                                                new_keypoints)
 
             all_points = update(all_points, points)
