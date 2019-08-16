@@ -7,7 +7,9 @@ def solve_pnp(points, keypoints, K):
     # TODO make independent from cv2
     import cv2
 
-    retval, rvec, tvec = cv2.solvePnP(points, keypoints, K, np.zeros(4))
+    retval, rvec, tvec = cv2.solvePnP(points.astype(np.float64),
+                                      keypoints.astype(np.float64),
+                                      K, np.zeros(4))
     rvec = rvec.flatten()
     tvec = tvec.flatten()
     return rvec, tvec
