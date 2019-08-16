@@ -81,8 +81,8 @@ def test_extrema_tracking():
     curvature1 = set_hills(np.zeros((100, 100)), local_maximums1_expected)
     curvature2 = set_hills(np.zeros((100, 100)), local_maximums2_expected)
 
-    local_maximums1, local_maximums2 = extrema_tracking(curvature1, curvature2,
-                                                        affine_transform)
+    local_maximums1, local_maximums2 =\
+        extrema_tracking(curvature1, curvature2, affine_transform, lambda_=0.1)
 
     assert_array_equal(array_to_set(local_maximums1),
                        local_maximums1_expected)
