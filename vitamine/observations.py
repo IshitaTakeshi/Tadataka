@@ -15,6 +15,9 @@ class BaseObserver(object):
     def request(self):
         raise NotImplementedError()
 
+    def is_running(self):
+        raise NotImplementedError()
+
 
 class DummyObserver(BaseObserver):
     def __init__(self, observations):
