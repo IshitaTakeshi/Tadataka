@@ -8,15 +8,10 @@ from vitamine.rigid.transformation import transform_all
 from vitamine.rigid.rotation import rodrigues
 from vitamine.projection.projections import PerspectiveProjection
 
+from tests.utils import project
+
 
 def test_initialize():
-    def project(rotations, translations, points, projection):
-        points = transform_all(rotations, translations, points)
-        keypoints = projection.compute(points.reshape(-1, 3))
-        keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
-        return keypoints
-
-
     camera_parameters = CameraParameters(
         focal_length=[0.9, 1.2],
         offset=[0.8, -0.2]

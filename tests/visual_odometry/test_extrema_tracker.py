@@ -4,22 +4,7 @@ from numpy.testing import assert_array_equal
 from vitamine.transform import AffineTransform
 from vitamine.visual_odometry.extrema_tracker import (
     extract_local_maximums, extrema_tracking)
-
-
-local_hill = np.array([
-    [1, 1, 1, 1, 1],
-    [1, 2, 2, 2, 1],
-    [1, 2, 3, 2, 1],
-    [1, 2, 2, 2, 1],
-    [1, 1, 1, 1, 1],
-])
-
-
-def set_hills(curvature, coordinates):
-    for x, y in coordinates:
-        # fill around (x, y) with the hill
-        curvature[y-2:y+3, x-2:x+3] = local_hill
-    return curvature
+from tests.utils import set_hills
 
 
 def array_to_set(coordinates):
@@ -36,8 +21,7 @@ def test_local_maximums():
         (50, 30)
     }
 
-    curvature = np.zeros((100, 100))
-    curvature = set_hills(curvature, expected)
+    curvature = set_hills(np.zeros((100, 100)), expected)
 
     local_maximums = extract_local_maximums(curvature)
 
