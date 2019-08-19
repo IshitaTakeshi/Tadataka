@@ -1,18 +1,6 @@
 from autograd import numpy as np
 
 from vitamine.assertion import check_poses, check_points
-from vitamine.bundle_adjustment.mask import pose_mask, point_mask
-
-
-def expand_array(array, expected_size, constant=np.nan):
-    n = expected_size - array.shape[0]
-    assert(n >= 0)
-
-    array = np.pad(array, ((0, n), (0, 0)),
-                   mode='constant', constant_values=np.nan)
-
-    assert(array.shape[0] == expected_size)
-    return array
 
 
 class Map(object):
@@ -40,23 +28,12 @@ class Map(object):
 
     def add_poses(self, camera_omegas, camera_locations, frame_index):
         check_poses(camera_omegas, camera_locations)
-
-        mask = pose_mask(camera_omegas, camera_locations)
-        indices = np.where(mask)[0]
-
-        n = frame_index + camera_omegas.shape[0]
-        self.camera_omegas = expand_array(self.camera_omegas, n)
-        self.camera_locations = expand_array(self.camera_locations, n)
-
-        self.camera_omegas[frame_index+indices] = camera_omegas[indices]
-        self.camera_locations[frame_index+indices] = camera_locations[indices]
+        self.camera_omegas = np.vstack((self.camera_omegas, camera_omegas))
+        self.camera_locations = np.vstack((self.camera_locations, camera_locations))
 
     def add_points(self, points):
-        assert(self.points.shape[0] == points.shape[0])
         check_points(points)
-
-        mask = point_mask(points)
-        self.points[mask] = points[mask]
+        self.points = np.vstack((self.points, points))
 
     def get(self):
         return self.camera_omegas, self.camera_locations, self.points
