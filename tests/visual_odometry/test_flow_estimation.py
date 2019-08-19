@@ -4,7 +4,7 @@ from skimage import transform as tf
 from skimage.color import rgb2gray
 from skimage.data import astronaut
 
-from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
+from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
 
 
 def test_estimate_affine_transform():
@@ -24,10 +24,9 @@ def test_estimate_affine_transform():
     image1 = rgb2gray(astronaut())
     image2 = tf.warp(image1, inv_transform_true)
 
-    estimator = AffineTransformEstimator()
-    affine_transform = estimator.estimate(image1, image2)
+    tform = estimate_affine_transform(image1, image2)
 
-    A_pred, b_pred = affine_transform.A, affine_transform.b
+    A_pred, b_pred = tform.A, tform.b
 
     # test relative error
     threshold = np.linalg.norm(A_true.flatten()) * 0.05
