@@ -55,37 +55,51 @@ def fundamental_to_essential(F, K0, K1=None):
     return K1.T.dot(F).dot(K0)
 
 
-# TODO compute multiple points
+def calc_depth(P, x):
+    return np.dot(P[2], x)
+
+
+def motion_matrix(R, t):
+    T = np.empty((3, 4))
+    T[0:3, 0:3] = R
+    T[0:3, 3] = t
+    return T
+
+
+# def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1, K):
+#     P0 = np.dot(K, motion_matrix(R0, t0))
+#     P1 = np.dot(K, motion_matrix(R1, t1))
+#
+#     # print(X[0:3, 0].shape)
+#
+#     x0, y0 = keypoints0
+#     x1, y1 = keypoints1
+#
+#     # See section 12.2 for details
+#     A = np.vstack([
+#         x0 * P0[2] - P0[0],
+#         y0 * P0[2] - P0[1],
+#         x1 * P1[2] - P1[0],
+#         y1 * P1[2] - P1[1],
+#     ])
+#     x = solve_linear(A)
+#
+#     # normalize so that x / x[3] be a homogeneous vector [x y z 1]
+#     # and extract the first 3 elements
+#     assert(x[3] != 0)
+#     x = x / x[3]
+#     # calculate depths for utilities
+#     return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
+
+
 def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1, K):
-    def calc_depth(P, x):
-        return np.dot(P[2], x)
-
-    def motion_matrix(R, t):
-        T = np.empty((3, 4))
-        T[0:3, 0:3] = R
-        T[0:3, 3] = t
-        return T
-
+    import cv2
     P0 = np.dot(K, motion_matrix(R0, t0))
     P1 = np.dot(K, motion_matrix(R1, t1))
-
-    x0, y0 = keypoints0
-    x1, y1 = keypoints1
-
-    # See section 12.2 for details
-    A = np.vstack([
-        x0 * P0[2] - P0[0],
-        y0 * P0[2] - P0[1],
-        x1 * P1[2] - P1[0],
-        y1 * P1[2] - P1[1],
-    ])
-    x = solve_linear(A)
-
-    # normalize so that x / x[3] be a homogeneous vector [x y z 1]
-    # and extract the first 3 elements
+    X = cv2.triangulatePoints(P0, P1, keypoints0, keypoints1)
+    x = X.flatten()
     assert(x[3] != 0)
     x = x / x[3]
-    # calculate depths for utilities
     return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
 
 
