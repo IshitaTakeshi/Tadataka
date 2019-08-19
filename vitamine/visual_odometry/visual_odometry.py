@@ -7,16 +7,15 @@ from vitamine.bundle_adjustment.mask import correspondence_mask, compute_mask
 from vitamine.bundle_adjustment.triangulation import (
     points_from_known_poses, MultipleTriangulation)
 from vitamine.visual_odometry.local_ba import LocalBundleAdjustment
-from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
 from vitamine.visual_odometry.extrema_tracker import (
     multiple_view_keypoints, TwoViewExtremaTracker)
+from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
 from vitamine.bundle_adjustment.mask import pose_mask, point_mask
 from vitamine.bundle_adjustment.pnp import estimate_pose
 from vitamine.rigid.coordinates import camera_to_world
 from vitamine.rigid.rotation import rodrigues
 from vitamine.visual_odometry.initializers import Initializer
 from vitamine.flow_estimation.image_curvature import compute_image_curvature
-from vitamine.assertion import check_keypoints
 from vitamine.transform import AffineTransform
 from vitamine.utils import is_in_image_range
 from vitamine.map import Map
