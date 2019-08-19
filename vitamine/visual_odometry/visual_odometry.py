@@ -51,27 +51,9 @@ def filter_unobserved(local_maximums, affine, image_shape):
     return local_maximums[~mask]
 
 
-def pool_images(observer, window_size):
-    images = []
-    for i in range(window_size):
-        image = observer.request()
-        images.append(image)
-    return np.array(images)
-
-
 def init_affines(images):
     f = estimate_affine_transform
     return [f(images[i], images[i+1]) for i in range(0, len(images)-1)]
-
-
-def init_poses_and_points(keypoints, K):
-    initializer = Initializer(keypoints, K)
-
-    omegas, translations, points = initializer.initialize(0, 1)
-
-    check_keypoints(keypoints, omegas, translations, points)
-
-    return omegas, translations, points
 
 
 def init_curvatures(images):
