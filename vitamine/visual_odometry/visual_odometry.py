@@ -60,20 +60,42 @@ def init_curvatures(images):
     return [compute_image_curvature(image) for image in images]
 
 
-class NewPoseEstimator(object):
-    def __init__(self, points, two_view_tracker, K, lambda_):
-        # estimate the affine transform
-        # from the latest image in the window to the new image
+class Window(object):
+    def __init__(self, omegas, translations, curvatures, affines):
+        self.omegas = omegas
+        self.translations = translations
+        self.curvatures = curvatures
+        self.affines = affines
 
-        # estimate the camera pose of the new (n-th) viewpoint
+    def slide(self, new_omega, new_translation, new_curvature, new_affine):
+        self.omegas = slide_window(self.omegas, new_omega)
+        self.translations = slide_window(self.translations, new_translation)
+        self.curvatures = slide_window(self.curvatures, new_curvature)
+        self.affines = slide_window(self.affines, new_affine)
+        return self
+
+
+class NewPoseEstimation(object):
+    def __init__(self, points, new_curvature, new_affine, K, lambda_):
         self.points = points
-        self.tracker = two_view_tracker
-
+        self.tracker = TwoViewExtremaTracker(new_curvature, new_affine,
+                                             lambda_)
         self.K = K
 
     def estimate(self, last_keypoints):
         new_keypoints = self.tracker.track(last_keypoints)
-        return estimate_pose(self.points, new_keypoints, self.K)
+        new_omega, new_translation = estimate_pose(self.points, new_keypoints, self.K)
+        return new_omega, new_translation
+
+
+class NewPointTriangulation(object):
+    def __init__(self, K):
+        self.K = K
+
+    def triangulate(self, omegas, translations, keypoints):
+        t = MultipleTriangulation(omegas[:-1], translations[:-1],
+                                  keypoints[:-1], self.K)
+        return t.triangulate(omegas[-1], translations[-1], keypoints[-1])
 
 
 class VisualOdometry(object):
@@ -90,61 +112,69 @@ class VisualOdometry(object):
         omegas, translations, points = local_ba.compute(keypoints)
         return omegas, translations, points
 
-    def estimate_new_pose(self, points, last_keypoints, new_curvature, new_affine):
-        tracker = TwoViewExtremaTracker(new_curvature, new_affine,
-                                        self.lambda_)
-        estimator = NewPoseEstimator(points, tracker,
-                                     self.K, self.lambda_)
-        return estimator.estimate(last_keypoints)
+    def initialize(self, images):
+        curvatures = init_curvatures(images)
+        affines = init_affines(images)
+
+        viewpoint1, viewpoint2 = 0, 1
+
+        keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
+
+        init = Initializer(keypoints, self.K)
+        omegas, translations, points = init.initialize(viewpoint1, viewpoint2)
+
+        window = Window(omegas, translations, curvatures, affines)
+
+        return window, points, keypoints
 
     def sequence(self):
         global_map = Map()
 
-        images = pool_images(self.observer, self.window_size)
-        curvatures = init_curvatures(images)
-        affines = init_affines(images)
+        images = [self.observer.request() for i in range(self.window_size)]
+        window, points, keypoints = self.initialize(images)
 
-        keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
-
-        omegas, translations, points = init_poses_and_points(keypoints, self.K)
+        global_map.add(
+            *camera_to_world(window.omegas, window.translations),
+            points
+        )
 
         # omegas, translations, points = self.refine(
         #     omegas, translations, points, keypoint_matrix)
 
+        last_image = images[-1]
 
         while self.observer.is_running():
+            print("iter")
+
+            last_keypoints = keypoints[-1]
+
             new_image = self.observer.request()
 
-            new_affine = estimate_affine_transform(images[-1], new_image)
+            new_affine = estimate_affine_transform(last_image, new_image)
             new_curvature = compute_image_curvature(new_image)
 
-            new_omega, new_translation = self.estimate_new_pose(
-                points, keypoints[-1], new_curvature, new_affine)
+            estimator = NewPoseEstimation(points, new_curvature, new_affine,
+                                          self.K, self.lambda_)
+            new_omega, new_translation = estimator.estimate(last_keypoints)
 
-            omegas = slide_window(omegas, new_omega)
-            translations = slide_window(translations, new_translation)
-            images = slide_window(images, new_image)
-            curvatures = slide_window(curvatures, new_curvature)
-            affines = slide_window(affines, new_affine)
+            window.slide(new_omega, new_translation, new_curvature, new_affine)
 
-            keypoints = multiple_view_keypoints(curvatures, affines,
+            keypoints = multiple_view_keypoints(window.curvatures, window.affines,
                                                 self.lambda_)
 
-            triangulation = MultipleTriangulation(
-                omegas[:-1],
-                translations[:-1],
-                keypoints[:-1],
-                self.K
-            )
-            points = triangulation.triangulate(
-                omegas[-1],
-                translations[-1],
-                keypoints[-1]
-            )
-            print(points)
-            # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
+            triangulation = NewPointTriangulation(self.K)
+            points = triangulation.triangulate(window.omegas, window.translations,
+                                               keypoints)
 
-            # global_map.add(*camera_to_world(omegas, translations), added_points)
+            # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
+            last_image = new_image
+
+            global_map.add(
+                *camera_to_world(new_omega.reshape(1, -1),
+                                 new_translation.reshape(1, -1)),
+                points
+            )
+
             # plot_map(global_map.camera_omegas,
             #          global_map.camera_locations,
             #          global_map.points)
