@@ -6,7 +6,6 @@ from vitamine.coordinates import yx_to_xy
 from vitamine.flow_estimation.extrema_tracker import ExtremaTracker
 from vitamine.flow_estimation.image_curvature import compute_image_curvature
 from vitamine.utils import round_int, is_in_image_range
-from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
 
 
 def extract_local_maximums(curvature):

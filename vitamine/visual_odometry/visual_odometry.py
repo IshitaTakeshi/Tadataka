@@ -74,8 +74,8 @@ def pool_images(observer, window_size):
     return np.array(images)
 
 
-def init_affines(images, affine_estimator):
-    f = affine_estimator.estimate
+def init_affines(images):
+    f = estimate_affine_transform
     return [f(images[i], images[i+1]) for i in range(0, len(images)-1)]
 
 
@@ -131,14 +131,11 @@ class VisualOdometry(object):
         return estimator.estimate(last_keypoints)
 
     def sequence(self):
-        affine_estimator = AffineTransformEstimator()
-
         global_map = Map()
 
         images = pool_images(self.observer, self.window_size)
         curvatures = init_curvatures(images)
-        affines = init_affines(images, affine_estimator)
-        image_shape = images[0].shape[0:2]
+        affines = init_affines(images)
 
         keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
 
@@ -150,8 +147,9 @@ class VisualOdometry(object):
 
         while self.observer.is_running():
             new_image = self.observer.request()
+
+            new_affine = estimate_affine_transform(images[-1], new_image)
             new_curvature = compute_image_curvature(new_image)
-            new_affine = affine_estimator.estimate(images[-1], new_image)
 
             new_omega, new_translation = self.estimate_new_pose(
                 points, keypoints[-1], new_curvature, new_affine)

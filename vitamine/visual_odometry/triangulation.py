@@ -1,15 +1,16 @@
+from autograd import numpy as np
+
 from vitamine.bundle_adjustment.triangulation import points_from_unknown_poses
 from vitamine.flow_estimation.image_curvature import compute_image_curvature
 from vitamine.visual_odometry.extrema_tracker import extrema_tracking
-from vitamine.visual_odometry.flow_estimation import AffineTransformEstimator
+from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
 
 
 def triangulation(image1, image2, K):
     assert(np.ndim(image1) == 2)
     assert(np.ndim(image2) == 2)
 
-    estimator = AffineTransformEstimator()
-    affine_transform = estimator.estimate(image1, image2)
+    affine_transform = estimate_affine_transform(image1, image2)
 
     local_maximums1, local_maximums2 = extrema_tracking(
         compute_image_curvature(image1),
