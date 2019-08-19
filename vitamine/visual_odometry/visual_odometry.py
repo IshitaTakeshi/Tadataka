@@ -21,20 +21,6 @@ from vitamine.utils import is_in_image_range
 from vitamine.map import Map
 
 
-def count_redundancy(keypoints):
-    # count the number of shared points like below
-    # where the boolean matrix is the keypoint mask
-    #
-    #             point0  point1  point2  point3
-    # viewpoint0 [  True   False    True   False]
-    # viewpoint1 [  True    True   False   False]
-    #   n shared       2       1       1       0
-    # redundancy       2   +   1   +   1   +   0  =  4
-
-    mask = keypoint_mask(keypoints)
-    return np.sum(np.all(mask, axis=0))
-
-
 def slide_window(array, new_element):
     array[:-1] = array[1:]
     array[-1] = new_element
