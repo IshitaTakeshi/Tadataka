@@ -1,4 +1,6 @@
 from autograd import numpy as np
+
+from vitamine.assertion import check_keypoints
 from vitamine.bundle_adjustment.triangulation import (
     points_from_unknown_poses, points_from_known_poses, MultipleTriangulation)
 from vitamine.bundle_adjustment.mask import (
@@ -99,4 +101,6 @@ class Initializer(object):
 
         omegas, translations = estimate_poses(all_points, self.keypoints,
                                               self.K)
+
+        check_keypoints(self.keypoints, omegas, translations, all_points)
         return omegas, translations, all_points
