@@ -81,5 +81,7 @@ def propagate(local_maximums, curvatures, affines, lambda_):
 
 
 def multiple_view_keypoints(curvatures, affines, lambda_):
+    # generate a sequence of keypoints for the window
+    # keypoints.shape == (n_viewpoints, n_keypoints, 2)
     return propagate(extract_local_maximums(curvatures[0]),
                      curvatures[1:], affines, lambda_)

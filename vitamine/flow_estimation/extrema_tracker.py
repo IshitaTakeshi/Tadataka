@@ -72,6 +72,7 @@ def isint(array):
     return array.dtype.kind == 'i'
 
 
+# FIXME rename to 'LocalExtremaCorrection'
 # FIXME pass 'initial_coordinates' to ExtremaTracker.optimize,
 # not to ExtremaTracker.__init__
 class ExtremaTracker(object):
