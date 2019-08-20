@@ -24,3 +24,8 @@ def project(rotations, translations, points, projection):
     keypoints = projection.compute(points.reshape(-1, 3))
     keypoints = keypoints.reshape(points.shape[0], points.shape[1], 2)
     return keypoints
+
+
+def add_uniform_noise(array, scale=1.0):
+    noise = np.random.uniform(-scale, scale, size=array.shape)
+    return array + noise
