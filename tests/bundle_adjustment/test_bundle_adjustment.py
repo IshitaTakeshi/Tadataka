@@ -1,10 +1,13 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from vitamine.bundle_adjustment.parameters import to_params
+from vitamine.bundle_adjustment.parameters import to_params, from_params
 from vitamine.camera import CameraParameters
 from vitamine.bundle_adjustment.bundle_adjustment import (
-    Transformer, MaskedResidual, BundleAdjustmentSolver)
+    Transformer, MaskedResidual, BundleAdjustmentSolver,
+    bundle_adjustment_core)
+
+from tests.utils import add_uniform_noise
 
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
@@ -61,6 +64,16 @@ def test_transformer():
 
 
 def test_bundle_adjustment():
-    # TODO
-    # BA has the scale / rotation ambiguity
-    pass
+    scale = 0.2
+    omegas = add_uniform_noise(omegas_true, scale)
+    translations = add_uniform_noise(translations_true, scale)
+    points = add_uniform_noise(points_true, scale)
+
+    params = to_params(omegas, translations, points)
+    params = bundle_adjustment_core(keypoints_true, params, 2, 9,
+                                    camera_parameters)
+    omegas_pred, translations_pred, points_pred = from_params(params, 2, 9)
+
+    assert_array_almost_equal(omegas_pred, omegas_true, decimal=1)
+    assert_array_almost_equal(translations_pred, translations_true, decimal=1)
+    assert_array_almost_equal(points_pred, points_true, decimal=1)
