@@ -64,7 +64,7 @@ def test_transformer():
 
 
 def test_bundle_adjustment():
-    scale = 0.2
+    scale = 0.1
     omegas = add_uniform_noise(omegas_true, scale)
     translations = add_uniform_noise(translations_true, scale)
     points = add_uniform_noise(points_true, scale)
