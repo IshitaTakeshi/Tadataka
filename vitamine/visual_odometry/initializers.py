@@ -67,40 +67,39 @@ class Initializer(object):
         assert(0 <= viewpoint1 < n_viewpoints)
         assert(0 <= viewpoint2 < n_viewpoints)
 
-        all_points = initial_points(self.keypoints[viewpoint1],
-                                    self.keypoints[viewpoint2],
-                                    self.K)
+        points = initial_points(self.keypoints[viewpoint1],
+                                self.keypoints[viewpoint2],
+                                self.K)
 
         # represented in a set
         used_viewpoints = {viewpoint1, viewpoint2}
 
         while len(used_viewpoints) < n_viewpoints:
             # select a viewpoint other than used_viewpoints
-            new_viewpoint = select_new_viewpoint(all_points, self.keypoints,
+            new_viewpoint = select_new_viewpoint(points, self.keypoints,
                                                  used_viewpoints)
             assert(new_viewpoint not in used_viewpoints)
 
             used_keypoints = self.keypoints[sorted(used_viewpoints)]
 
             # triangulate the new viewpoint with existing viewpoints
-            omegas, translations = estimate_poses(all_points, used_keypoints,
+            omegas, translations = estimate_poses(points, used_keypoints,
                                                   self.K)
             triangulation = MultipleTriangulation(omegas, translations,
                                                   used_keypoints, self.K)
 
             new_keypoints = self.keypoints[new_viewpoint]
 
-            new_omega, new_translation = estimate_pose(all_points, new_keypoints,
+            new_omega, new_translation = estimate_pose(points, new_keypoints,
                                                        self.K)
-            points = triangulation.triangulate(new_omega, new_translation,
-                                               new_keypoints)
+            points_ = triangulation.triangulate(new_omega, new_translation,
+                                                new_keypoints)
 
-            all_points = update(all_points, points)
+            points = update(points, points_)
 
             used_viewpoints.add(new_viewpoint)
 
-        omegas, translations = estimate_poses(all_points, self.keypoints,
-                                              self.K)
+        omegas, translations = estimate_poses(points, self.keypoints, self.K)
 
-        check_keypoints(self.keypoints, omegas, translations, all_points)
-        return omegas, translations, all_points
+        check_keypoints(self.keypoints, omegas, translations, points)
+        return omegas, translations, points
