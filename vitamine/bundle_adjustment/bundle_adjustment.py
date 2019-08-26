@@ -5,7 +5,7 @@ from vitamine.assertion import check_non_nan
 from vitamine.bundle_adjustment.initializers import (
     PoseInitializer, PointInitializer)
 from vitamine.bundle_adjustment.parameters import (
-    ParameterMask, from_params, to_params)
+    ParameterMask, from_params)
 from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
 
 from vitamine.optimization.robustifiers import SquaredRobustifier
