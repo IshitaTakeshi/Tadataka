@@ -7,6 +7,9 @@ def compute_mask(array):
 
 
 def keypoint_mask(keypoints):
+    """
+    Return visbility mask of shape (n_viewpoints, n_points)
+    """
     n_viewpoints, n_points = keypoints.shape[0:2]
 
     keypoints = keypoints.reshape(n_viewpoints * n_points, 2)
