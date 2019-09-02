@@ -86,25 +86,30 @@ def test_local_bundle_adjustment():
     def error(keypoints1, keypoints2):
         return np.power(keypoints1 - keypoints2, 2).sum()
 
-    def run(omegas, translations, points):
+    def run(omegas1, translations1, points1):
         keypoints1 = keypoint_prediction.compute(
-            to_poses(omegas, translations), points
+            to_poses(omegas1, translations1), points1
         )
 
         # refine parameters
-        omegas, translations, points = local_ba.compute(
-            omegas, translations, points)
+        omegas2, translations2, points2 = local_ba.compute(
+            omegas1, translations1, points1)
 
         keypoints2 = keypoint_prediction.compute(
-            to_poses(omegas, translations), points
+            to_poses(omegas2, translations2), points2
         )
 
         # error shoud be decreased after bundle adjustment
         E1 = error(keypoints1, keypoints_true)
         E2 = error(keypoints2, keypoints_true)
-        print("\n")
-        # print("E1: {:.6f}".format(E1))
-        # print("E2: {:.6f}".format(E2))
+
+        if np.isclose(E1, E2):
+            # nothing updated
+            assert_array_equal(omegas1, omegas2)
+            assert_array_equal(translations1, translations2)
+            assert_array_equal(points1, points2)
+            return
+
         assert(E2 < E1)
 
 
