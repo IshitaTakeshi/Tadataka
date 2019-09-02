@@ -57,24 +57,16 @@ def test_jacobian():
         pose, point = poses[j], points[i]
         dpose, dpoint = dposes[j], dpoints[i]
 
-        print("pose", pose)
-        print("point", point)
         # test sign(Q(a + da, b) - Q(a, b)) == sign(A * da)
         # where A = dQ / da
         dx_true = Q(pose + dpose, point) - Q(pose, point)
         dx_pred = A[index].dot(dpose)
-        print("A")
-        print("dx_true", dx_true)
-        print("dx_pred", dx_pred)
         assert_array_equal(np.sign(dx_true), np.sign(dx_pred))
 
         # test sign(Q(a, b + db) - Q(a, b)) == sign(B * db)
         # where B = dQ / db
         dx_true = Q(pose, point + dpoint) - Q(pose, point)
         dx_pred = B[index].dot(dpoint)
-        print("B")
-        print("dx_true", dx_true)
-        print("dx_pred", dx_pred)
         assert_array_equal(np.sign(dx_true), np.sign(dx_pred))
 
 
