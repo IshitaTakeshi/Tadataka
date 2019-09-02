@@ -100,9 +100,6 @@ class LocalBundleAdjustment(object):
                               np.swapaxes(self.keypoints_true, 0, 1),
                               np.swapaxes(keypoint_pred, 0, 1),
                               reverse_axes_3d(A), reverse_axes_3d(B))
-        # print("A", np.linalg.svd(A)[1])
-        # print("B", np.linalg.svd(B)[1])
-
         assert(not np.isnan(dposes).all())
         assert(not np.isnan(dpoints).all())
         return dposes.T, dpoints.T
@@ -113,28 +110,31 @@ class LocalBundleAdjustment(object):
         poses = np.hstack((initial_omegas, initial_translations))
         points = initial_points
 
-        previous_error = np.inf
+        keypoint_pred = self.prediction.compute(poses, points)
+        current_error = calc_error(self.keypoints_true, keypoint_pred)
+
         for iter_ in range(n_max_iter):
-            keypoint_pred = self.prediction.compute(poses, points)
-
-            error = calc_error(self.keypoints_true, keypoint_pred)
-
-            print("error[{:>3d}]: {:.8f}".format(iter_, error))
-            # print("points[{:>3d}]".format(iter_))
-            # print(points)
-            # print("poses[{:>3d}]".format(iter_))
-            # print(poses)
-
-            if error > previous_error:
-                break
-
-            if error < absolute_threshold:
-                break
-
-            previous_error = error
             dposes, dpoints = self.calc_update(poses, points, keypoint_pred)
-            poses = poses + dposes
-            points = points + dpoints
+
+            new_poses = poses + dposes
+            new_points = points + dpoints
+
+            keypoint_pred = self.prediction.compute(new_poses, new_points)
+            new_error = calc_error(self.keypoints_true, keypoint_pred)
+
+            # converged or started to diverge
+            if new_error > current_error:
+                break
+
+            poses = new_poses
+            points = new_points
+
+            # new_error is goood enough
+            # return new_poses and new_points
+            if new_error < absolute_threshold:
+                break
+
+            current_error = new_error
 
         omegas, translations = poses[:, 0:3], poses[:, 3:6]
         return omegas, translations, points
