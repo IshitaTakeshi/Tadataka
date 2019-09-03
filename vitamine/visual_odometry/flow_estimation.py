@@ -2,6 +2,7 @@ from skimage import transform as tf
 from skimage.measure import ransac
 
 from vitamine.flow_estimation.keypoints import extract_keypoints, match
+from vitamine.coordinates import xy_to_yx
 from vitamine.transform import AffineTransform
 
 
@@ -12,11 +13,35 @@ def affine_params_from_matrix(matrix):
 
 
 def estimate_affine_from_keypoints(keypoints1, keypoints2):
-    tform, inliers_mask = ransac((keypoints1, keypoints2),
-                                 tf.AffineTransform,
-                                 random_state=3939, min_samples=3,
-                                 residual_threshold=2, max_trials=100)
-    return affine_params_from_matrix(tform.params)
+    # estimate inliers using ransac on FundamentalMatrixTransform
+    # it's possible to estimate AffineTransform in RANSAC, however,
+    # we can get more inliers using FundamentalMatrixTransform
+    _, inliers_mask = ransac((keypoints1, keypoints2),
+                             tf.FundamentalMatrixTransform,
+                             random_state=3939, min_samples=8,
+                             residual_threshold=1, max_trials=5000)
+
+    # estimate affine transform between two views using the estimated inliers
+    tform = tf.AffineTransform()
+    tform.estimate(keypoints1[inliers_mask], keypoints2[inliers_mask])
+    A, b = affine_params_from_matrix(tform.params)
+    return A, b, inliers_mask
+
+
+def plot_matches(image1, image2, keypoints1, keypoints2, inliers_mask):
+    from matplotlib import pyplot as plt
+    from skimage import feature
+    from autograd import numpy as np
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    ax.set_title("number of inliers = {}".format(np.sum(inliers_mask)))
+    indices = np.where(inliers_mask)[0]
+    feature.plot_matches(ax, image1, image2,
+                         xy_to_yx(keypoints1), xy_to_yx(keypoints2),
+                         np.vstack((indices, indices)).T)
+    plt.show()
 
 
 def estimate_affine_transform(image1, image2):
@@ -27,10 +52,12 @@ def estimate_affine_transform(image1, image2):
 
     keypoints1, descriptors1 = extract_keypoints(image1)
     keypoints2, descriptors2 = extract_keypoints(image2)
+
     matches12 = match(descriptors1, descriptors2)
 
     keypoints1 = keypoints1[matches12[:, 0]]
     keypoints2 = keypoints2[matches12[:, 1]]
 
-    A, b = estimate_affine_from_keypoints(keypoints1, keypoints2)
+    A, b, inliers_mask = estimate_affine_from_keypoints(keypoints1, keypoints2)
+    # plot_matches(image1, image2, keypoints1, keypoints2, inliers_mask)
     return AffineTransform(A, b)
