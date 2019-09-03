@@ -1,8 +1,6 @@
 import itertools
 
 from autograd import numpy as np
-from autograd.numpy.linalg import inv
-from mpl_toolkits.mplot3d import Axes3D
 
 from vitamine.matrix import solve_linear
 from vitamine.rigid.rotation import tangent_so3
