@@ -152,19 +152,9 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
     return points, n_valid_depth
 
 
-def points_from_unknown_poses(keypoints0, keypoints1, K):
-    """
-    Reconstruct 3D points from non nan keypoints obtained from 2 views
-    keypoints[01].shape == (n_points, 2)
-    """
-    assert(keypoints0.shape == keypoints1.shape)
-
+def find_valid_pose(keypoints0, keypoints1, F, K):
     R0, t0 = np.identity(3), np.zeros(3)
 
-    check_non_nan(keypoints0)
-    check_non_nan(keypoints1)
-
-    F = estimate_fundamental(keypoints0, keypoints1)
     E = fundamental_to_essential(F, K)
     R1, R2, t1, t2 = extract_poses(E)
 
@@ -181,6 +171,21 @@ def points_from_unknown_poses(keypoints0, keypoints1, K):
             n_max_valid_depth = n_valid_depth
             argmax_R, argmax_t, argmax_X = R_, t_, X
     return argmax_R, argmax_t, argmax_X
+
+
+def points_from_unknown_poses(keypoints0, keypoints1, K):
+    """
+    Reconstruct 3D points from non nan keypoints obtained from 2 views
+    keypoints[01].shape == (n_points, 2)
+    """
+    assert(keypoints0.shape == keypoints1.shape)
+
+    check_non_nan(keypoints0)
+    check_non_nan(keypoints1)
+
+    F = estimate_fundamental(keypoints0, keypoints1)
+    R, t, X = find_valid_pose(keypoints0, keypoints1, F, K)
+    return R, t, X
 
 
 class MultipleTriangulationImpl(object):
