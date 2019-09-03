@@ -1,6 +1,19 @@
 from autograd import numpy as np
 
 
+def transform_each(rotations, translations, points):
+    assert(rotations.shape[0] == translations.shape[0] == points.shape[0])
+    assert(rotations.shape[1:3] == (3, 3))
+
+    # l : n_points
+    # i : n_viewpoints
+    # points.shape = (N, 3) where N == n_points == n_viewpoints
+    points = np.einsum('ijk,ik->ij', rotations, points)
+    points = points + translations
+    return points
+
+
+
 def transform_all(rotations, translations, points):
     # same as computing
     # for R, t in zip(rotations, translations):
