@@ -1,5 +1,4 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
-from autograd.numpy.linalg import norm
 from autograd import numpy as np
 from vitamine.visual_odometry import local_ba
 from vitamine.rigid.transformation import transform_all
@@ -7,19 +6,11 @@ from vitamine.rigid.rotation import rodrigues
 from vitamine.camera import CameraParameters
 from vitamine.visual_odometry.local_ba import (
     LocalBundleAdjustment, Projection, KeypointPrediction)
-from tests.utils import add_uniform_noise
+from tests.utils import unit_uniform
 
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = Projection(camera_parameters)
-
-
-def relative_difference(x_true, x_pred):
-    return np.linalg.norm(x_pred - x_true) / np.linalg.norm(x_true)
-
-
-def unit_uniform(shape):
-    return np.random.uniform(-1.0, 1.0, shape)
 
 
 def to_poses(omegas, translations):

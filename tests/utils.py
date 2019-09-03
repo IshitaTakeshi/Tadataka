@@ -26,6 +26,10 @@ def project(rotations, translations, points, projection):
     return keypoints
 
 
-def add_uniform_noise(array, scale=1.0):
-    noise = np.random.uniform(-scale, scale, size=array.shape)
+def unit_uniform(shape):
+    return np.random.uniform(-1.0, 1.0, shape)
+
+
+def add_uniform_noise(array, scale=0.01):
+    noise = scale * unit_uniform(array.shape)
     return array + noise
