@@ -4,23 +4,21 @@ from autograd import numpy as np
 from vitamine.assertion import check_non_nan
 
 
-class GradientBasedUpdater(object):
-    def flattened_residual(self, theta):
-        residual = self.residual.compute(theta)
-        return residual.flatten()
-
-    def jacobian(self, theta):
-        return jacobian(self.residual.compute)(theta)
-
-
-class GaussNewtonUpdater(GradientBasedUpdater):
+class GaussNewtonUpdater(object):
     def __init__(self, residual, robustifier):
         self.residual = residual
         self.robustifier = robustifier
 
+    def jacobian(self, theta):
+        return jacobian(self.residual.compute)(theta)
+
+    def flattened_residual(self, theta):
+        residual = self.residual.compute(theta)
+        return residual.flatten()
+
     def compute(self, theta):
         # Not exactly the same as the equation of Gauss-Newton update
-        # d = inv (J^T * J) * J * r
+        # d = lstsq(J, r), not the stardard update d = inv (J^T * J) * J * r
         # however, it works better than implementing the equation malually
 
         r = self.flattened_residual(theta)
