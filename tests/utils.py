@@ -33,3 +33,7 @@ def unit_uniform(shape):
 def add_uniform_noise(array, scale=0.01):
     noise = scale * unit_uniform(array.shape)
     return array + noise
+
+
+def relative_error(x_true, x_pred):
+    return np.linalg.norm(x_true - x_pred) / np.linalg.norm(x_true)

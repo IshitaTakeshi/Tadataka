@@ -6,6 +6,8 @@ from skimage.data import astronaut
 
 from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
 
+from tests.utils import relative_error
+
 
 def test_estimate_affine_transform():
     # test if affine parameters can be estimated correctly from
@@ -28,9 +30,5 @@ def test_estimate_affine_transform():
 
     A_pred, b_pred = tform.A, tform.b
 
-    # test relative error
-    threshold = np.linalg.norm(A_true.flatten()) * 0.05
-    assert(np.linalg.norm((A_true-A_pred).flatten()) < threshold)
-
-    threshold = np.linalg.norm(b_true.flatten()) * 0.05
-    assert(np.linalg.norm(b_true-b_pred) < threshold)
+    assert(relative_error(A_true.flatten(), A_pred.flatten()) < 0.05)
+    assert(relative_error(b_true, b_pred) < 0.05)
