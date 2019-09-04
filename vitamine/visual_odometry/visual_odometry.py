@@ -10,11 +10,12 @@ from vitamine.visual_odometry.local_ba import LocalBundleAdjustment
 from vitamine.visual_odometry.extrema_tracker import (
     multiple_view_keypoints, TwoViewExtremaTracker)
 from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
-from vitamine.bundle_adjustment.mask import pose_mask, point_mask
+from vitamine.bundle_adjustment.mask import (
+    pose_mask, point_mask, keypoint_mask)
 from vitamine.bundle_adjustment.pnp import estimate_pose
 from vitamine.rigid.coordinates import camera_to_world
 from vitamine.rigid.rotation import rodrigues
-from vitamine.visual_odometry.initializers import Initializer
+from vitamine.visual_odometry.initializers import initialize
 from vitamine.flow_estimation.image_curvature import compute_image_curvature
 from vitamine.transform import AffineTransform
 from vitamine.utils import is_in_image_range
@@ -104,13 +105,27 @@ class VisualOdometry(object):
         self.camera_parameters = camera_parameters
         self.window_size = window_size
         self.K = self.camera_parameters.matrix
+        self.triangulation = NewPointTriangulation(self.K)
+
         self.lambda_ = 0.1
 
-    def refine(self, omegas, translations, points, keypoints):
-        local_ba = LocalBundleAdjustment(omegas, translations, points,
-                                         self.camera_parameters)
-        omegas, translations, points = local_ba.compute(keypoints)
-        return omegas, translations, points
+    def run_ba(self, omegas, translations, points, keypoints):
+        mask = keypoint_mask(keypoints)
+        viewpoint_indices, point_indices = np.where(mask)
+
+        # preserve only non-null keypoints
+        # keypoints.shape == (n_visible_keypoints, 2)
+        keypoints = keypoints[mask]
+
+        assert(not np.isnan(omegas).any())
+        assert(not np.isnan(translations).any())
+        assert(not np.isnan(points).any())
+        assert(not np.isnan(keypoints).any())
+
+        local_ba = LocalBundleAdjustment(
+            viewpoint_indices, point_indices, keypoints,
+            self.camera_parameters)
+        return local_ba.compute(omegas, translations, points)
 
     def initialize(self, images):
         curvatures = init_curvatures(images)
@@ -120,12 +135,15 @@ class VisualOdometry(object):
 
         keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
 
-        init = Initializer(keypoints, self.K)
-        omegas, translations, points = init.initialize(viewpoint1, viewpoint2)
+        omegas, translations, points = initialize(
+            keypoints, viewpoint1, viewpoint2, self.K)
 
         window = Window(omegas, translations, curvatures, affines)
 
-        return window, points, keypoints
+        # points may still contain nan
+        mask = point_mask(points)
+        # mask them and return only non-nan elements
+        return window, points[mask], keypoints[:, mask]
 
     def sequence(self):
         global_map = Map()
@@ -138,14 +156,14 @@ class VisualOdometry(object):
             points
         )
 
-        # omegas, translations, points = self.refine(
-        #     omegas, translations, points, keypoint_matrix)
+        # window.omegas, window.translations, points = self.run_ba(
+        #     window.omegas, window.translations, points,
+        #     keypoints
+        # )
 
         last_image = images[-1]
 
         while self.observer.is_running():
-            print("iter")
-
             last_keypoints = keypoints[-1]
 
             new_image = self.observer.request()
@@ -161,12 +179,15 @@ class VisualOdometry(object):
 
             keypoints = multiple_view_keypoints(window.curvatures, window.affines,
                                                 self.lambda_)
-
-            triangulation = NewPointTriangulation(self.K)
-            points = triangulation.triangulate(window.omegas, window.translations,
+            # keypoints.shape == (n_viewpoints, n_points, 2)
+            points = self.triangulation.triangulate(window.omegas, window.translations,
                                                keypoints)
 
-            # omegas, translations, points = self.refine(omegas, translations, points, keypoints)
+            # window.omegas, window.translations, points = self.run_ba(
+            #     window.omegas, window.translations, points,
+            #     keypoints
+            # )
+
             last_image = new_image
 
             global_map.add(
