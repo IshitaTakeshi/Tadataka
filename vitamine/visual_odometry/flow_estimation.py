@@ -16,18 +16,17 @@ def estimate_affine_from_keypoints(keypoints1, keypoints2):
     # estimate inliers using ransac on FundamentalMatrixTransform
     # it's possible to estimate AffineTransform in RANSAC, however,
     # we can get more inliers using FundamentalMatrixTransform
-    _, inliers_mask = ransac((keypoints1, keypoints2),
-                             tf.FundamentalMatrixTransform,
-                             random_state=3939, min_samples=8,
-                             residual_threshold=1, max_trials=5000)
+    tform, inliers_mask = ransac((keypoints1, keypoints2),
+                                 tf.AffineTransform,
+                                 random_state=3939, min_samples=8,
+                                 residual_threshold=1, max_trials=5000)
 
     # estimate affine transform between two views using the estimated inliers
-    tform = tf.AffineTransform()
-    tform.estimate(keypoints1[inliers_mask], keypoints2[inliers_mask])
     A, b = affine_params_from_matrix(tform.params)
     return A, b, inliers_mask
 
 
+# for debug
 def plot_matches(image1, image2, keypoints1, keypoints2, inliers_mask):
     from matplotlib import pyplot as plt
     from skimage import feature
