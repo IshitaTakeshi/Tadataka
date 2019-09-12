@@ -164,27 +164,24 @@ def initialize(keypoints0, keypoints1, descriptors0, descriptors1, K):
 
     R1, t1, points, valid_depth_mask = pose_point_from_keypoints(
         keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]],
-        K
+        keypoints1[matches01[:, 1]]
     )
 
     return R1, t1, matches01[valid_depth_mask], points[valid_depth_mask]
 
 
 class Triangulation(object):
-    def __init__(self, R1, R2, t1, t2, K):
+    def __init__(self, R1, R2, t1, t2):
         self.R1, self.R2 = R1, R2
         self.t1, self.t2 = t1, t2
-        self.K = K
 
     def triangulate(self, descriptors1, descriptors2, keypoints1, keypoints2):
         matches12 = match(descriptors1, descriptors2)
 
         points, valid_depth_mask =  points_from_known_poses(
             self.R1, self.R2, self.t1, self.t2,
-            keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]], self.K
+            keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]],
         )
-
         return matches12[valid_depth_mask], points[valid_depth_mask]
 
 
@@ -246,7 +243,7 @@ class VisualOdometry(object):
         )
         R0, t0 = self.keyframes.get_pose(keyframe_id0)
 
-        triangulation = Triangulation(R0, R1, t0, t1, self.K)
+        triangulation = Triangulation(R0, R1, t0, t1)
         matches01, points = triangulation.triangulate(
             descriptors0, descriptors1,
             keypoints0, keypoints1
