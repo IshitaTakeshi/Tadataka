@@ -1,6 +1,6 @@
 from autograd import numpy as np
 
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 from vitamine.rigid.transformation import transform_all
 
 
