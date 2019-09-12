@@ -142,7 +142,8 @@ class PointManager(object):
         return np.concatenate(indices)
 
 
-def match_existing(point_manager, keyframes, keypoints1, descriptors1, keyframe_id0):
+def match_existing(point_manager, keyframes,
+                   keypoints1, descriptors1, keyframe_id0):
     """
     Match with descriptors that already have corresponding 3D points
     """
@@ -175,10 +176,10 @@ class Triangulation(object):
         self.R1, self.R2 = R1, R2
         self.t1, self.t2 = t1, t2
 
-    def triangulate(self, descriptors1, descriptors2, keypoints1, keypoints2):
+    def triangulate(self, keypoints1, keypoints2, descriptors1, descriptors2):
         matches12 = match(descriptors1, descriptors2)
 
-        points, valid_depth_mask =  points_from_known_poses(
+        points, valid_depth_mask = points_from_known_poses(
             self.R1, self.R2, self.t1, self.t2,
             keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]],
         )
@@ -234,8 +235,7 @@ class VisualOdometry(object):
         indices = self.point_manager.get_triangulated_indices(keyframe_id)
         return self.keyframes.get_untriangulated(keyframe_id, indices)
 
-    def triangulate_new(self, keypoints1, descriptors1, R1, t1,
-                        keyframe_id0):
+    def triangulate_new(self, keypoints1, descriptors1, R1, t1, keyframe_id0):
         indices0 = self.get_untriangulated(keyframe_id0)
         # match and triangulate with newly observed points
         keypoints0, descriptors0 = self.keyframes.get_keypoints(
@@ -245,8 +245,8 @@ class VisualOdometry(object):
 
         triangulation = Triangulation(R0, R1, t0, t1)
         matches01, points = triangulation.triangulate(
-            descriptors0, descriptors1,
-            keypoints0, keypoints1
+            keypoints0, keypoints1,
+            descriptors0, descriptors1
         )
         matches01[:, 0] = indices0[matches01[:, 0]]
 
