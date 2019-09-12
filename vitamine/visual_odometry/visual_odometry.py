@@ -1,201 +1,278 @@
+from collections import deque
 from autograd import numpy as np
-
-from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment_core
-from vitamine.bundle_adjustment.initializers import (
-    PoseInitializer, PointInitializer)
-from vitamine.bundle_adjustment.mask import correspondence_mask, compute_mask
-from vitamine.bundle_adjustment.triangulation import (
-    points_from_known_poses, MultipleTriangulation)
-from vitamine.visual_odometry.local_ba import LocalBundleAdjustment
-from vitamine.visual_odometry.extrema_tracker import (
-    multiple_view_keypoints, TwoViewExtremaTracker)
-from vitamine.visual_odometry.flow_estimation import estimate_affine_transform
-from vitamine.bundle_adjustment.mask import (
-    pose_mask, point_mask, keypoint_mask)
-from vitamine.bundle_adjustment.pnp import estimate_pose
-from vitamine.rigid.coordinates import camera_to_world
-from vitamine.rigid.rotation import rodrigues
-from vitamine.visual_odometry.initializers import initialize
-from vitamine.flow_estimation.image_curvature import compute_image_curvature
-from vitamine.transform import AffineTransform
-from vitamine.utils import is_in_image_range
-from vitamine.map import Map
+from vitamine.keypoints import extract_keypoints, match
+from vitamine.triangulation import pose_point_from_keypoints, points_from_known_poses
+from vitamine.pose_estimation import solve_pnp
+from vitamine.so3 import rodrigues
 
 
-def slide_window(array, new_element):
-    array[:-1] = array[1:]
-    array[-1] = new_element
-    return array
+class Keyframes(object):
+    def __init__(self):
+        self.keypoint_manager = KeypointManager()
+        self.pose_manager = PoseManager()
+
+        # leftmost is the oldest
+        self.active_keyframe_ids = deque()
+        self.current_keyframe_id = -1
+
+    def add(self, keypoints, descriptors, R, t):
+        self.keypoint_manager.add(keypoints, descriptors)
+        self.pose_manager.add(R, t)
+
+        self.current_keyframe_id += 1
+        self.active_keyframe_ids.append(self.current_keyframe_id)
+        return self.current_keyframe_id
+
+    @property
+    def oldest_keyframe_id(self):
+        # Returns the oldest keyframe id in the window
+        return self.active_keyframe_ids[0]
+
+    def id_to_index(self, keyframe_id):
+        return keyframe_id - self.oldest_keyframe_id
+
+    def get_keypoints(self, keyframe_id, indices=slice(None, None, None)):
+        i = self.id_to_index(keyframe_id)
+        return self.keypoint_manager.get(i, indices)
+
+    def get_pose(self, keyframe_id):
+        i = self.id_to_index(keyframe_id)
+        return self.pose_manager.get(i)
+
+    def get_untriangulated(self, keyframe_id, triangulated_indices):
+        """
+        Get keypoints that have not been used for triangulation.
+        These keypoints don't have corresponding 3D points.
+        """
+        i = self.id_to_index(keyframe_id)
+        size = self.keypoint_manager.size(i)
+        print(f"size = {size}")
+        print(f"triangulated_indices = {triangulated_indices}")
+        return indices_other_than_1d(size, triangulated_indices)
+
+    @property
+    def n_active_frames(self):
+        return len(self.active_keyframe_ids)
 
 
-def inverse_affine_params(A, b):
-    N = A.shape[0]
+class PoseManager(object):
+    def __init__(self):
+        self.rotations = []
+        self.translations = []
 
-    matrix = np.identity(N + 1)
-    matrix[0:N, 0:N] = A
-    matrix[0:N, N] = b
-    inv_matrix = np.linalg.inv(matrix)
-    A_inv = matrix[0:N, 0:N]
-    b_inv = matrix[0:N, N]
-    return A_inv, b_inv
+    def add(self, R, t):
+        self.rotations.append(R)
+        self.translations.append(t)
 
+    def get(self, i):
+        R = self.rotations[i]
+        t = self.translations[i]
+        return R, t
 
-def inverse(affine):
-    A_inv, b_inv = inverse_affine_params(affine.A, affine.b)
-    return AffineTransform(A_inv, b_inv)
-
-
-def filter_unobserved(local_maximums, affine, image_shape):
-    # keep local maximums extracted in the newly observed image area
-    mask = is_in_image_range(inverse(affine).transform(local_maximums),
-                             image_shape)
-    return local_maximums[~mask]
+    def get_motion_matrix(self, i):
+        R, t = self.get(i)
+        return motion_matrix(R, t)
 
 
-def init_affines(images):
-    f = estimate_affine_transform
-    return [f(images[i], images[i+1]) for i in range(0, len(images)-1)]
+class KeypointManager(object):
+    def __init__(self):
+        self.keypoints = []
+        self.descriptors = []
+
+    def add(self, keypoints, descriptors):
+        print("added keypoints", keypoints.shape)
+        self.keypoints.append(keypoints)
+        self.descriptors.append(descriptors)
+
+    def get(self, i, indices):
+        keypoints = self.keypoints[i]
+        descriptors = self.descriptors[i]
+        return keypoints[indices], descriptors[indices]
+
+    def size(self, i):
+        return len(self.keypoints[i])
 
 
-def init_curvatures(images):
-    return [compute_image_curvature(image) for image in images]
+def indices_other_than_1d(size, indices):
+    """
+    size: size of the array you want to get elements from
+    example:
+    >>> indices_other_than_1d(8, [1, 2, 3])
+    [0, 4, 5, 6, 7]
+    """
+    return np.setxor1d(indices, np.arange(size))
 
 
-class Window(object):
-    def __init__(self, omegas, translations, curvatures, affines):
-        self.omegas = omegas
-        self.translations = translations
-        self.curvatures = curvatures
-        self.affines = affines
+class PointManager(object):
+    def __init__(self):
+        self.visible_from = []
+        self.matches = []
+        self.points = []
 
-    def slide(self, new_omega, new_translation, new_curvature, new_affine):
-        self.omegas = slide_window(self.omegas, new_omega)
-        self.translations = slide_window(self.translations, new_translation)
-        self.curvatures = slide_window(self.curvatures, new_curvature)
-        self.affines = slide_window(self.affines, new_affine)
-        return self
+    @property
+    def n_frames_added(self):
+        # number of 'add' called so far
+        return len(self.visible_from)
+
+    def add(self, keyframe_ids, matches, points):
+        assert(len(keyframe_ids) == 2)
+        # self.points[i] is a 3D point estimated from
+        # keypoints[keyframe_id1][matches[i, 0]] and
+        # keypoints[keyframe_id2][matches[i, 1]]
+
+        self.matches.append(matches)
+        self.points.append(points)
+        self.visible_from.append(keyframe_ids)
+
+    def get(self, i):
+        """
+        Return 'i'-th added points, keyframe ids used for triangulation,
+        and the corresponding matches
+        """
+        return self.points[i], self.visible_from[i], self.matches[i]
+
+    def get_triangulated_indices(self, keyframe_id):
+        """Get keypoint indices that are already have corresponding 3D points"""
+        visible_from = np.array(self.visible_from)
+        frame_indices, col_indices = np.where(visible_from==keyframe_id)
+        indices = []
+        for frame_index, col_index in zip(frame_indices, col_indices):
+            matches = self.matches[frame_index]
+            indices.append(matches[:, col_index])
+        return np.concatenate(indices)
 
 
-class NewPoseEstimation(object):
-    def __init__(self, points, new_curvature, new_affine, K, lambda_):
-        self.points = points
-        self.tracker = TwoViewExtremaTracker(new_curvature, new_affine,
-                                             lambda_)
+def match_existing(point_manager, keyframes, keypoints1, descriptors1, keyframe_id0):
+    """
+    Match with descriptors that already have corresponding 3D points
+    """
+    points0, keyframe_ids, matches = point_manager.get(keyframe_id0)
+
+    _, descriptorsa = keyframes.get_keypoints(keyframe_ids[0], matches[:, 0])
+    _, descriptorsb = keyframes.get_keypoints(keyframe_ids[1], matches[:, 1])
+    matches1a = match(descriptors1, descriptorsa)
+    matches1b = match(descriptors1, descriptorsb)
+
+    if len(matches1a) > len(matches1b):
+        return keypoints1[matches1a[:, 0]], points0[matches1a[:, 1]]
+    else:
+        return keypoints1[matches1b[:, 0]], points0[matches1b[:, 1]]
+
+
+def initialize(keypoints0, keypoints1, descriptors0, descriptors1, K):
+    matches01 = match(descriptors0, descriptors1)
+
+    R1, t1, points, valid_depth_mask = pose_point_from_keypoints(
+        keypoints0[matches01[:, 0]],
+        keypoints1[matches01[:, 1]],
+        K
+    )
+
+    return R1, t1, matches01[valid_depth_mask], points[valid_depth_mask]
+
+
+class Triangulation(object):
+    def __init__(self, R1, R2, t1, t2, K):
+        self.R1, self.R2 = R1, R2
+        self.t1, self.t2 = t1, t2
         self.K = K
 
-    def estimate(self, last_keypoints):
-        new_keypoints = self.tracker.track(last_keypoints)
-        new_omega, new_translation = estimate_pose(self.points, new_keypoints, self.K)
-        return new_omega, new_translation
+    def triangulate(self, descriptors1, descriptors2, keypoints1, keypoints2):
+        matches12 = match(descriptors1, descriptors2)
 
+        points, valid_depth_mask =  points_from_known_poses(
+            self.R1, self.R2, self.t1, self.t2,
+            keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]], self.K
+        )
 
-class NewPointTriangulation(object):
-    def __init__(self, K):
-        self.K = K
-
-    def triangulate(self, omegas, translations, keypoints):
-        t = MultipleTriangulation(omegas[:-1], translations[:-1],
-                                  keypoints[:-1], self.K)
-        return t.triangulate(omegas[-1], translations[-1], keypoints[-1])
+        return matches12[valid_depth_mask], points[valid_depth_mask]
 
 
 class VisualOdometry(object):
-    def __init__(self, observer, camera_parameters, window_size=8):
-        self.observer = observer
-        self.camera_parameters = camera_parameters
-        self.window_size = window_size
-        self.K = self.camera_parameters.matrix
-        self.triangulation = NewPointTriangulation(self.K)
+    def __init__(self, camera_parameters):
+        self.K = camera_parameters.matrix
+        self.n_min_keypoints = 8
+        self.keyframes = Keyframes()
+        self.point_manager = PointManager()
 
-        self.lambda_ = 0.1
+    def add(self, image):
+        keypoints, descriptors = extract_keypoints(image)
 
-    def run_ba(self, omegas, translations, points, keypoints):
-        mask = keypoint_mask(keypoints)
-        viewpoint_indices, point_indices = np.where(mask)
+        if len(keypoints) < self.n_min_keypoints:
+            return False
 
-        # preserve only non-null keypoints
-        # keypoints.shape == (n_visible_keypoints, 2)
-        keypoints = keypoints[mask]
+        if self.keyframes.n_active_frames == 0:
+            self.init_keypoints(keypoints, descriptors)
+            return
 
-        assert(not np.isnan(omegas).any())
-        assert(not np.isnan(translations).any())
-        assert(not np.isnan(points).any())
-        assert(not np.isnan(keypoints).any())
+        keyframe_id0 = self.keyframes.oldest_keyframe_id
 
-        local_ba = LocalBundleAdjustment(
-            viewpoint_indices, point_indices, keypoints,
-            self.camera_parameters)
-        return local_ba.compute(omegas, translations, points)
+        if self.point_manager.n_frames_added == 0:
+            success = self.try_init_points(keypoints, descriptors,
+                                           keyframe_id0)
+            return success
 
-    def initialize(self, images):
-        curvatures = init_curvatures(images)
-        affines = init_affines(images)
+        success = self.try_add_new(keypoints, descriptors, keyframe_id0)
+        return success
 
-        viewpoint1, viewpoint2 = 0, 1
+    def try_init_points(self, keypoints1, descriptors1, keyframe_id0):
+        keypoints0, descriptors0 = self.keyframes.get_keypoints(keyframe_id0)
+        R1, t1, matches01, points = initialize(
+            keypoints0, keypoints1, descriptors0, descriptors1, self.K)
 
-        keypoints = multiple_view_keypoints(curvatures, affines, self.lambda_)
+        # if not self.inlier_condition(matches):
+        #     raise ValueError("No sufficient inliers found")
+        # if not pose_condition(R1, t1, points):
+        #     return False
 
-        omegas, translations, points = initialize(
-            keypoints, viewpoint1, viewpoint2, self.K)
+        keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
+        self.point_manager.add((keyframe_id0, keyframe_id1), matches01, points)
+        return True
 
-        window = Window(omegas, translations, curvatures, affines)
+    def init_keypoints(self, keypoints, descriptors):
+        R, t = np.identity(3), np.zeros(3)
+        keyframe_id = self.keyframes.add(keypoints, descriptors, R, t)
 
-        # points may still contain nan
-        mask = point_mask(points)
-        # mask them and return only non-nan elements
-        return window, points[mask], keypoints[:, mask]
+    def get_untriangulated(self, keyframe_id):
+        indices = self.point_manager.get_triangulated_indices(keyframe_id)
+        return self.keyframes.get_untriangulated(keyframe_id, indices)
 
-    def sequence(self):
-        global_map = Map()
+    def triangulate_new(self, keypoints1, descriptors1, R1, t1,
+                        keyframe_id0):
+        indices0 = self.get_untriangulated(keyframe_id0)
+        # match and triangulate with newly observed points
+        keypoints0, descriptors0 = self.keyframes.get_keypoints(
+            keyframe_id0, indices0
+        )
+        R0, t0 = self.keyframes.get_pose(keyframe_id0)
 
-        images = [self.observer.request() for i in range(self.window_size)]
-        window, points, keypoints = self.initialize(images)
+        triangulation = Triangulation(R0, R1, t0, t1, self.K)
+        matches01, points = triangulation.triangulate(
+            descriptors0, descriptors1,
+            keypoints0, keypoints1
+        )
+        matches01[:, 0] = indices0[matches01[:, 0]]
 
-        global_map.add(
-            *camera_to_world(window.omegas, window.translations),
-            points
+        return matches01, points
+
+    def try_add_new(self, keypoints1, descriptors1, keyframe_id0):
+        keypoints1_matched, points = match_existing(
+            self.point_manager, self.keyframes,
+            keypoints1, descriptors1, keyframe_id0,
         )
 
-        # window.omegas, window.translations, points = self.run_ba(
-        #     window.omegas, window.translations, points,
-        #     keypoints
-        # )
+        omega1, t1 = solve_pnp(points, keypoints1_matched, self.K)
+        R1 = rodrigues(omega1.reshape(1, -1))[0]
 
-        last_image = images[-1]
+        # if not pose_condition(R, t, points):
+        #     return False
 
-        while self.observer.is_running():
-            last_keypoints = keypoints[-1]
+        matches01, points = self.triangulate_new(keypoints1, descriptors1,
+                                                 R1, t1, keyframe_id0)
 
-            new_image = self.observer.request()
+        keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
+        self.point_manager.add((keyframe_id0, keyframe_id1), matches01, points)
+        return True
 
-            new_affine = estimate_affine_transform(last_image, new_image)
-            new_curvature = compute_image_curvature(new_image)
-
-            estimator = NewPoseEstimation(points, new_curvature, new_affine,
-                                          self.K, self.lambda_)
-            new_omega, new_translation = estimator.estimate(last_keypoints)
-
-            window.slide(new_omega, new_translation, new_curvature, new_affine)
-
-            keypoints = multiple_view_keypoints(window.curvatures, window.affines,
-                                                self.lambda_)
-            # keypoints.shape == (n_viewpoints, n_points, 2)
-            points = self.triangulation.triangulate(window.omegas, window.translations,
-                                               keypoints)
-
-            # window.omegas, window.translations, points = self.run_ba(
-            #     window.omegas, window.translations, points,
-            #     keypoints
-            # )
-
-            last_image = new_image
-
-            global_map.add(
-                *camera_to_world(new_omega.reshape(1, -1),
-                                 new_translation.reshape(1, -1)),
-                points
-            )
-
-            # plot_map(global_map.camera_omegas,
-            #          global_map.camera_locations,
-            #          global_map.points)
+    def remove_keyframe(self):
+        self.keyframes
