@@ -1,10 +1,29 @@
 from numpy.testing import assert_array_almost_equal
 from autograd import numpy as np
-from vitamine.camera_distortion import FOV, calc_factors
+from vitamine.camera import CameraParameters
+from vitamine.camera_distortion import Normalizer, FOV, calc_factors
 
 
 def test_normalizer():
-    pass
+    camera_parameters = CameraParameters(
+        focal_length=[2., 3.],
+        offset=[-1., 4.]
+    )
+    keypoints = np.array([
+        [4, 3],
+        [2, 1],
+        [1, 9]
+    ])
+    expected = np.array([
+        [5 / 2, -1 / 3],
+        [3 / 2, -3 / 3],
+        [2 / 2, 5 / 3]
+    ])
+    assert_array_almost_equal(
+        Normalizer(camera_parameters).normalize(keypoints),
+        expected
+    )
+
 
 def test_fov_undistort():
     X = np.array([
