@@ -50,16 +50,9 @@ def calc_depth(P, x):
     return np.dot(P[2], x)
 
 
-def motion_matrix(R, t):
-    T = np.empty((3, 4))
-    T[0:3, 0:3] = R
-    T[0:3, 3] = t
-    return T
-
-
-def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1, K):
-    P0 = np.dot(K, motion_matrix(R0, t0))
-    P1 = np.dot(K, motion_matrix(R1, t1))
+def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
+    P0 = motion_matrix(R0, t0)
+    P1 = motion_matrix(R1, t1)
 
     # print(X[0:3, 0].shape)
 
@@ -81,17 +74,6 @@ def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1, K):
     x = x / x[3]
     # calculate depths for utilities
     return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
-
-
-def projection_matrix(E, F, K):
-    R, t = extract_pose(E)
-    e = np.dot(K, t)  # project(t, K)
-    S = tangent_so3(e.reshape(1, 3))[0]
-
-    P = np.empty((3, 4))
-    P[0:3, 0:3] = S.dot(F)
-    P[0:3, 3] = e
-    return P
 
 
 def extract_poses(E):
