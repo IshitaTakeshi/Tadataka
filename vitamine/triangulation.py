@@ -53,7 +53,10 @@ def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
 
     # normalize so that x / x[3] be a homogeneous vector [x y z 1]
     # and extract the first 3 elements
-    assert(x[3] != 0)
+    # assert(x[3] != 0)
+    if np.isclose(x[3], 0):
+        return np.inf * np.ones(3), np.nan, np.nan
+
     x = x / x[3]
     # calculate depths for utilities
     return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
