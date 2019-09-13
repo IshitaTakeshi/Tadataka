@@ -23,23 +23,6 @@ W = np.array([
 ])
 
 
-def estimate_fundamental(keypoints0, keypoints1):
-    # Eq. 11.3
-    assert(keypoints0.shape == keypoints1.shape)
-
-    N = keypoints0.shape[0]
-    assert(N >= 8)
-
-    XA, YA = keypoints0[:, 0], keypoints0[:, 1]
-    XB, YB = keypoints1[:, 0], keypoints1[:, 1]
-    A = np.vstack((XB * XA, XB * YA, XB,
-                   YB * XA, YB * YA, YB,
-                   XA, YA, np.ones(N))).T
-    f = solve_linear(A)
-    F = f.reshape(3, 3)
-    return F
-
-
 def fundamental_to_essential(F, K0, K1=None):
     if K1 is None:
         K1 = K0
@@ -125,6 +108,12 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1, K):
         if depth_is_valid:
             n_valid_depth += 1
     return points, n_valid_depth
+
+def estimate_fundamental(keypoints1, keypoints2):
+    tform = FundamentalMatrixTransform()
+    tform.estimate(keypoints1, keypoints2)
+    return tform.params
+
 
 
 def find_valid_pose(keypoints0, keypoints1, F, K):
