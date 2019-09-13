@@ -1,12 +1,10 @@
 import itertools
 
 from autograd import numpy as np
+from skimage.transform import FundamentalMatrixTransform
 
-from vitamine.matrix import solve_linear
-from vitamine.rigid.rotation import tangent_so3
-from vitamine.assertion import check_non_nan
-from vitamine.bundle_adjustment.mask import correspondence_mask
-from vitamine.rigid.rotation import rodrigues
+from vitamine.matrix import solve_linear, motion_matrix
+from vitamine.so3 import rodrigues
 
 
 # Equation numbers are the ones in Multiple View Geometry
@@ -23,11 +21,6 @@ W = np.array([
     [1, 0, 0],
     [0, 0, 1]
 ])
-
-
-def project(p, K):
-    q = np.dot(K, p)
-    return q / q[2]
 
 
 def estimate_fundamental(keypoints0, keypoints1):
