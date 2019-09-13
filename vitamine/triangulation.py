@@ -137,6 +137,7 @@ def pose_point_from_keypoints(keypoints0, keypoints1):
 
     n_max_valid_depth = -1
     argmax_R, argmax_t, argmax_X = None, None, None
+    argmax_mask = None
 
     for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
         X, valid_depth_mask = points_from_known_poses(
@@ -147,5 +148,6 @@ def pose_point_from_keypoints(keypoints0, keypoints1):
         # the correct pair
         if n_valid_depth > n_max_valid_depth:
             n_max_valid_depth = n_valid_depth
+            argmax_mask = valid_depth_mask
             argmax_R, argmax_t, argmax_X = R_, t_, X
     return argmax_R, argmax_t, argmax_X, argmax_mask
