@@ -35,7 +35,7 @@ points = cubic_lattice(3)
 omegas = np.array([
     [0, 0, 0],
     [0, np.pi / 2, 0],
-    [0, 0, np.pi / 2],
+    [np.pi / 2, 0, 0],
     [0, np.pi / 4, 0]
 ])
 
