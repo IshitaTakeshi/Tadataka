@@ -2,6 +2,7 @@ from collections import deque
 from autograd import numpy as np
 from vitamine.keypoints import extract_keypoints, match
 from vitamine.triangulation import pose_point_from_keypoints, points_from_known_poses
+from vitamine.camera_distortion import CameraModel
 from vitamine.pose_estimation import solve_pnp
 from vitamine.so3 import rodrigues
 
@@ -38,6 +39,11 @@ class Keyframes(object):
     def get_pose(self, keyframe_id):
         i = self.id_to_index(keyframe_id)
         return self.pose_manager.get(i)
+
+    def get_active_poses(self):
+        poses = [self.get_pose(i) for i in self.active_keyframe_ids]
+        rotations, translations = zip(*poses)
+        return np.array(rotations), np.array(translations)
 
     def get_untriangulated(self, keyframe_id, triangulated_indices):
         """
