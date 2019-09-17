@@ -127,6 +127,9 @@ class PointManager(object):
         self.points.append(points)
         self.visible_from.append(keyframe_ids)
 
+    def get_points(self):
+        return np.vstack(self.points)
+
     def get(self, i):
         """
         Return 'i'-th added points, keyframe ids used for triangulation,
@@ -212,6 +215,15 @@ class VisualOdometry(object):
         keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
         self.point_manager.add(points, (keyframe_id0, keyframe_id1), matches01)
         return True
+
+    @property
+    def points(self):
+        # temporarl way to get points
+        return self.point_manager.get_points()
+
+    @property
+    def poses(self):
+        return self.keyframes.get_active_poses()
 
     def init_keypoints(self, keypoints, descriptors):
         R, t = np.identity(3), np.zeros(3)
