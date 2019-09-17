@@ -145,8 +145,7 @@ class PointManager(object):
         return np.concatenate(indices)
 
 
-
-def initialize(keypoints0, keypoints1, descriptors0, descriptors1, K):
+def initialize(keypoints0, keypoints1, descriptors0, descriptors1):
     matches01 = match(descriptors0, descriptors1)
 
     R1, t1, points, valid_depth_mask = pose_point_from_keypoints(
@@ -201,8 +200,9 @@ class VisualOdometry(object):
 
     def try_init_points(self, keypoints1, descriptors1, keyframe_id0):
         keypoints0, descriptors0 = self.keyframes.get_keypoints(keyframe_id0)
-        R1, t1, matches01, points = initialize(
-            keypoints0, keypoints1, descriptors0, descriptors1, self.K)
+
+        R1, t1, matches01, points = initialize(keypoints0, keypoints1,
+                                               descriptors0, descriptors1)
 
         # if not self.inlier_condition(matches):
         #     raise ValueError("No sufficient inliers found")
