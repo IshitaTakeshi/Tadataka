@@ -183,7 +183,9 @@ class VisualOdometry(object):
 
     def add(self, image):
         keypoints, descriptors = extract_keypoints(image)
+        return self.try_add(keypoints, descriptors)
 
+    def try_add(self, keypoints, descriptors):
         if len(keypoints) < self.n_min_keypoints:
             return False
 
