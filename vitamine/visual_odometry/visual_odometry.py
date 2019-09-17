@@ -234,10 +234,17 @@ class VisualOdometry(object):
         return self.keyframes.get_untriangulated(keyframe_id, indices)
 
     def triangulate_new(self, keypoints1, descriptors1, R1, t1, keyframe_id0):
-        indices0 = self.get_untriangulated(keyframe_id0)
+        # get untriangulated keypoint indices
+        untriangulated_indices0 = self.get_untriangulated(keyframe_id0)
+
+        if len(untriangulated_indices0) == 0:
+            # no points to add
+            return (np.empty((0, 2), dtype=np.int64),
+                    np.empty((0, 3), dtype=np.float64))
+
         # match and triangulate with newly observed points
         keypoints0, descriptors0 = self.keyframes.get_keypoints(
-            keyframe_id0, indices0
+            keyframe_id0, untriangulated_indices0
         )
         R0, t0 = self.keyframes.get_pose(keyframe_id0)
 
@@ -246,7 +253,7 @@ class VisualOdometry(object):
             keypoints0, keypoints1,
             descriptors0, descriptors1
         )
-        matches01[:, 0] = indices0[matches01[:, 0]]
+        matches01[:, 0] = untriangulated_indices0[matches01[:, 0]]
 
         return matches01, points
 
