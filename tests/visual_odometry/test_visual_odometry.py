@@ -64,3 +64,36 @@ def test_triangulation():
     P = transform_all(np.array([R1, R2]), np.array([t1, t2]), points)
     assert_array_almost_equal(projection.compute(P[0]), keypoints1)
     assert_array_almost_equal(projection.compute(P[1]), keypoints2)
+
+    # randomize first 10 descriptors
+    matches, points = triangulation.triangulate(
+        keypoints1, keypoints2,
+        add_noise(descriptors, np.arange(0, 10)),
+        add_noise(descriptors, np.arange(0, 10))
+    )
+    P = transform_all(np.array([R1, R2]), np.array([t1, t2]), points)
+    assert_array_almost_equal(projection.compute(P[0]), keypoints1[10:])
+    assert_array_almost_equal(projection.compute(P[1]), keypoints2[10:])
+
+
+def test_init_points():
+    keypoints0, keypoints1 = observations[0:2]
+
+    vo = VisualOdometry(camera_parameters, FOV(0.0))
+    vo.try_add(keypoints0, np.copy(descriptors))
+    vo.try_add(keypoints1, np.copy(descriptors))
+
+    rotations, translations = vo.poses
+    P = transform_all(rotations, translations, vo.points)
+    assert_array_almost_equal(projection.compute(P[0]), keypoints0)
+    assert_array_almost_equal(projection.compute(P[1]), keypoints1)
+
+    # randomize first 10 descriptors
+    vo = VisualOdometry(camera_parameters, FOV(0.0))
+    vo.try_add(keypoints0, add_noise(descriptors, np.arange(0, 10)))
+    vo.try_add(keypoints1, add_noise(descriptors, np.arange(0, 10)))
+
+    rotations, translations = vo.poses
+    P = transform_all(rotations, translations, vo.points)
+    assert_array_almost_equal(projection.compute(P[0]), keypoints0[10:])
+    assert_array_almost_equal(projection.compute(P[1]), keypoints1[10:])
