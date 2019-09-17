@@ -117,7 +117,7 @@ class PointManager(object):
         # number of 'add' called so far
         return len(self.visible_from)
 
-    def add(self, keyframe_ids, matches, points):
+    def add(self, points, keyframe_ids, matches):
         assert(len(keyframe_ids) == 2)
         # self.points[i] is a 3D point estimated from
         # keypoints[keyframe_id1][matches[i, 0]] and
@@ -227,7 +227,7 @@ class VisualOdometry(object):
         #     return False
 
         keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
-        self.point_manager.add((keyframe_id0, keyframe_id1), matches01, points)
+        self.point_manager.add(points, (keyframe_id0, keyframe_id1), matches01)
         return True
 
     def init_keypoints(self, keypoints, descriptors):
