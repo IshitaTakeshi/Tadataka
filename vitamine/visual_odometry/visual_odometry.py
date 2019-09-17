@@ -145,23 +145,6 @@ class PointManager(object):
         return np.concatenate(indices)
 
 
-def match_existing(point_manager, keyframes,
-                   keypoints1, descriptors1, keyframe_id0):
-    """
-    Match with descriptors that already have corresponding 3D points
-    """
-    points0, keyframe_ids, matches = point_manager.get(keyframe_id0)
-
-    _, descriptorsa = keyframes.get_keypoints(keyframe_ids[0], matches[:, 0])
-    _, descriptorsb = keyframes.get_keypoints(keyframe_ids[1], matches[:, 1])
-    matches1a = match(descriptors1, descriptorsa)
-    matches1b = match(descriptors1, descriptorsb)
-
-    if len(matches1a) > len(matches1b):
-        return keypoints1[matches1a[:, 0]], points0[matches1a[:, 1]]
-    else:
-        return keypoints1[matches1b[:, 0]], points0[matches1b[:, 1]]
-
 
 def initialize(keypoints0, keypoints1, descriptors0, descriptors1, K):
     matches01 = match(descriptors0, descriptors1)
@@ -259,7 +242,26 @@ class VisualOdometry(object):
         keypoints1_matched, points = match_existing(
             self.point_manager, self.keyframes,
             keypoints1, descriptors1, keyframe_id0,
+    def match_existing(self, keypoints1, descriptors1, timestamp):
+        """
+        Match with descriptors that already have corresponding 3D points
+        """
+
+        points0, keyframe_ids, matches = self.point_manager.get(timestamp)
+        # get descriptors already matched
+        _, descriptorsa = self.keyframes.get_keypoints(
+            keyframe_ids[0], matches[:, 0]
         )
+        _, descriptorsb = self.keyframes.get_keypoints(
+            keyframe_ids[1], matches[:, 1]
+        )
+        matches1a = match(descriptors1, descriptorsa)
+        matches1b = match(descriptors1, descriptorsb)
+
+        if len(matches1a) > len(matches1b):
+            return keypoints1[matches1a[:, 0]], points0[matches1a[:, 1]]
+        else:
+            return keypoints1[matches1b[:, 0]], points0[matches1b[:, 1]]
 
         omega1, t1 = solve_pnp(points, keypoints1_matched, self.K)
         R1 = rodrigues(omega1.reshape(1, -1))[0]
