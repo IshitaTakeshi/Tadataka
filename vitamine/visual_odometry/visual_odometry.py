@@ -52,8 +52,6 @@ class Keyframes(object):
         """
         i = self.id_to_index(keyframe_id)
         size = self.keypoint_manager.size(i)
-        print(f"size = {size}")
-        print(f"triangulated_indices = {triangulated_indices}")
         return indices_other_than_1d(size, triangulated_indices)
 
     @property
@@ -86,7 +84,6 @@ class KeypointManager(object):
         self.descriptors = []
 
     def add(self, keypoints, descriptors):
-        print("added keypoints", keypoints.shape)
         self.keypoints.append(keypoints)
         self.descriptors.append(descriptors)
 
