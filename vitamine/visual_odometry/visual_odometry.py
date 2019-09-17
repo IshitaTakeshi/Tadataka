@@ -257,10 +257,6 @@ class VisualOdometry(object):
 
         return matches01, points
 
-    def try_add_new(self, keypoints1, descriptors1, keyframe_id0):
-        keypoints1_matched, points = match_existing(
-            self.point_manager, self.keyframes,
-            keypoints1, descriptors1, keyframe_id0,
     def match_existing(self, keypoints1, descriptors1, timestamp):
         """
         Match with descriptors that already have corresponding 3D points
@@ -282,17 +278,28 @@ class VisualOdometry(object):
         else:
             return keypoints1[matches1b[:, 0]], points0[matches1b[:, 1]]
 
-        omega1, t1 = solve_pnp(points, keypoints1_matched, self.K)
+    def estimate_pose(self, keypoints1, descriptors1, timestamp0):
+        keypoints1_matched, points = self.match_existing(
+            keypoints1, descriptors1, timestamp0,
+        )
+        print(keypoints1_matched.shape, keypoints1_matched.dtype)
+        print(points.shape, points.dtype)
+        omega1, t1 = solve_pnp(points, keypoints1_matched)
         R1 = rodrigues(omega1.reshape(1, -1))[0]
+        return R1, t1
 
+    def try_add_new(self, keypoints1, descriptors1, keyframe_id0):
+        R1, t1 = self.estimate_pose(keypoints1, descriptors1, keyframe_id0)
         # if not pose_condition(R, t, points):
         #     return False
+        keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
 
         matches01, points = self.triangulate_new(keypoints1, descriptors1,
                                                  R1, t1, keyframe_id0)
+        if len(matches01) == 0:
+            return True
 
-        keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
-        self.point_manager.add((keyframe_id0, keyframe_id1), matches01, points)
+        self.point_manager.add(points, (keyframe_id0, keyframe_id1), matches01)
         return True
 
     def remove_keyframe(self):
