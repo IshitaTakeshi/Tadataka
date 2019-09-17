@@ -35,6 +35,5 @@ extract_keypoints = extract_brief
 
 def match(descriptors0, descriptors1):
     return match_descriptors(descriptors0, descriptors1,
-                             metric="hamming", cross_check=False)
-
-
+                             metric="hamming", cross_check=True,
+                             max_ratio=0.8)
