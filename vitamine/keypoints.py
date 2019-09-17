@@ -38,18 +38,3 @@ def match(descriptors0, descriptors1):
                              metric="hamming", cross_check=False)
 
 
-class MatchOneToMany(object):
-    def __init__(self, base_image):
-        self.keypoints0, self.descriptors0 = extract_keypoints(base_image)
-        self.base_image = base_image
-
-    def compute(self, images):
-        n_images = images.shape[0]
-        n_keypoints = self.keypoints0.shape[0]
-
-        keypoints = np.full((n_images, n_keypoints, 2), np.nan)
-        for i, image in enumerate(images):
-            keypoints1, descriptors1 = extract_keypoints(image)
-            matches01 = match(self.descriptors0, descriptors1)
-            keypoints[i, matches01[:, 0]] = keypoints1[matches01[:, 1]]
-        return keypoints
