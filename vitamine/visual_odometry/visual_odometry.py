@@ -175,9 +175,9 @@ class Triangulation(object):
 
 
 class VisualOdometry(object):
-    def __init__(self, camera_parameters):
-        self.K = camera_parameters.matrix
-        self.n_min_keypoints = 8
+    def __init__(self, camera_parameters, distortion_model, n_min_keypoints=8):
+        self.n_min_keypoints = n_min_keypoints
+        self.camera_model = CameraModel(camera_parameters, distortion_model)
         self.keyframes = Keyframes()
         self.point_manager = PointManager()
 
