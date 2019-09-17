@@ -34,7 +34,9 @@ points = cubic_lattice(3)
 
 omegas = np.array([
     [0, 0, 0],
-    [0, np.pi / 2, 0]
+    [0, np.pi / 2, 0],
+    [0, 0, np.pi / 2],
+    [0, np.pi / 4, 0]
 ])
 
 rotations = rodrigues(omegas)
@@ -49,16 +51,16 @@ descriptors = random_binary((len(points), 256))
 
 
 def test_triangulation():
-    R1, R2 = rotations
-    t1, t2 = translations
+    R1, R2 = rotations[0:2]
+    t1, t2 = translations[0:2]
     triangulation = Triangulation(R1, R2, t1, t2)
 
-    descriptors1 = np.copy(descriptors)
-    descriptors2 = np.copy(descriptors)
     keypoints1, keypoints2 = observations[0:2]
 
-    matches, points = triangulation.triangulate(keypoints1, keypoints2,
-                                                descriptors1, descriptors2)
+    matches, points = triangulation.triangulate(
+        keypoints1, keypoints2,
+        np.copy(descriptors), np.copy(descriptors)
+    )
     P = transform_all(np.array([R1, R2]), np.array([t1, t2]), points)
     assert_array_almost_equal(projection.compute(P[0]), keypoints1)
     assert_array_almost_equal(projection.compute(P[1]), keypoints2)
