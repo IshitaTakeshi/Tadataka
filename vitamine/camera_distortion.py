@@ -40,3 +40,13 @@ class FOV(object):
 
         factors = calc_factors(normalized_keypoints, self.omega)
         return factors.reshape(-1, 1) * normalized_keypoints
+
+
+class CameraModel(object):
+    def __init__(self, camera_parameters, distortion_model):
+        self.normalizer = Normalizer(camera_parameters)
+        self.distortion_model = distortion_model
+
+    def undistort(self, keypoints):
+        normalized = self.normalizer.normalize(keypoints)
+        return self.distortion_model.undistort(normalized)
