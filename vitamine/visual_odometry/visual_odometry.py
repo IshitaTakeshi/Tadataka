@@ -193,7 +193,7 @@ class VisualOdometry(object):
 
         if self.keyframes.n_active_frames == 0:
             self.init_keypoints(keypoints, descriptors)
-            return
+            return True
 
         keyframe_id0 = self.keyframes.oldest_keyframe_id
 
