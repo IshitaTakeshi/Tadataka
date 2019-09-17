@@ -189,6 +189,8 @@ class VisualOdometry(object):
         if len(keypoints) < self.n_min_keypoints:
             return False
 
+        keypoints = self.camera_model.undistort(keypoints)
+
         if self.keyframes.n_active_frames == 0:
             self.init_keypoints(keypoints, descriptors)
             return
