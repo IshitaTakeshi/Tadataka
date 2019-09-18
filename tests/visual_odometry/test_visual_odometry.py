@@ -99,7 +99,7 @@ def test_init_points():
     assert_array_almost_equal(projection.compute(P[1]), keypoints1[10:])
 
 
-def test_visual_odometry():
+def test_try_add():
     # test the case all descriptors are same
     vo = VisualOdometry(camera_parameters, FOV(0.0))
     for i in range(3):
@@ -121,6 +121,7 @@ def test_visual_odometry():
     # triangulated
     vo.try_add(observations[0], descriptors0)
     vo.try_add(observations[1], descriptors1)
+    # descriptors0[0:10] and descriptors1[0:10] cannot be matched
     assert_array_equal(vo.get_untriangulated(0), np.arange(10))
     # descriptors0[5:10] and descriptors2[5:10] should be matched and the
     # corresponding keypoints should be triangulated
@@ -148,3 +149,5 @@ def test_visual_odometry():
                               observations[0, 0:5])
     assert_array_almost_equal(projection.compute(P[3, 22:27]),
                               observations[3, 0:5])
+
+
