@@ -70,6 +70,12 @@ class Keyframes(object):
     def n_active(self):
         return len(self.active_timestamps)
 
+    def select_removed(self):
+        return 0
+
+    def remove(self):
+        index = self.select_removed()
+        return self.active_timestamps.pop(index)
 
 
 class PoseManager(object):
@@ -331,5 +337,9 @@ class VisualOdometry(object):
         self.point_manager.add(points, (timestamp0, timestamp1), matches01)
         return True
 
-    def remove_keyframe(self):
-        self.keyframes
+    def try_remove(self):
+        if self.keyframes.n_active <= self.min_active_keyframes:
+            return False
+
+        timestamp = self.keyframes.remove()
+        return True
