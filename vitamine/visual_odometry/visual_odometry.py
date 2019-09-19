@@ -130,11 +130,7 @@ class VisualOdometry(object):
 
         return matches01, points
 
-    def match_existing(self, keypoints1, descriptors1, timestamp0):
-        """
-        Match with descriptors that already have corresponding 3D points
-        """
-
+    def get_descriptors(self, timestamp0):
         # 3D points have corresponding two viewpoits used for triangulation
         # To estimate the pose of the new frame, match keypoints in the new
         # frame to keypoints in the two viewpoints
@@ -143,30 +139,18 @@ class VisualOdometry(object):
         # and corresponding 3D points.
         points0, timestamps, matches = self.point_manager.get(timestamp0)
         # get descriptors already matched
-        _, descriptorsa = self.keyframes.get_keypoints(
+        _, descriptors0a = self.keyframes.get_keypoints(
             timestamps[0], matches[:, 0]
         )
-        _, descriptorsb = self.keyframes.get_keypoints(
+        _, descriptors0b = self.keyframes.get_keypoints(
             timestamps[1], matches[:, 1]
         )
-        matches1a = match(descriptors1, descriptorsa)
-        matches1b = match(descriptors1, descriptorsb)
-
-        if len(matches1a) > len(matches1b):
-            return keypoints1[matches1a[:, 0]], points0[matches1a[:, 1]]
-        else:
-            return keypoints1[matches1b[:, 0]], points0[matches1b[:, 1]]
-
-    def estimate_pose(self, keypoints1, descriptors1, timestamp0):
-        keypoints1_matched, points = self.match_existing(
-            keypoints1, descriptors1, timestamp0,
-        )
-        omega1, t1 = solve_pnp(points, keypoints1_matched)
-        R1 = rodrigues(omega1.reshape(1, -1))[0]
-        return R1, t1
+        return points0, descriptors0a, descriptors0b
 
     def try_add_new(self, keypoints1, descriptors1, timestamp0):
-        R1, t1 = self.estimate_pose(keypoints1, descriptors1, timestamp0)
+        estimator = PoseEstimator(self.matcher,
+                                  *self.get_descriptors(timestamp0))
+        R1, t1 = estimator.estimate(keypoints1, descriptors1)
         # if not pose_condition(R, t, points):
         #     return False
         timestamp1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
