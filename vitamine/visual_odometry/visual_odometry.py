@@ -128,7 +128,7 @@ class VisualOdometry(object):
         # Matched keypoints have corresponding 3D points.
         # Therefore we can estimate the pose of the new frame using the matched keypoints
         # and corresponding 3D points.
-        points0, timestamps, matches = self.point_manager.get(timestamp0)
+        points0, timestamps, matches = self.point_manager.get(0)  # oldest
         ta, tb = timestamps
         ma, mb = matches[:, 0], matches[:, 1]
         # get descriptors already matched
