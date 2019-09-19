@@ -1,6 +1,11 @@
 from autograd import numpy as np
 
 
+def delete_multiple(array, indices):
+    indices = set(indices)
+    return [array[i] for i in range(len(array)) if i not in indices]
+
+
 class PointManager(object):
     def __init__(self):
         self.visible_from = []
@@ -41,5 +46,15 @@ class PointManager(object):
         indices = []
         for frame_index, col_index in zip(frame_indices, col_indices):
             matches = self.matches[frame_index]
+            # 'matches[:, col_index]' have keypoints indices
+            # corresponding to 'timestamp' that are already triangulated
             indices.append(matches[:, col_index])
         return np.concatenate(indices)
+
+    def remove(self, timestamp):
+        """Remove points which 'timestamp' is used for triangulation"""
+        visible_from = np.array(self.visible_from)
+        indices = np.where(visible_from==timestamp)[0]
+        self.points = delete_multiple(self.points, indices)
+        self.visible_from = delete_multiple(self.visible_from, indices)
+        self.matches = delete_multiple(self.matches, indices)
