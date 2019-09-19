@@ -129,4 +129,19 @@ def test_try_add():
     assert_array_almost_equal(projection.compute(P[3, 22:27]),
                               observations[3, 0:5])
 
+def test_try_remove():
+    vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
+    vo.try_add(observations[0], np.copy(descriptors))
+    vo.try_add(observations[1], add_noise(descriptors, np.arange(0, 18)))
+    vo.try_add(observations[2], add_noise(descriptors, np.arange(0, 15)))
+    vo.try_add(observations[3], add_noise(descriptors, np.arange(0, 10)))
+    assert(not vo.try_remove())  # 'vo' have to hold at least 4 keyframes
+    assert(vo.reference_keyframe_id == 0)
 
+    vo.try_add(observations[4], add_noise(descriptors, np.arange(0, 5)))
+    assert(vo.try_remove())
+    assert(vo.reference_keyframe_id == 1)
+
+    vo.try_add(observations[5], add_noise(descriptors, np.arange(15, 27)))
+    assert(vo.try_remove())
+    assert(vo.reference_keyframe_id == 2)
