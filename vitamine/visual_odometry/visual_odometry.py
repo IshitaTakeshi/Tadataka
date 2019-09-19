@@ -87,7 +87,7 @@ class VisualOdometry(object):
         timestamp0 = self.reference_timestamp
         if self.point_manager.n_added == 0:
             return self.try_init_points(keypoints, descriptors, timestamp0)
-        return self.try_add_new(keypoints, descriptors, timestamp0)
+        return self.try_add_keyframe(keypoints, descriptors, timestamp0)
 
     def try_init_points(self, keypoints1, descriptors1, timestamp0):
         keypoints0, descriptors0 = self.keyframes.get_keypoints(timestamp0)
@@ -95,11 +95,11 @@ class VisualOdometry(object):
         initializer = Initializer(self.matcher, keypoints0, descriptors0)
         R1, t1, matches01, points = initializer.initialize(keypoints1, descriptors1)
 
-        # TODO
         # if not self.inlier_condition(matches):
         #     return False
         # if not pose_condition(R1, t1, points):
         #     return False
+
         timestamp1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
         self.point_manager.add(points, (timestamp0, timestamp1), matches01)
         return True
@@ -136,7 +136,7 @@ class VisualOdometry(object):
         _, descriptors0b = self.keyframes.get_keypoints(tb, mb)
         return points0, descriptors0a, descriptors0b
 
-    def try_add_new(self, keypoints1, descriptors1, timestamp0):
+    def try_add_keyframe(self, keypoints1, descriptors1, timestamp0):
         estimator = PoseEstimator(self.matcher,
                                   *self.get_descriptors(timestamp0))
         R1, t1 = estimator.estimate(keypoints1, descriptors1)
