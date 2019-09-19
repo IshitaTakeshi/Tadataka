@@ -165,4 +165,5 @@ class VisualOdometry(object):
             return False
 
         timestamp = self.keyframes.remove()
+        self.point_manager.remove(timestamp)
         return True
