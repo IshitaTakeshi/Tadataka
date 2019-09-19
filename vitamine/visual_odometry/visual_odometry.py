@@ -53,13 +53,22 @@ class VisualOdometry(object):
         self.keyframes = Keyframes()
         self.point_manager = PointManager()
 
-    def add(self, image):
-        keypoints, descriptors = extract_keypoints(image)
-        return self.try_add(keypoints, descriptors)
+    @property
+    def points(self):
+        # temporarl way to get points
+        return self.point_manager.get_points()
+
+    @property
+    def poses(self):
+        return self.keyframes.get_active_poses()
 
     @property
     def reference_timestamp(self):
         return self.keyframes.oldest_timestamp
+
+    def add(self, image):
+        keypoints, descriptors = extract_keypoints(image)
+        return self.try_add(keypoints, descriptors)
 
     def try_add(self, keypoints, descriptors):
         if len(keypoints) < self.min_keypoints:
@@ -72,14 +81,9 @@ class VisualOdometry(object):
             return True
 
         timestamp0 = self.reference_timestamp
-
         if self.point_manager.n_added == 0:
-            success = self.try_init_points(keypoints, descriptors,
-                                           timestamp0)
-            return success
-
-        success = self.try_add_new(keypoints, descriptors, timestamp0)
-        return success
+            return self.try_init_points(keypoints, descriptors, timestamp0)
+        return self.try_add_new(keypoints, descriptors, timestamp0)
 
     def try_init_points(self, keypoints1, descriptors1, timestamp0):
         keypoints0, descriptors0 = self.keyframes.get_keypoints(timestamp0)
@@ -95,15 +99,6 @@ class VisualOdometry(object):
         timestamp1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
         self.point_manager.add(points, (timestamp0, timestamp1), matches01)
         return True
-
-    @property
-    def points(self):
-        # temporarl way to get points
-        return self.point_manager.get_points()
-
-    @property
-    def poses(self):
-        return self.keyframes.get_active_poses()
 
     def init_keypoints(self, keypoints, descriptors):
         R, t = np.identity(3), np.zeros(3)
@@ -134,7 +129,6 @@ class VisualOdometry(object):
             descriptors0, descriptors1
         )
         matches01[:, 0] = untriangulated_indices0[matches01[:, 0]]
-
         return matches01, points
 
     def get_descriptors(self, timestamp0):
@@ -145,13 +139,11 @@ class VisualOdometry(object):
         # Therefore we can estimate the pose of the new frame using the matched keypoints
         # and corresponding 3D points.
         points0, timestamps, matches = self.point_manager.get(timestamp0)
+        ta, tb = timestamps
+        ma, mb = matches[:, 0], matches[:, 1]
         # get descriptors already matched
-        _, descriptors0a = self.keyframes.get_keypoints(
-            timestamps[0], matches[:, 0]
-        )
-        _, descriptors0b = self.keyframes.get_keypoints(
-            timestamps[1], matches[:, 1]
-        )
+        _, descriptors0a = self.keyframes.get_keypoints(ta, ma)
+        _, descriptors0b = self.keyframes.get_keypoints(tb, mb)
         return points0, descriptors0a, descriptors0b
 
     def try_add_new(self, keypoints1, descriptors1, timestamp0):
