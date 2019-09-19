@@ -3,21 +3,20 @@ from autograd import numpy as np
 from vitamine.keypoints import extract_keypoints, match
 from vitamine.triangulation import pose_point_from_keypoints, points_from_known_poses
 from vitamine.camera_distortion import CameraModel
-from vitamine.pose_estimation import solve_pnp
-from vitamine.so3 import rodrigues
 
-from vitamine.visual_odometry.pose import PoseManager
+from vitamine.visual_odometry.pose import PoseManager, PoseEstimator
 from vitamine.visual_odometry.point import PointManager
 from vitamine.visual_odometry.keyframe import Keyframes
 
 
 class Triangulation(object):
-    def __init__(self, R1, R2, t1, t2):
+    def __init__(self, matcher, R1, R2, t1, t2):
+        self.matcher = matcher
         self.R1, self.R2 = R1, R2
         self.t1, self.t2 = t1, t2
 
     def triangulate(self, keypoints1, keypoints2, descriptors1, descriptors2):
-        matches12 = match(descriptors1, descriptors2)
+        matches12 = self.matcher(descriptors1, descriptors2)
 
         points, valid_depth_mask = points_from_known_poses(
             self.R1, self.R2, self.t1, self.t2,
@@ -38,8 +37,9 @@ def initialize(keypoints0, keypoints1, descriptors0, descriptors1):
 
 
 class VisualOdometry(object):
-    def __init__(self, camera_parameters, distortion_model, min_keypoints=8,
-                 min_active_keyframes=8):
+    def __init__(self, camera_parameters, distortion_model, matcher=match,
+                 min_keypoints=8, min_active_keyframes=8):
+        self.matcher = match
         self.min_keypoints = min_keypoints
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
@@ -77,8 +77,8 @@ class VisualOdometry(object):
     def try_init_points(self, keypoints1, descriptors1, timestamp0):
         keypoints0, descriptors0 = self.keyframes.get_keypoints(timestamp0)
 
-        R1, t1, matches01, points = initialize(keypoints0, keypoints1,
-                                               descriptors0, descriptors1)
+        initializer = Initializer(self.matcher, keypoints0, descriptors0)
+        R1, t1, matches01, points = initializer.initialize(keypoints1, descriptors1)
 
         # TODO
         # if not self.inlier_condition(matches):
@@ -121,7 +121,7 @@ class VisualOdometry(object):
         )
         R0, t0 = self.keyframes.get_pose(timestamp0)
 
-        triangulation = Triangulation(R0, R1, t0, t1)
+        triangulation = Triangulation(self.matcher, R0, R1, t0, t1)
         matches01, points = triangulation.triangulate(
             keypoints0, keypoints1,
             descriptors0, descriptors1
