@@ -6,178 +6,9 @@ from vitamine.camera_distortion import CameraModel
 from vitamine.pose_estimation import solve_pnp
 from vitamine.so3 import rodrigues
 
-
-class TimeStamp(object):
-    def __init__(self):
-        self.timestamp = 0
-
-    def increment(self):
-        self.timestamp += 1
-
-    def get(self):
-        return self.timestamp
-
-
-class Keyframes(object):
-    def __init__(self):
-        self.keypoint_manager = KeypointManager()
-        self.pose_manager = PoseManager()
-
-        # leftmost is the oldest
-        self.active_timestamps = []
-        self.timestamp = TimeStamp()
-
-    def add(self, keypoints, descriptors, R, t):
-        self.keypoint_manager.add(keypoints, descriptors)
-        self.pose_manager.add(R, t)
-
-        timestamp = self.timestamp.get()
-        self.active_timestamps.append(timestamp)
-        self.timestamp.increment()
-        return timestamp
-
-    @property
-    def oldest_timestamp(self):
-        # Returns the oldest keyframe id in the window
-        return self.active_timestamps[0]
-
-    def id_to_index(self, timestamp):
-        return timestamp - self.oldest_timestamp
-
-    def get_keypoints(self, timestamp, indices=slice(None, None, None)):
-        i = self.id_to_index(timestamp)
-        return self.keypoint_manager.get(i, indices)
-
-    def get_pose(self, timestamp):
-        i = self.id_to_index(timestamp)
-        return self.pose_manager.get(i)
-
-    def get_active_poses(self):
-        poses = [self.get_pose(i) for i in self.active_timestamps]
-        rotations, translations = zip(*poses)
-        return np.array(rotations), np.array(translations)
-
-    def get_untriangulated(self, timestamp, triangulated_indices):
-        """
-        Get keypoints that have not been used for triangulation.
-        These keypoints don't have corresponding 3D points.
-        """
-        i = self.id_to_index(timestamp)
-        size = self.keypoint_manager.size(i)
-        return indices_other_than_1d(size, triangulated_indices)
-
-    @property
-    def n_active(self):
-        return len(self.active_timestamps)
-
-    def select_removed(self):
-        return 0
-
-    def remove(self):
-        index = self.select_removed()
-        return self.active_timestamps.pop(index)
-
-
-class PoseManager(object):
-    def __init__(self):
-        self.rotations = []
-        self.translations = []
-
-    def add(self, R, t):
-        self.rotations.append(R)
-        self.translations.append(t)
-
-    def get(self, i):
-        R = self.rotations[i]
-        t = self.translations[i]
-        return R, t
-
-    def get_motion_matrix(self, i):
-        R, t = self.get(i)
-        return motion_matrix(R, t)
-
-
-class KeypointManager(object):
-    def __init__(self):
-        self.keypoints = []
-        self.descriptors = []
-
-    def add(self, keypoints, descriptors):
-        self.keypoints.append(keypoints)
-        self.descriptors.append(descriptors)
-
-    def get(self, i, indices):
-        keypoints = self.keypoints[i]
-        descriptors = self.descriptors[i]
-        return keypoints[indices], descriptors[indices]
-
-    def size(self, i):
-        return len(self.keypoints[i])
-
-
-def indices_other_than_1d(size, indices):
-    """
-    size: size of the array you want to get elements from
-    example:
-    >>> indices_other_than_1d(8, [1, 2, 3])
-    [0, 4, 5, 6, 7]
-    """
-    return np.setxor1d(indices, np.arange(size))
-
-
-class PointManager(object):
-    def __init__(self):
-        self.visible_from = []
-        self.matches = []
-        self.points = []
-
-    @property
-    def n_added(self):
-        # number of 'add' called so far
-        return len(self.visible_from)
-
-    def add(self, points, timestamps, matches):
-        assert(len(timestamps) == 2)
-        # self.points[i] is a 3D point estimated from
-        # keypoints[timestamp1][matches[i, 0]] and
-        # keypoints[timestamp2][matches[i, 1]]
-
-        self.points.append(points)
-        self.visible_from.append(timestamps)
-        self.matches.append(matches)
-
-    def get_points(self):
-        if len(self.points) == 0:
-            return np.empty((0, 3), dtype=np.float64)
-        return np.vstack(self.points)
-
-    def get(self, i):
-        """
-        Return 'i'-th added points, keyframe ids used for triangulation,
-        and the corresponding matches
-        """
-        return self.points[i], self.visible_from[i], self.matches[i]
-
-    def get_triangulated_indices(self, timestamp):
-        """Get keypoint indices that already have corresponding 3D points"""
-        visible_from = np.array(self.visible_from)
-        frame_indices, col_indices = np.where(visible_from==timestamp)
-        indices = []
-        for frame_index, col_index in zip(frame_indices, col_indices):
-            matches = self.matches[frame_index]
-            indices.append(matches[:, col_index])
-        return np.concatenate(indices)
-
-
-def initialize(keypoints0, keypoints1, descriptors0, descriptors1):
-    matches01 = match(descriptors0, descriptors1)
-
-    R1, t1, points, valid_depth_mask = pose_point_from_keypoints(
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
-
-    return R1, t1, matches01[valid_depth_mask], points[valid_depth_mask]
+from vitamine.visual_odometry.pose import PoseManager
+from vitamine.visual_odometry.point import PointManager
+from vitamine.visual_odometry.keyframe import Keyframes
 
 
 class Triangulation(object):
@@ -193,6 +24,17 @@ class Triangulation(object):
             keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]],
         )
         return matches12[valid_depth_mask], points[valid_depth_mask]
+
+
+def initialize(keypoints0, keypoints1, descriptors0, descriptors1):
+    matches01 = match(descriptors0, descriptors1)
+
+    R1, t1, points, valid_depth_mask = pose_point_from_keypoints(
+        keypoints0[matches01[:, 0]],
+        keypoints1[matches01[:, 1]]
+    )
+
+    return R1, t1, matches01[valid_depth_mask], points[valid_depth_mask]
 
 
 class VisualOdometry(object):

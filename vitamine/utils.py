@@ -1,6 +1,16 @@
 from autograd import numpy as np
 
 
+def indices_other_than(size, indices):
+    """
+    size: size of the array you want to get elements from
+    example:
+    >>> indices_other_than(8, [1, 2, 3])
+    [0, 4, 5, 6, 7]
+    """
+    return np.setxor1d(indices, np.arange(size))
+
+
 def round_int(X):
     return np.round(X, 0).astype(np.int64)
 
@@ -12,3 +22,7 @@ def is_in_image_range(keypoints, image_shape):
     mask_y = np.logical_and(0 <= ys, ys < height)
     mask = np.logical_and(mask_x, mask_y)
     return mask
+
+
+def radian_to_degree(radian):
+    return radian / np.pi * 180
