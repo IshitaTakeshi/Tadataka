@@ -56,9 +56,5 @@ class Keyframes(object):
     def n_active(self):
         return len(self.active_keyframe_ids)
 
-    def select_removed(self):
-        return 0
-
-    def remove(self):
-        index = self.select_removed()
-        return self.active_keyframe_ids.pop(index)
+    def remove(self, keyframe_id):
+        return self.active_keyframe_ids.remove(keyframe_id)

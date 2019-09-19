@@ -164,6 +164,8 @@ class VisualOdometry(object):
         if self.keyframes.n_active <= self.min_active_keyframes:
             return False
 
-        keyframe_id = self.keyframes.remove()
+        # remove the oldest keyframe and the corresponding points
+        keyframe_id = self.keyframes.oldest_keyframe_id
+        self.keyframes.remove(keyframe_id)
         self.point_manager.remove(keyframe_id)
         return True
