@@ -50,32 +50,6 @@ observations, positive_depth_mask = generate_observations(
 descriptors = random_binary((len(points), 256))
 
 
-def test_triangulation():
-    R1, R2 = rotations[0:2]
-    t1, t2 = translations[0:2]
-    triangulation = Triangulation(R1, R2, t1, t2)
-
-    keypoints1, keypoints2 = observations[0:2]
-
-    matches, points = triangulation.triangulate(
-        keypoints1, keypoints2,
-        np.copy(descriptors), np.copy(descriptors)
-    )
-    P = transform_all(np.array([R1, R2]), np.array([t1, t2]), points)
-    assert_array_almost_equal(projection.compute(P[0]), keypoints1)
-    assert_array_almost_equal(projection.compute(P[1]), keypoints2)
-
-    # randomize first 10 descriptors
-    matches, points = triangulation.triangulate(
-        keypoints1, keypoints2,
-        add_noise(descriptors, np.arange(0, 10)),
-        add_noise(descriptors, np.arange(0, 10))
-    )
-    P = transform_all(np.array([R1, R2]), np.array([t1, t2]), points)
-    assert_array_almost_equal(projection.compute(P[0]), keypoints1[10:])
-    assert_array_almost_equal(projection.compute(P[1]), keypoints2[10:])
-
-
 def test_init_points():
     keypoints0, keypoints1 = observations[0:2]
 
