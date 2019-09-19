@@ -8,8 +8,9 @@ from vitamine.dataset.observations import (
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
+from vitamine.keypoints import  match
 from vitamine.visual_odometry.visual_odometry import (
-    Triangulation, VisualOdometry, initialize)
+    Triangulation, VisualOdometry)
 from vitamine.rigid.transformation import transform_all
 
 
@@ -36,8 +37,12 @@ omegas = np.array([
     [0, 0, 0],
     [0, np.pi / 2, 0],
     [np.pi / 2, 0, 0],
-    [0, np.pi / 4, 0]
+    [0, np.pi / 4, 0],
+    [0, -np.pi / 4, 0],
+    [-np.pi / 4, 0, 0],
+    [np.pi / 2, 0, 0]
 ])
+
 
 rotations = rodrigues(omegas)
 translations = generate_translations(rotations, points)
