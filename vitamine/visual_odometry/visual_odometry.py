@@ -112,28 +112,14 @@ class VisualOdometry(object):
         indices = self.point_manager.get_triangulated_indices(timestamp)
         return self.keyframes.get_untriangulated(timestamp, indices)
 
-    def triangulate_new(self, keypoints1, descriptors1, R1, t1, timestamp0):
-        # get untriangulated keypoint indices
-        untriangulated_indices0 = self.get_untriangulated(timestamp0)
-
-        if len(untriangulated_indices0) == 0:
-            # no points to add
-            return (np.empty((0, 2), dtype=np.int64),
-                    np.empty((0, 3), dtype=np.float64))
-
-        # match and triangulate with newly observed points
+    def get_triangulator(self, timestamp0, indices0):
         keypoints0, descriptors0 = self.keyframes.get_keypoints(
-            timestamp0, untriangulated_indices0
+            timestamp0, indices0
         )
+
         R0, t0 = self.keyframes.get_pose(timestamp0)
 
-        triangulation = Triangulation(self.matcher, R0, R1, t0, t1)
-        matches01, points = triangulation.triangulate(
-            keypoints0, keypoints1,
-            descriptors0, descriptors1
-        )
-        matches01[:, 0] = untriangulated_indices0[matches01[:, 0]]
-        return matches01, points
+        return Triangulation(self.matcher, R0, t0, keypoints0, descriptors0)
 
     def get_descriptors(self, timestamp0):
         # 3D points have corresponding two viewpoits used for triangulation
