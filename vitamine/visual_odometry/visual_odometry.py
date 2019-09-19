@@ -10,19 +10,23 @@ from vitamine.visual_odometry.keyframe import Keyframes
 
 
 class Triangulation(object):
-    def __init__(self, matcher, R1, R2, t1, t2):
+    def __init__(self, matcher, R0, t0, keypoints0, descriptors0):
         self.matcher = matcher
-        self.R1, self.R2 = R1, R2
-        self.t1, self.t2 = t1, t2
+        self.R0 = R0
+        self.t0 = t0
+        self.keypoints0 = keypoints0
+        self.descriptors0 = descriptors0
 
-    def triangulate(self, keypoints1, keypoints2, descriptors1, descriptors2):
-        matches12 = self.matcher(descriptors1, descriptors2)
+    def triangulate(self, R1, t1, keypoints1, descriptors1):
+        matches01 = self.matcher(self.descriptors0, descriptors1)
+        indices0, indices1 = matches01[:, 0], matches01[:, 1]
 
         points, valid_depth_mask = points_from_known_poses(
-            self.R1, self.R2, self.t1, self.t2,
-            keypoints1[matches12[:, 0]], keypoints2[matches12[:, 1]],
+            self.R0, R1, self.t0, t1,
+            self.keypoints0[indices0], keypoints1[indices1],
         )
-        return matches12[valid_depth_mask], points[valid_depth_mask]
+
+        return matches01[valid_depth_mask], points[valid_depth_mask]
 
 
 class Initializer(object):
