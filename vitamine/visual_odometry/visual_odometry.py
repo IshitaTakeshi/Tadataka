@@ -144,10 +144,18 @@ class VisualOdometry(object):
         #     return False
         timestamp1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
 
-        matches01, points = self.triangulate_new(keypoints1, descriptors1,
-                                                 R1, t1, timestamp0)
-        if len(matches01) == 0:
+        indices0 = self.get_untriangulated(timestamp0)
+
+        if len(indices0) == 0:
+            # nothing to triangulate
+            print("No points to add")
             return True
+
+        # match and triangulate with newly observed points
+        triangulator = self.get_triangulator(timestamp0, indices0)
+        matches01, points = triangulator.triangulate(R1, t1,
+                                                     keypoints1, descriptors1)
+        matches01[:, 0] = indices0[matches01[:, 0]]
 
         self.point_manager.add(points, (timestamp0, timestamp1), matches01)
         return True
