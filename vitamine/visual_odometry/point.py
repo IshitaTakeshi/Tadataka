@@ -17,14 +17,14 @@ class PointManager(object):
         # number of 'add' called so far
         return len(self.visible_from)
 
-    def add(self, points, timestamps, matches):
-        assert(len(timestamps) == 2)
+    def add(self, points, keyframe_ids, matches):
+        assert(len(keyframe_ids) == 2)
         # self.points[i] is a 3D point estimated from
-        # keypoints[timestamp1][matches[i, 0]] and
-        # keypoints[timestamp2][matches[i, 1]]
+        # keypoints[keyframe_id1][matches[i, 0]] and
+        # keypoints[keyframe_id2][matches[i, 1]]
 
         self.points.append(points)
-        self.visible_from.append(timestamps)
+        self.visible_from.append(keyframe_ids)
         self.matches.append(matches)
 
     def get_points(self):
@@ -39,22 +39,22 @@ class PointManager(object):
         """
         return self.points[i], self.visible_from[i], self.matches[i]
 
-    def get_triangulated_indices(self, timestamp):
+    def get_triangulated_indices(self, keyframe_id):
         """Get keypoint indices that already have corresponding 3D points"""
         visible_from = np.array(self.visible_from)
-        frame_indices, col_indices = np.where(visible_from==timestamp)
+        frame_indices, col_indices = np.where(visible_from==keyframe_id)
         indices = []
         for frame_index, col_index in zip(frame_indices, col_indices):
             matches = self.matches[frame_index]
             # 'matches[:, col_index]' have keypoints indices
-            # corresponding to 'timestamp' that are already triangulated
+            # corresponding to 'keyframe_id' that are already triangulated
             indices.append(matches[:, col_index])
         return np.concatenate(indices)
 
-    def remove(self, timestamp):
-        """Remove points which 'timestamp' is used for triangulation"""
+    def remove(self, keyframe_id):
+        """Remove points which 'keyframe_id' is used for triangulation"""
         visible_from = np.array(self.visible_from)
-        indices = np.where(visible_from==timestamp)[0]
+        indices = np.where(visible_from==keyframe_id)[0]
         self.points = delete_multiple(self.points, indices)
         self.visible_from = delete_multiple(self.visible_from, indices)
         self.matches = delete_multiple(self.matches, indices)

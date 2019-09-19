@@ -10,56 +10,55 @@ class Keyframes(object):
         self.keypoint_manager = KeypointManager()
         self.pose_manager = PoseManager()
 
-        # leftmost is the oldest
-        self.active_timestamps = []
+        self.active_keyframe_ids = []  # leftmost is the oldest
         self.timestamp = TimeStamp()
 
     def add(self, keypoints, descriptors, R, t):
         self.keypoint_manager.add(keypoints, descriptors)
         self.pose_manager.add(R, t)
 
-        timestamp = self.timestamp.get()
-        self.active_timestamps.append(timestamp)
+        keyframe_id = self.timestamp.get()
+        self.active_keyframe_ids.append(keyframe_id)
         self.timestamp.increment()
-        return timestamp
+        return keyframe_id
 
     @property
-    def oldest_timestamp(self):
+    def oldest_keyframe_id(self):
         # Returns the oldest keyframe id in the window
-        return self.active_timestamps[0]
+        return self.active_keyframe_ids[0]
 
-    def id_to_index(self, timestamp):
-        return timestamp - self.oldest_timestamp
+    def keyframe_id_to_index(self, keyframe_id):
+        return keyframe_id - self.oldest_keyframe_id
 
-    def get_keypoints(self, timestamp, indices=slice(None, None, None)):
-        i = self.id_to_index(timestamp)
+    def get_keypoints(self, keyframe_id, indices=slice(None, None, None)):
+        i = self.keyframe_id_to_index(keyframe_id)
         return self.keypoint_manager.get(i, indices)
 
-    def get_pose(self, timestamp):
-        i = self.id_to_index(timestamp)
+    def get_pose(self, keyframe_id):
+        i = self.keyframe_id_to_index(keyframe_id)
         return self.pose_manager.get(i)
 
     def get_active_poses(self):
-        poses = [self.get_pose(i) for i in self.active_timestamps]
+        poses = [self.get_pose(i) for i in self.active_keyframe_ids]
         rotations, translations = zip(*poses)
         return np.array(rotations), np.array(translations)
 
-    def get_untriangulated(self, timestamp, triangulated_indices):
+    def get_untriangulated(self, keyframe_id, triangulated_indices):
         """
         Get keypoints that have not been used for triangulation.
         These keypoints don't have corresponding 3D points.
         """
-        i = self.id_to_index(timestamp)
+        i = self.keyframe_id_to_index(keyframe_id)
         size = self.keypoint_manager.size(i)
         return indices_other_than(size, triangulated_indices)
 
     @property
     def n_active(self):
-        return len(self.active_timestamps)
+        return len(self.active_keyframe_ids)
 
     def select_removed(self):
         return 0
 
     def remove(self):
         index = self.select_removed()
-        return self.active_timestamps.pop(index)
+        return self.active_keyframe_ids.pop(index)
