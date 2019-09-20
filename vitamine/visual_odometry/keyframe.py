@@ -46,8 +46,9 @@ class Keyframes(object):
         i = self.keyframe_id_to_index(keyframe_id)
         return self.pose_manager.get(i)
 
-    def get_active_poses(self):
-        poses = [self.get_pose(i) for i in self.active_keyframe_ids]
+    def get_poses(self, indices=None):
+        indices = range(self.size) if indices is None else indices
+        poses = [self.pose_manager.get(i) for i in indices]
         rotations, translations = zip(*poses)
         return np.array(rotations), np.array(translations)
 
