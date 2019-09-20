@@ -141,7 +141,10 @@ class VisualOdometry(object):
         #     return False
 
         keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
-        self.point_manager.add(points, (keyframe_id0, keyframe_id1), matches01)
+        point_indices = self.points.add(points)
+        indices0, indices1 = matches01[:, 0], matches01[:, 1]
+        self.keyframes.add_triangulated(keyframe_id0, indices0, point_indices)
+        self.keyframes.add_triangulated(keyframe_id1, indices1, point_indices)
         return True
 
     def init_keypoints(self, keypoints, descriptors):
