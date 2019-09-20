@@ -68,7 +68,11 @@ class Keyframes(object):
         return self.keypoint_manager.get_triangulated(i)
 
     @property
-    def n_active(self):
+    def size(self):
+        return self.timestamp.get()
+
+    @property
+    def active_size(self):
         return len(self.active_keyframe_ids)
 
     def remove(self, keyframe_id):
