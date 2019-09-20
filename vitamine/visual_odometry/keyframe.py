@@ -13,6 +13,10 @@ class Keyframes(object):
         self.active_keyframe_ids = []  # leftmost is the oldest
         self.timestamp = TimeStamp()
 
+    def add_triangulated(self, keyframe_id, indices, point_indices):
+        i = self.keyframe_id_to_index(keyframe_id)
+        self.keypoint_manager.add_triangulated(i, indices, point_indices)
+
     def add(self, keypoints, descriptors, R, t):
         self.keypoint_manager.add(keypoints, descriptors)
         self.pose_manager.add(R, t)
