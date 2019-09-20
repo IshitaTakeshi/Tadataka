@@ -146,37 +146,42 @@ class VisualOdometry(object):
         indices = self.point_manager.get_triangulated_indices(keyframe_id)
         return self.keyframes.get_untriangulated(keyframe_id, indices)
 
-    def get_triangulator(self, keyframe_id0, indices0):
-        keypoints0, descriptors0 = self.keyframes.get_keypoints(
-            keyframe_id0, indices0
+    def try_add_keyframe(self, keypoints0, descriptors0):
+        points1, keyframe_ids, matches = self.point_manager.get(0)  # oldest
+        indices0, indices1 = match_existing(
+            self.matcher, self.keyframes,
+            descriptors0, keyframe_ids, matches
         )
-
-        R0, t0 = self.keyframes.get_pose(keyframe_id0)
-
-        return Triangulation(self.matcher, R0, t0, keypoints0, descriptors0)
-
-    def try_add_keyframe(self, keypoints1, descriptors1, keyframe_id0):
-        estimator = PoseEstimator(self.matcher,
-                                  *self.get_descriptors(keyframe_id0))
-        R1, t1 = estimator.estimate(keypoints1, descriptors1)
+        R0, t0 = estimate_pose(points1[indices1], keypoints0[indices0])
         # if not pose_condition(R, t, points):
         #     return False
-        keyframe_id1 = self.keyframes.add(keypoints1, descriptors1, R1, t1)
 
-        indices0 = self.get_untriangulated(keyframe_id0)
+        triangulator = Triangulation(self.matcher, R0, t0,
+                                     keypoints0, descriptors0)
+        active_keyframe_ids = copy(self.keyframes.active_keyframe_ids)
+        keyframe_id0 = self.keyframes.add(keypoints0, descriptors0, R0, t0)
 
-        if len(indices0) == 0:
-            # nothing to triangulate
-            print("No points to add")
-            return True
+        for keyframe_id1 in active_keyframe_ids:
+            indices1 = self.get_untriangulated(keyframe_id1)
 
-        # match and triangulate with newly observed points
-        triangulator = self.get_triangulator(keyframe_id0, indices0)
-        matches01, points = triangulator.triangulate(R1, t1,
-                                                     keypoints1, descriptors1)
-        matches01[:, 0] = indices0[matches01[:, 0]]
+            if len(indices1) == 0:
+                continue
+            print("indices1", indices1)
+            keypoints1, descriptors1 = self.keyframes.get_keypoints(
+                keyframe_id1, indices1
+            )
 
-        self.point_manager.add(points, (keyframe_id0, keyframe_id1), matches01)
+            R1, t1 = self.keyframes.get_pose(keyframe_id1)
+
+            points, matches01 = triangulator.triangulate(R1, t1,
+                                                         keypoints1, descriptors1)
+            if len(matches01) == 0:
+                continue
+
+            matches01[:, 1] = indices1[matches01[:, 1]]
+
+            self.point_manager.add(points, (keyframe_id0, keyframe_id1),
+                                   matches01)
         return True
 
     def try_remove(self):
