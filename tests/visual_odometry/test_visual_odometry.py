@@ -12,10 +12,7 @@ from vitamine.keypoints import  match
 from vitamine.visual_odometry.visual_odometry import (
     Triangulation, VisualOdometry)
 from vitamine.rigid.transformation import transform_all
-
-
-def random_binary(size):
-    return np.random.randint(0, 2, size, dtype=np.bool)
+from vitmine.utils import random_binary
 
 
 def add_noise(descriptors, indices):
@@ -81,8 +78,9 @@ def test_init_points():
 def test_try_add():
     # test the case all descriptors are same
     vo = VisualOdometry(camera_parameters, FOV(0.0))
-    for i in range(3):
-        vo.try_add(observations[i], np.copy(descriptors))
+    vo.try_add(observations[0], np.copy(descriptors))
+    vo.try_add(observations[1], np.copy(descriptors))
+    vo.try_add(observations[2], np.copy(descriptors))
 
     rotations, translations = vo.poses
     P = transform_all(rotations, translations, vo.points)
@@ -96,20 +94,28 @@ def test_try_add():
     descriptors2 = add_noise(descriptors, [0, 1, 2, 3, 4, 10, 11, 12, 13, 14])
     descriptors3 = add_noise(descriptors, [10, 11, 12, 13, 14])
 
-    # descriptors0[10:27] and descriptors1[10:27] should be matched and
-    # triangulated
+    # descriptors0[10:27] and descriptors1[10:27] should match
     vo.try_add(observations[0], descriptors0)
     vo.try_add(observations[1], descriptors1)
-    # descriptors0[0:10] and descriptors1[0:10] cannot be matched
+
+    # descriptors0[0:10] and descriptors1[0:10] cannot match
     assert_array_equal(vo.get_untriangulated(0), np.arange(10))
-    # descriptors0[5:10] and descriptors2[5:10] should be matched and the
+    assert_array_equal(vo.matches[0],
+                       np.vstack((np.arange(10, 27), np.arange(10, 27))).T)
+
+    # descriptors0[5:10] and descriptors2[5:10] should match and the
     # corresponding keypoints should be triangulated
     # descriptors0[15:27] and descriptors2[15:27] have the same
     # descriptors but the corresponding keypoints are already
     # triangulated so they are ignored
     vo.try_add(observations[2], descriptors2)
+    assert_array_equal(vo.matches[1],
+                       np.vstack((np.arange(5, 10), np.arange(5, 10))).T)
+
     # descriptors0[0:5] and descriptors3[0:5] should be matched
     vo.try_add(observations[3], descriptors3)
+    assert_array_equal(vo.matches[2],
+                       np.vstack((np.arange(0, 5), np.arange(0, 5))).T)
 
     rotations, translations = vo.poses
     P = transform_all(rotations, translations, vo.points)
@@ -131,13 +137,19 @@ def test_try_add():
 
 def test_try_remove():
     vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
+    # [10:27] are triangulated
     vo.try_add(observations[0], np.copy(descriptors))
-    vo.try_add(observations[1], add_noise(descriptors, np.arange(0, 18)))
-    vo.try_add(observations[2], add_noise(descriptors, np.arange(0, 15)))
-    vo.try_add(observations[3], add_noise(descriptors, np.arange(0, 10)))
+    vo.try_add(observations[1], add_noise(descriptors, np.arange(0, 10)))
+
+    # [8:10] are triangulated
+    vo.try_add(observations[2], add_noise(descriptors, np.arange(0, 8)))
+
+    # [0:5] are triangulated
+    vo.try_add(observations[3], add_noise(descriptors, np.arange(5, 10)))
     assert(not vo.try_remove())  # 'vo' have to hold at least 4 keyframes
     assert(vo.reference_keyframe_id == 0)
 
+    # [5:8] are triangulated
     vo.try_add(observations[4], add_noise(descriptors, np.arange(0, 5)))
     assert(vo.try_remove())
     assert(vo.reference_keyframe_id == 1)
