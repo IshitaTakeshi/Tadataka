@@ -97,21 +97,14 @@ class VisualOdometry(object):
         self.min_keypoints = min_keypoints
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
+        self.points = Points()
         self.keyframes = Keyframes()
-        self.point_manager = PointManager()
 
-    @property
-    def points(self):
-        # temporarl way to get points
-        return self.point_manager.get_points()
+    def export_points(self):
+        return self.points.get()
 
-    @property
-    def matches(self):
-        return self.point_manager.matches
-
-    @property
-    def poses(self):
-        return self.keyframes.get_active_poses()
+    def export_poses(self):
+        return self.keyframes.get_poses()
 
     @property
     def reference_keyframe_id(self):
@@ -127,12 +120,12 @@ class VisualOdometry(object):
 
         keypoints = self.camera_model.undistort(keypoints)
 
-        if self.keyframes.n_active == 0:
-            self.init_keypoints(keypoints, descriptors)
-            return True
+        if self.keyframes.active_size == 0:
+            return self.init_keypoints(keypoints, descriptors)
 
-        if self.keyframes.n_active == 1:
+        if self.keyframes.active_size == 1:
             return self.try_init_points(keypoints, descriptors)
+
         return self.try_add_keyframe(keypoints, descriptors)
 
     def try_init_points(self, keypoints1, descriptors1):
