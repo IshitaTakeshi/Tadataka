@@ -8,9 +8,23 @@ from vitamine.triangulation import pose_point_from_keypoints, points_from_known_
 from vitamine.camera_distortion import CameraModel
 
 from vitamine.visual_odometry.pose import PoseManager, estimate_pose
-from vitamine.visual_odometry.point import PointManager
+from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keyframe import Keyframes
 
+
+def find_best_match(matcher, keyframes, descriptors0, active_keyframe_ids):
+    max_matches = 0
+    argmax_matches01 = None
+    argmax_keyframe_id = None
+
+    for keyframe_id1 in active_keyframe_ids:
+        keypoints1, descriptors1 = keyframes.get_triangulated(keyframe_id1)
+        matches01 = matcher(descriptors0, descriptors1)
+        if len(matches01) > max_matches:
+            max_matches = len(matches01)
+            argmax_matches01 = matches01
+            argmax_keyframe_id = keyframe_id1
+    return argmax_matches01, argmax_keyframe_id
 
 
 class Triangulation(object):
