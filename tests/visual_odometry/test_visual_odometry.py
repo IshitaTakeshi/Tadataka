@@ -12,7 +12,7 @@ from vitamine.keypoints import  match
 from vitamine.visual_odometry.visual_odometry import (
     Triangulation, VisualOdometry)
 from vitamine.rigid.transformation import transform_all
-from vitmine.utils import random_binary
+from tests.utils import random_binary
 
 
 def add_noise(descriptors, indices):
@@ -59,8 +59,8 @@ def test_init_points():
     vo.try_add(keypoints0, np.copy(descriptors))
     vo.try_add(keypoints1, np.copy(descriptors))
 
-    rotations, translations = vo.poses
-    P = transform_all(rotations, translations, vo.points)
+    rotations, translations = vo.export_poses()
+    P = transform_all(rotations, translations, vo.export_points())
     assert_array_almost_equal(projection.compute(P[0]), keypoints0)
     assert_array_almost_equal(projection.compute(P[1]), keypoints1)
 
@@ -69,8 +69,8 @@ def test_init_points():
     vo.try_add(keypoints0, add_noise(descriptors, np.arange(0, 10)))
     vo.try_add(keypoints1, add_noise(descriptors, np.arange(0, 10)))
 
-    rotations, translations = vo.poses
-    P = transform_all(rotations, translations, vo.points)
+    rotations, translations = vo.export_poses()
+    P = transform_all(rotations, translations, vo.export_points())
     assert_array_almost_equal(projection.compute(P[0]), keypoints0[10:])
     assert_array_almost_equal(projection.compute(P[1]), keypoints1[10:])
 
@@ -78,12 +78,11 @@ def test_init_points():
 def test_try_add():
     # test the case all descriptors are same
     vo = VisualOdometry(camera_parameters, FOV(0.0))
-    vo.try_add(observations[0], np.copy(descriptors))
-    vo.try_add(observations[1], np.copy(descriptors))
-    vo.try_add(observations[2], np.copy(descriptors))
+    for i in range(3):
+        vo.try_add(observations[i], np.copy(descriptors))
 
-    rotations, translations = vo.poses
-    P = transform_all(rotations, translations, vo.points)
+    rotations, translations = vo.export_poses()
+    P = transform_all(rotations, translations, vo.export_points())
     for i in range(3):
         assert_array_almost_equal(projection.compute(P[i]), observations[i])
 
@@ -98,27 +97,17 @@ def test_try_add():
     vo.try_add(observations[0], descriptors0)
     vo.try_add(observations[1], descriptors1)
 
-    # descriptors0[0:10] and descriptors1[0:10] cannot match
-    assert_array_equal(vo.get_untriangulated(0), np.arange(10))
-    assert_array_equal(vo.matches[0],
-                       np.vstack((np.arange(10, 27), np.arange(10, 27))).T)
-
     # descriptors0[5:10] and descriptors2[5:10] should match and the
     # corresponding keypoints should be triangulated
     # descriptors0[15:27] and descriptors2[15:27] have the same
     # descriptors but the corresponding keypoints are already
     # triangulated so they are ignored
     vo.try_add(observations[2], descriptors2)
-    assert_array_equal(vo.matches[1],
-                       np.vstack((np.arange(5, 10), np.arange(5, 10))).T)
-
     # descriptors0[0:5] and descriptors3[0:5] should be matched
     vo.try_add(observations[3], descriptors3)
-    assert_array_equal(vo.matches[2],
-                       np.vstack((np.arange(0, 5), np.arange(0, 5))).T)
 
-    rotations, translations = vo.poses
-    P = transform_all(rotations, translations, vo.points)
+    rotations, translations = vo.export_poses()
+    P = transform_all(rotations, translations, vo.export_points())
     # points corresponding to descriptors0[10:27] and descriptors1[10:27]
     assert_array_almost_equal(projection.compute(P[0, 0:17]),
                               observations[0, 10:])
