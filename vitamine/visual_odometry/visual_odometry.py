@@ -150,35 +150,40 @@ class VisualOdometry(object):
     def init_keypoints(self, keypoints, descriptors):
         R, t = np.identity(3), np.zeros(3)
         keyframe_id = self.keyframes.add(keypoints, descriptors, R, t)
+        return True
 
-    def get_untriangulated(self, keyframe_id):
-        indices = self.point_manager.get_triangulated(keyframe_id)
-        return self.keyframes.get_untriangulated(keyframe_id, indices)
+    def estimate_pose(self, keypoints0, descriptors0, active_keyframe_ids,
+                      min_matches=4):
+        matches01, keyframe_id1 = find_best_match(
+            self.matcher, self.keyframes,
+            descriptors0, active_keyframe_ids
+        )
+
+        if len(matches01) < min_matches:
+            return False
+
+        point_indices = self.keyframes.get_point_indices(keyframe_id1)
+        keypoints = keypoints0[matches01[:, 0]]
+        points = self.points.get(point_indices[matches01[:, 1]])
+        return estimate_pose(points, keypoints)
 
     def try_add_keyframe(self, keypoints0, descriptors0):
-        points1, keyframe_ids, matches = self.point_manager.get(0)  # oldest
-        indices0, indices1 = match_existing(
-            self.matcher, self.keyframes,
-            descriptors0, keyframe_ids, matches
-        )
-        R0, t0 = estimate_pose(points1[indices1], keypoints0[indices0])
         # if not pose_condition(R, t, points):
         #     return False
 
+        active_keyframe_ids = copy(self.keyframes.active_keyframe_ids)
+        R0, t0 = self.estimate_pose(keypoints0, descriptors0,
+                                    active_keyframe_ids)
         triangulator = Triangulation(self.matcher, R0, t0,
                                      keypoints0, descriptors0)
-        active_keyframe_ids = copy(self.keyframes.active_keyframe_ids)
         keyframe_id0 = self.keyframes.add(keypoints0, descriptors0, R0, t0)
 
         for keyframe_id1 in active_keyframe_ids:
-            indices1 = self.get_untriangulated(keyframe_id1)
-
-            if len(indices1) == 0:
-                continue
-            print("indices1", indices1)
-            keypoints1, descriptors1 = self.keyframes.get_keypoints(
-                keyframe_id1, indices1
+            keypoints1, descriptors1 = self.keyframes.get_untriangulated(
+                keyframe_id1
             )
+            if len(keypoints1) == 0:
+                continue
 
             R1, t1 = self.keyframes.get_pose(keyframe_id1)
 
@@ -187,10 +192,12 @@ class VisualOdometry(object):
             if len(matches01) == 0:
                 continue
 
-            matches01[:, 1] = indices1[matches01[:, 1]]
+            point_indices = self.points.add(points)
+            self.keyframes.add_triangulated(keyframe_id0, matches01[:, 0],
+                                            point_indices)
+            self.keyframes.add_triangulated(keyframe_id1, matches01[:, 1],
+                                            point_indices)
 
-            self.point_manager.add(points, (keyframe_id0, keyframe_id1),
-                                   matches01)
         return True
 
     def try_remove(self):
