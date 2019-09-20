@@ -26,6 +26,10 @@ class Keyframes(object):
         self.timestamp.increment()
         return keyframe_id
 
+    def get_point_indices(self, keyframe_id):
+        i = self.keyframe_id_to_index(keyframe_id)
+        return self.keypoint_manager.get_point_indices(i)
+
     @property
     def oldest_keyframe_id(self):
         # Returns the oldest keyframe id in the window
