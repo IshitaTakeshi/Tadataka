@@ -67,6 +67,10 @@ class VisualOdometry(object):
         return self.point_manager.get_points()
 
     @property
+    def matches(self):
+        return self.point_manager.matches
+
+    @property
     def poses(self):
         return self.keyframes.get_active_poses()
 
