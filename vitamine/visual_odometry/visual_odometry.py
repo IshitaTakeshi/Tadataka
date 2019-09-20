@@ -1,12 +1,16 @@
 from collections import deque
+from copy import copy
+
 from autograd import numpy as np
+
 from vitamine.keypoints import extract_keypoints, match
 from vitamine.triangulation import pose_point_from_keypoints, points_from_known_poses
 from vitamine.camera_distortion import CameraModel
 
-from vitamine.visual_odometry.pose import PoseManager, PoseEstimator
+from vitamine.visual_odometry.pose import PoseManager, estimate_pose
 from vitamine.visual_odometry.point import PointManager
 from vitamine.visual_odometry.keyframe import Keyframes
+
 
 
 class Triangulation(object):
