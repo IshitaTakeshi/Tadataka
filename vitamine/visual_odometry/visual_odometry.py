@@ -30,7 +30,7 @@ class Triangulation(object):
             self.keypoints0[indices0], keypoints1[indices1],
         )
 
-        return matches01[valid_depth_mask], points[valid_depth_mask]
+        return points[valid_depth_mask], matches01[valid_depth_mask]
 
 
 class Initializer(object):
