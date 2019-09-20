@@ -37,3 +37,11 @@ def add_uniform_noise(array, scale=0.01):
 
 def relative_error(x_true, x_pred):
     return np.linalg.norm(x_true - x_pred) / np.linalg.norm(x_true)
+
+
+def random_binary(size):
+    return np.random.randint(0, 2, size, dtype=np.bool)
+
+def random_rotation_matrix(size):
+    A = np.random.random((size, size))
+    return np.linalg.svd(np.dot(A.T, A))[0]
