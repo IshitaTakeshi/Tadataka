@@ -117,10 +117,9 @@ class VisualOdometry(object):
             self.init_keypoints(keypoints, descriptors)
             return True
 
-        keyframe_id0 = self.reference_keyframe_id
-        if self.point_manager.n_added == 0:
-            return self.try_init_points(keypoints, descriptors, keyframe_id0)
-        return self.try_add_keyframe(keypoints, descriptors, keyframe_id0)
+        if self.keyframes.n_active == 1:
+            return self.try_init_points(keypoints, descriptors)
+        return self.try_add_keyframe(keypoints, descriptors)
 
     def try_init_points(self, keypoints1, descriptors1):
         keyframe_id0 = 0
