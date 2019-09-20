@@ -43,6 +43,10 @@ class PointManager(object):
         """Get keypoint indices that already have corresponding 3D points"""
         visible_from = np.array(self.visible_from)
         frame_indices, col_indices = np.where(visible_from==keyframe_id)
+
+        if len(frame_indices) == 0:
+            return np.array([], dtype=np.int64)
+
         indices = []
         for frame_index, col_index in zip(frame_indices, col_indices):
             matches = self.matches[frame_index]
