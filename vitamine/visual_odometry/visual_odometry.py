@@ -51,6 +51,31 @@ class Initializer(object):
         return R1, t1, matches01[valid_depth_mask], points[valid_depth_mask]
 
 
+def match_existing(matcher, keyframes, descriptors0, keyframe_ids, matches):
+    """
+    Match with descriptors that already have corresponding 3D points
+    """
+
+    # 3D points have corresponding two viewpoits used for triangulation
+    # To estimate the pose of the new frame, match keypoints in the new
+    # frame to keypoints in the two viewpoints
+    # Matched keypoints have corresponding 3D points.
+    # Therefore we can estimate the pose of the new frame using the matched keypoints
+    # and corresponding 3D points.
+    ka, kb = keyframe_ids
+    ma, mb = matches[:, 0], matches[:, 1]
+    # get descriptors already matched
+    _, descriptors1a = keyframes.get_keypoints(ka, ma)
+    _, descriptors1b = keyframes.get_keypoints(kb, mb)
+    matches01a = matcher(descriptors0, descriptors1a)
+    matches01b = matcher(descriptors0, descriptors1b)
+
+    if len(matches01a) > len(matches01b):
+        return matches01a[:, 0], matches01a[:, 1]
+    else:
+        return matches01b[:, 0], matches01b[:, 1]
+
+
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model, matcher=match,
                  min_keypoints=8, min_active_keyframes=8):
