@@ -39,7 +39,7 @@ class PointManager(object):
         """
         return self.points[i], self.visible_from[i], self.matches[i]
 
-    def get_triangulated_indices(self, keyframe_id):
+    def get_triangulated(self, keyframe_id):
         """Get keypoint indices that already have corresponding 3D points"""
         visible_from = np.array(self.visible_from)
         frame_indices, col_indices = np.where(visible_from==keyframe_id)

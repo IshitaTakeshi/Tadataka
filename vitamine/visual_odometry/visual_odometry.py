@@ -142,7 +142,7 @@ class VisualOdometry(object):
         keyframe_id = self.keyframes.add(keypoints, descriptors, R, t)
 
     def get_untriangulated(self, keyframe_id):
-        indices = self.point_manager.get_triangulated_indices(keyframe_id)
+        indices = self.point_manager.get_triangulated(keyframe_id)
         return self.keyframes.get_untriangulated(keyframe_id, indices)
 
     def try_add_keyframe(self, keypoints0, descriptors0):
