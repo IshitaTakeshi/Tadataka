@@ -52,14 +52,20 @@ class Keyframes(object):
         rotations, translations = zip(*poses)
         return np.array(rotations), np.array(translations)
 
-    def get_untriangulated(self, keyframe_id, triangulated_indices):
+    def get_untriangulated(self, keyframe_id):
         """
         Get keypoints that have not been used for triangulation.
         These keypoints don't have corresponding 3D points.
         """
         i = self.keyframe_id_to_index(keyframe_id)
-        size = self.keypoint_manager.size(i)
-        return indices_other_than(size, triangulated_indices)
+        return self.keypoint_manager.get_untriangulated(i)
+
+    def get_triangulated(self, keyframe_id):
+        """
+        Get keypoints that have been used for triangulation.
+        """
+        i = self.keyframe_id_to_index(keyframe_id)
+        return self.keypoint_manager.get_triangulated(i)
 
     @property
     def n_active(self):
