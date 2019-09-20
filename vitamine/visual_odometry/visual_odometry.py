@@ -155,21 +155,6 @@ class VisualOdometry(object):
 
         return Triangulation(self.matcher, R0, t0, keypoints0, descriptors0)
 
-    def get_descriptors(self, keyframe_id0):
-        # 3D points have corresponding two viewpoits used for triangulation
-        # To estimate the pose of the new frame, match keypoints in the new
-        # frame to keypoints in the two viewpoints
-        # Matched keypoints have corresponding 3D points.
-        # Therefore we can estimate the pose of the new frame using the matched keypoints
-        # and corresponding 3D points.
-        points0, keyframe_ids, matches = self.point_manager.get(0)  # oldest
-        ta, tb = keyframe_ids
-        ma, mb = matches[:, 0], matches[:, 1]
-        # get descriptors already matched
-        _, descriptors0a = self.keyframes.get_keypoints(ta, ma)
-        _, descriptors0b = self.keyframes.get_keypoints(tb, mb)
-        return points0, descriptors0a, descriptors0b
-
     def try_add_keyframe(self, keypoints1, descriptors1, keyframe_id0):
         estimator = PoseEstimator(self.matcher,
                                   *self.get_descriptors(keyframe_id0))
