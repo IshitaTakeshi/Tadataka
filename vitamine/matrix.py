@@ -40,6 +40,15 @@ def to_homogeneous(X):
     return np.hstack((X, ones))
 
 
+def motion_matrix(R, t):
+    T = np.empty((4, 4))
+    T[0:3, 0:3] = R
+    T[0:3, 3] = t
+    T[3, 0:3] = 0
+    T[3, 3] = 1
+    return T
+
+
 def from_homogeneous(X):
     d = X.shape[1] - 1
     return X[:, 0:d]
