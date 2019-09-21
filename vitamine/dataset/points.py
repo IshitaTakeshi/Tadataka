@@ -1,6 +1,6 @@
 from autograd import numpy as np
 
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 
 
 def cubic_lattice(N):
