@@ -201,7 +201,7 @@ class VisualOdometry(object):
         return True
 
     def try_remove(self):
-        if self.keyframes.n_active <= self.min_active_keyframes:
+        if self.keyframes.active_size <= self.min_active_keyframes:
             return False
 
         self.keyframes.remove(self.keyframes.oldest_keyframe_id)
