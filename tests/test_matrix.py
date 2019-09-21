@@ -4,7 +4,7 @@ from numpy.testing import assert_array_almost_equal, assert_equal
 from vitamine.matrix import solve_linear
 
 
-def test_find_kernel():
+def test_solve_linear():
     # some random matrix
     A = np.array(
         [[7, 3, 6, 7, 4, 3, 7, 2],
