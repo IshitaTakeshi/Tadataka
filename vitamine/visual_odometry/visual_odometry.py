@@ -27,22 +27,7 @@ def find_best_match(matcher, keyframes, descriptors0, active_keyframe_ids):
     return argmax_matches01, argmax_keyframe_id
 
 
-class Triangulation(object):
-    def __init__(self, matcher, R0, t0, keypoints0, descriptors0):
-        self.matcher = matcher
-        self.R0 = R0
-        self.t0 = t0
-        self.keypoints0 = keypoints0
-        self.descriptors0 = descriptors0
-
-    def triangulate(self, R1, t1, keypoints1, descriptors1):
-        matches01 = self.matcher(self.descriptors0, descriptors1)
-        indices0, indices1 = matches01[:, 0], matches01[:, 1]
-
-        points, valid_depth_mask = points_from_known_poses(
-            self.R0, R1, self.t0, t1,
-            self.keypoints0[indices0], keypoints1[indices1],
-        )
+from vitamine.visual_odometry.triangulation import Triangulation
 
         return points[valid_depth_mask], matches01[valid_depth_mask]
 
