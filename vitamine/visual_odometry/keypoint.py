@@ -1,6 +1,37 @@
 from autograd import numpy as np
 
 
+class Keypoints(object):
+    def __init__(self, keypoints, descriptors):
+        self.keypoints = keypoints
+        self.descriptors = descriptors
+        self.point_indices = PointIndices(len(keypoints))
+
+    def get(self, indices_or_mask=None):
+        keypoints, descriptors = self.keypoints, self.descriptors
+        if indices_or_mask is None:
+            return keypoints, descriptors
+        return keypoints[indices_or_mask], descriptors[indices_or_mask]
+
+    def triangulated(self):
+        """
+        Get keypoints that have been used for triangulation.
+        """
+        mask = self.point_indices.is_triangulated
+        return self.keypoints.get(mask)
+
+    def untriangulated(self):
+        """
+        Get keypoints that have not been used for triangulation.
+        These keypoints don't have corresponding 3D points.
+        """
+        mask = self.point_indices.is_triangulated
+        return self.keypoints.get(~mask)
+
+    def associate_points(self, indices, point_indices):
+        self.point_indices.subscribe(indices, point_indices)
+
+
 class PointIndices(object):
     def __init__(self, size):
         self.point_indices = -np.ones(size, dtype=np.int64)
@@ -14,37 +45,3 @@ class PointIndices(object):
 
     def get(self):
         return self.point_indices[self.is_triangulated]
-
-
-class KeypointManager(object):
-    def __init__(self):
-        self.keypoints = []
-        self.descriptors = []
-        self.point_indices = []
-
-    def add(self, keypoints, descriptors):
-        self.keypoints.append(keypoints)
-        self.descriptors.append(descriptors)
-        self.point_indices.append(PointIndices(len(keypoints)))
-
-    def add_triangulated(self, i, indices, point_indices):
-        self.point_indices[i].subscribe(indices, point_indices)
-
-    def get(self, i, indices_or_mask):
-        keypoints = self.keypoints[i]
-        descriptors = self.descriptors[i]
-        return keypoints[indices_or_mask], descriptors[indices_or_mask]
-
-    def get_triangulated(self, i):
-        mask = self.point_indices[i].is_triangulated
-        return self.get(i, mask)
-
-    def get_untriangulated(self, i):
-        mask = self.point_indices[i].is_triangulated
-        return self.get(i, ~mask)
-
-    def size(self, i):
-        return len(self.keypoints[i])
-
-    def get_point_indices(self, i):
-        return self.point_indices[i].get()
