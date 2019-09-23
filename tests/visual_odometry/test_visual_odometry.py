@@ -1,5 +1,6 @@
 from autograd import numpy as np
-from numpy.testing import assert_array_almost_equal, assert_array_equal
+from numpy.testing import (assert_array_almost_equal,
+                           assert_array_equal, assert_equal)
 from vitamine.so3 import rodrigues
 from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.points import cubic_lattice
@@ -8,9 +9,9 @@ from vitamine.dataset.observations import (
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
-from vitamine.keypoints import  match
+from vitamine.keypoints import match
 from vitamine.visual_odometry.visual_odometry import (
-    Triangulation, VisualOdometry)
+    Triangulation, VisualOdometry, find_best_match)
 from vitamine.rigid.transformation import transform_all
 from tests.utils import random_binary
 
@@ -52,97 +53,33 @@ observations, positive_depth_mask = generate_observations(
 descriptors = random_binary((len(points), 256))
 
 
-def test_init_points():
-    keypoints0, keypoints1 = observations[0:2]
 
+def test_find_best_match():
+    descriptors_ = [
+        descriptors[0:12],  # 12 points can match
+        add_noise(descriptors, [1, 3, 5, 8, 9]),  # 22 points can match
+        descriptors[12:27],  # 15 points can match
+        add_noise(descriptors, np.arange(3, 12))  # 18 points can match
+    ]
+
+    expected = np.vstack((
+        [0, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15,
+         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
+        [0, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15,
+         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
+    )).T
+    matches01, argmax = find_best_match(match, descriptors_, descriptors)
+    assert_array_equal(matches01, expected)
+    assert_equal(argmax, 1)
+
+
+def test_try_initialize_from_two():
     vo = VisualOdometry(camera_parameters, FOV(0.0))
-    vo.try_add(keypoints0, np.copy(descriptors))
-    vo.try_add(keypoints1, np.copy(descriptors))
-
-    rotations, translations = vo.export_poses()
-    P = transform_all(rotations, translations, vo.export_points())
-    assert_array_almost_equal(projection.compute(P[0]), keypoints0)
-    assert_array_almost_equal(projection.compute(P[1]), keypoints1)
-
-    # randomize first 10 descriptors
-    vo = VisualOdometry(camera_parameters, FOV(0.0))
-    vo.try_add(keypoints0, add_noise(descriptors, np.arange(0, 10)))
-    vo.try_add(keypoints1, add_noise(descriptors, np.arange(0, 10)))
-
-    rotations, translations = vo.export_poses()
-    P = transform_all(rotations, translations, vo.export_points())
-    assert_array_almost_equal(projection.compute(P[0]), keypoints0[10:])
-    assert_array_almost_equal(projection.compute(P[1]), keypoints1[10:])
+    vo.init_first_keyframe(observations[0], descriptors)
+    assert_array_equal(vo.poses[0].R, np.identity(3))
+    assert_array_equal(vo.poses[0].t, np.zeros(3))
+    vo.try_initialize_from_two(observations[1], descriptors)
 
 
-def test_try_add():
-    # test the case all descriptors are same
-    vo = VisualOdometry(camera_parameters, FOV(0.0))
-    for i in range(3):
-        vo.try_add(observations[i], np.copy(descriptors))
-
-    rotations, translations = vo.export_poses()
-    P = transform_all(rotations, translations, vo.export_points())
-    for i in range(3):
-        assert_array_almost_equal(projection.compute(P[i]), observations[i])
-
-    vo = VisualOdometry(camera_parameters, FOV(0.0))
-
-    descriptors0 = descriptors  # nothing modified
-    descriptors1 = add_noise(descriptors, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    descriptors2 = add_noise(descriptors, [0, 1, 2, 3, 4, 10, 11, 12, 13, 14])
-    descriptors3 = add_noise(descriptors, [10, 11, 12, 13, 14])
-
-    # descriptors0[10:27] and descriptors1[10:27] should match
-    vo.try_add(observations[0], descriptors0)
-    vo.try_add(observations[1], descriptors1)
-
-    # descriptors0[5:10] and descriptors2[5:10] should match and the
-    # corresponding keypoints should be triangulated
-    # descriptors0[15:27] and descriptors2[15:27] have the same
-    # descriptors but the corresponding keypoints are already
-    # triangulated so they are ignored
-    vo.try_add(observations[2], descriptors2)
-    # descriptors0[0:5] and descriptors3[0:5] should be matched
-    vo.try_add(observations[3], descriptors3)
-
-    rotations, translations = vo.export_poses()
-    P = transform_all(rotations, translations, vo.export_points())
-    # points corresponding to descriptors0[10:27] and descriptors1[10:27]
-    assert_array_almost_equal(projection.compute(P[0, 0:17]),
-                              observations[0, 10:])
-    assert_array_almost_equal(projection.compute(P[1, 0:17]),
-                              observations[1, 10:])
-    # points corresponding to descriptors2[5:10] and descriptors0[5:10]
-    assert_array_almost_equal(projection.compute(P[0, 17:22]),
-                              observations[0, 5:10])
-    assert_array_almost_equal(projection.compute(P[2, 17:22]),
-                              observations[2, 5:10])
-    # points corresponding to descriptors3[0:5] and descriptors0[0:5]
-    assert_array_almost_equal(projection.compute(P[0, 22:27]),
-                              observations[0, 0:5])
-    assert_array_almost_equal(projection.compute(P[3, 22:27]),
-                              observations[3, 0:5])
-
-def test_try_remove():
-    vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
-    # [10:27] are triangulated
-    vo.try_add(observations[0], np.copy(descriptors))
-    vo.try_add(observations[1], add_noise(descriptors, np.arange(0, 10)))
-
-    # [8:10] are triangulated
-    vo.try_add(observations[2], add_noise(descriptors, np.arange(0, 8)))
-
-    # [0:5] are triangulated
-    vo.try_add(observations[3], add_noise(descriptors, np.arange(5, 10)))
-    assert(not vo.try_remove())  # 'vo' have to hold at least 4 keyframes
-    assert(vo.reference_keyframe_id == 0)
-
-    # [5:8] are triangulated
-    vo.try_add(observations[4], add_noise(descriptors, np.arange(0, 5)))
-    assert(vo.try_remove())
-    assert(vo.reference_keyframe_id == 1)
-
-    vo.try_add(observations[5], add_noise(descriptors, np.arange(15, 27)))
-    assert(vo.try_remove())
-    assert(vo.reference_keyframe_id == 2)
+def test_triangulation():
+    pass
