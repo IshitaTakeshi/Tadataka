@@ -45,8 +45,8 @@ omegas = np.array([
     [np.pi / 2, 0, 0],
     [0, np.pi / 4, 0],
     [0, -np.pi / 4, 0],
-    [-np.pi / 4, 0, 0],
-    [np.pi / 2, 0, 0]
+    [-np.pi / 4, np.pi / 4, 0],
+    [0, np.pi / 8, -np.pi / 4]
 ])
 
 
