@@ -5,17 +5,16 @@ from numpy.testing import (assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
 from autograd.numpy.linalg import inv, norm
 
-from vitamine.projection.projections import PerspectiveProjection
+from vitamine.projection import PerspectiveProjection
 from vitamine.camera import CameraParameters
-from vitamine.rigid.rotation import tangent_so3, rodrigues
+from vitamine.so3 import tangent_so3, rodrigues
 from vitamine.rigid.transformation import transform, transform_all
-from vitamine.bundle_adjustment.triangulation import (
+from vitamine.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
-    projection_matrix, linear_triangulation, points_from_known_poses,
-    MultipleTriangulation)
-from vitamine.bundle_adjustment.initializers import (
-    PointInitializer, PoseInitializer)
+    linear_triangulation, points_from_known_poses, pose_point_from_keypoints)
 
+
+# TODO add the case such that x[3] = 0
 
 X_true = np.array([
    [4, -1, 3],
@@ -49,12 +48,6 @@ translations = np.array([
 ])
 
 
-camera_parameters = CameraParameters(
-    focal_length=[0.8, 1.2],
-    offset=[0.8, 0.2]
-)
-projection = PerspectiveProjection(camera_parameters)
-
 
 def normalize(M):
     m = M.flatten()
@@ -62,6 +55,12 @@ def normalize(M):
 
 
 def test_estimate_fundamental():
+    camera_parameters = CameraParameters(
+        focal_length=[0.8, 1.2],
+        offset=[0.8, 0.2]
+    )
+    projection = PerspectiveProjection(camera_parameters)
+
     R, t = rotations[0], translations[0]
     keypoints0 = projection.compute(X_true)
     keypoints1 = projection.compute(transform(R, t, X_true))
@@ -108,6 +107,12 @@ def test_fundamental_to_essential():
 
 
 def test_linear_triangulation():
+    camera_parameters = CameraParameters(
+        focal_length=[1., 1.],
+        offset=[0., 0.]
+    )
+    projection = PerspectiveProjection(camera_parameters)
+
     R0, t0 = rotations[0], translations[0]
     R1, t1 = rotations[1], translations[1]
 
@@ -120,7 +125,7 @@ def test_linear_triangulation():
     for i in range(N):
         x_true = X_true[i]
         x, depth0, depth1 = linear_triangulation(
-            R0, R1, t0, t1, keypoints0[i], keypoints1[i], K)
+            R0, R1, t0, t1, keypoints0[i], keypoints1[i])
         assert_array_almost_equal(x, x_true)
         assert_equal(depth0, x[1] + t0[2])
         assert_equal(depth1, x[2] + t1[2])
@@ -174,93 +179,64 @@ def test_points_from_known_poses():
     ])
     t = np.array([0, 1, 0])
 
+    keypoints0 = projection.compute(points)
+    keypoints1 = projection.compute(transform(R, t, points))
     # obviously points are in front of the both camers (depth > 0)
-    _, n_valid_depth = points_from_known_poses(
+    X, valid_depth_mask = points_from_known_poses(
         np.identity(3), R, np.zeros(3), t,
-        projection.compute(points),
-        projection.compute(np.dot(R, points.T).T + t),
-        K
+        keypoints0, keypoints1
     )
-
-    assert_equal(n_valid_depth, 3)
+    assert_array_almost_equal(
+        projection.compute(X),
+        keypoints0
+    )
+    assert_array_almost_equal(
+        projection.compute(transform(R, t, points)),
+        keypoints1
+    )
+    assert_equal(valid_depth_mask, np.array([1, 1, 1], dtype=np.bool))
 
     t = np.array([0, 0, -2])
 
+    keypoints0 = projection.compute(points)
+    keypoints1 = projection.compute(transform(R, t, points))
     # points[1] is behind the 2nd camera
-    _, n_valid_depth = points_from_known_poses(
+    X, valid_depth_mask = points_from_known_poses(
         np.identity(3), R, np.zeros(3), t,
-        projection.compute(points),
-        projection.compute(np.dot(R, points.T).T + t),
-        K
+        keypoints0, keypoints1
     )
 
-    assert_equal(n_valid_depth, 2)
+    assert_array_almost_equal(
+        projection.compute(X),
+        keypoints0
+    )
+    assert_array_almost_equal(
+        projection.compute(transform(R, t, points)),
+        keypoints1
+    )
+    assert_equal(valid_depth_mask, np.array([1, 0, 1], dtype=np.bool))
 
 
-def test_initializers():
+def test_pose_point_from_keypoints():
+    camera_parameters = CameraParameters(
+        focal_length=[1., 1.],
+        offset=[0., 0.]
+    )
+    projection = PerspectiveProjection(camera_parameters)
+
+    R0, t0 = rotations[0], translations[0]
+    R1, t1 = rotations[1], translations[1]
+    keypoints0 = projection.compute(transform(R0, t0, X_true))
+    keypoints1 = projection.compute(transform(R1, t1, X_true))
+
     K = camera_parameters.matrix
 
-    points = transform_all(rotations, translations, X_true)
-    keypoints = projection.compute(points.reshape(-1, 3))
-    keypoints = keypoints.reshape(*points.shape[0:2], 2)
-
-    point_initializer = PointInitializer(keypoints[0], keypoints[1], K)
-    points_pred = point_initializer.initialize()
-    assert_equal(points_pred.shape, X_true.shape)
-
-    pose_initializer = PoseInitializer(keypoints, K)
-    omegas_pred, translations_pred = pose_initializer.initialize(points_pred)
-
-    P = transform_all(rodrigues(omegas_pred), translations_pred, points_pred)
-    assert_equal(keypoints.shape[0:2], P.shape[0:2])
-
+    R, t, X, mask = pose_point_from_keypoints(keypoints0, keypoints1)
     assert_array_almost_equal(
-        keypoints,
-        projection.compute(P.reshape(-1, 3)).reshape(keypoints.shape)
+        projection.compute(X),
+        keypoints0
     )
-
-
-def test_multiple_triangulation():
-    omegas = np.array([
-        [np.pi / 2, 0, 0],
-        [0, 0, np.pi / 4],
-        [0, 0, 0]
-    ])
-
-    points = transform_all(rodrigues(omegas), translations, X_true)
-    keypoints = projection.compute(points.reshape(-1, 3))
-    keypoints = keypoints.reshape(*points.shape[0:2], 2)
-    keypoints[0][[0, 3, 8]] = np.nan
-    keypoints[1][[2, 3, 9]] = np.nan
-    keypoints[2][[2, 3, 8]] = np.nan
-
-    # compare the 2nd viewpoint to 0th and 1st
-    triangulation = MultipleTriangulation(
-        omegas[0:2],
-        translations[0:2],
-        keypoints[0:2],
-        camera_parameters.matrix
-    )
-
-    expected = np.array([
-        # 0th point can be reconstructed by
-        # triangulating 1st and 2nd viewpoint
-        X_true[0],
-        X_true[1],
-        # 2nd, 3rd and 8th point is never reconstructed
-        [np.nan, np.nan, np.nan],
-        [np.nan, np.nan, np.nan],
-        X_true[4],
-        X_true[5],
-        X_true[6],
-        X_true[7],
-        [np.nan, np.nan, np.nan],
-        # 9th point can be reconstructed by
-        # triangulating 0th and 2nd viewpoint
-        X_true[9]
-    ])
-
     assert_array_almost_equal(
-        triangulation.triangulate(omegas[2], translations[2], keypoints[2]),
-        expected
+        projection.compute(transform(R, t, X)),
+        keypoints1
     )
