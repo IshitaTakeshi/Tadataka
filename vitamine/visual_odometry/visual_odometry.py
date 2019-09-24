@@ -32,9 +32,10 @@ def init_points(matcher, keypoints0, keypoints1,
     return init_points_(keypoints0, keypoints1, matches01)
 
 
-def associate_points(keyframe0, keyframe1, matches01, point_indices):
-    keyframe0.associate_points(matches01[:, 0], point_indices)
-    keyframe1.associate_points(matches01[:, 1], point_indices)
+def associate_points(local_features0, local_features1,
+                     matches01, point_indices):
+    local_features0.associate_points(matches01[:, 0], point_indices)
+    local_features1.associate_points(matches01[:, 1], point_indices)
 
 
 def triangulation(matcher, points, descriptors_, keyframe1):
