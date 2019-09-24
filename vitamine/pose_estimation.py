@@ -1,13 +1,19 @@
 from autograd import numpy as np
 
+# TODO make this independent from cv2
+import cv2
+
+
+min_correspondences = 4
+
 
 def solve_pnp(points, keypoints):
-    # TODO make independent from cv2
-    import cv2
+    assert(points.shape[0] == keypoints.shape[0])
 
-    retval, rvec, tvec = cv2.solvePnP(points.astype(np.float64),
-                                      keypoints.astype(np.float64),
-                                      np.identity(3), np.zeros(4))
-    rvec = rvec.flatten()
-    tvec = tvec.flatten()
-    return rvec, tvec
+    if keypoints.shape[0] < min_correspondences:
+        raise ValueError("No sufficient correspondences")
+
+    retval, omega, t = cv2.solvePnP(points.astype(np.float64),
+                                    keypoints.astype(np.float64),
+                                    np.identity(3), np.zeros(4))
+    return omega.flatten(), t.flatten()
