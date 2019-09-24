@@ -1,6 +1,6 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
-from vitamine.utils import is_in_image_range
+from vitamine.utils import is_in_image_range, radian_to_degree, indices_other_than
 
 
 def test_is_in_image_range():
@@ -23,3 +23,13 @@ def test_is_in_image_range():
         is_in_image_range(keypoints, (height, width)),
         expected
     )
+
+
+def test_radian_to_degree():
+    assert(np.isclose(radian_to_degree(np.pi / 2), 90.0))
+    assert(np.isclose(radian_to_degree(-2 * np.pi / 3), -120.0))
+
+
+def test_indices_other_than():
+    assert_array_equal(indices_other_than(8, [1, 2, 3, 7]), [0, 4, 5, 6])
+    assert_array_equal(indices_other_than(5, []), [0, 1, 2, 3, 4])
