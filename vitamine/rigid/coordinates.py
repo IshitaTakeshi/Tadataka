@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 from vitamine.rigid.transformation import rotate_each
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 
 
 def transpose_each(rotations):

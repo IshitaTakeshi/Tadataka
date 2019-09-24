@@ -2,8 +2,6 @@ from autograd import numpy as np
 
 from vitamine.assertion import check_non_nan
 
-from vitamine.bundle_adjustment.initializers import (
-    PoseInitializer, PointInitializer)
 from vitamine.bundle_adjustment.parameters import (
     ParameterMask, from_params)
 from vitamine.bundle_adjustment.mask import keypoint_mask, point_mask
@@ -18,9 +16,9 @@ from vitamine.optimization.residuals import BaseResidual
 from vitamine.optimization.optimizers import Optimizer
 from vitamine.optimization.transformers import BaseTransformer
 
-from vitamine.projection.projections import PerspectiveProjection
+from vitamine.projection import PerspectiveProjection
 
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 from vitamine.rigid.transformation import transform_all
 
 

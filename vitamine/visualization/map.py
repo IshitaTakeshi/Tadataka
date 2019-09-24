@@ -1,7 +1,7 @@
 from vitamine.bundle_adjustment.mask import pose_mask, point_mask
 from vitamine.visualization.visualizers import plot3d
 from vitamine.visualization.cameras import cameras_poly3d
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 from matplotlib import pyplot as plt
 
 

@@ -4,8 +4,8 @@ from julia.SBA import Indices, sba
 
 from vitamine.bundle_adjustment.mask import keypoint_mask
 from vitamine.rigid.transformation import transform_each
-from vitamine.rigid.rotation import rodrigues
-from vitamine.projection.projections import pi
+from vitamine.so3 import rodrigues
+from vitamine.projection import pi
 
 
 EPSILON = 1e-16

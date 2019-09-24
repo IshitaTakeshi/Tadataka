@@ -5,8 +5,8 @@ from numpy.testing import (assert_array_equal, assert_array_almost_equal,
 from vitamine.bundle_adjustment.pnp import estimate_poses
 from vitamine.camera import CameraParameters
 from vitamine.rigid.transformation import transform_all
-from vitamine.rigid.rotation import rodrigues
-from vitamine.projection.projections import PerspectiveProjection
+from vitamine.so3 import rodrigues
+from vitamine.projection import PerspectiveProjection
 
 from tests.utils import project
 

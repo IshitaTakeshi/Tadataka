@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from vitamine.rigid.transformation import inv_transform_all
-from vitamine.rigid.rotation import rodrigues
+from vitamine.so3 import rodrigues
 from vitamine.rigid.coordinates import camera_to_world
 from vitamine.visualization.visualizers import object_color
 from vitamine.visualization.cameras import cameras_poly3d

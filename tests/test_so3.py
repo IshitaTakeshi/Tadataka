@@ -1,7 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_equal
 
-from vitamine.rigid.rotation import tangent_so3, log_so3, rodrigues
+from vitamine.so3 import tangent_so3, log_so3, rodrigues
 
 
 def test_log_so3():
