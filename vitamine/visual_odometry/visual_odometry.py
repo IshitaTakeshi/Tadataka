@@ -91,21 +91,27 @@ class VisualOdometry(object):
         keypoints, descriptors = extract_keypoints(image)
         return self.try_add(keypoints, descriptors)
 
-    def try_initialize_from_two(self, keypoints1, descriptors1):
-        keypoints0, descriptors0 = self.keypoints[0].get()
-        R1, t1, points, matches01 = init_points(
-            self.matcher,
-            keypoints0, keypoints1,
-            descriptors0, descriptors1
-        )
-        if not self.can_add_keyframe(R1, t1, points, matches01):
+    def init_first(self, local_features):
+        self.keypoints.append(local_features)
+        self.poses.append(Pose.identity())
+
+    def try_init_second(self, lf1):
+        lf0 = self.keypoints[0]
+
+        try:
+            pose1, points, matches01 = init_points(lf0, lf1, self.matcher,
+                                                   self.inlier_condition)
+        except InvalidDepthsException as e:
+            print_error(str(e))
+            return False
+        except NotEnoughInliersException as e:
+            print_error(str(e))
             return False
 
-        kp0 = self.keypoints[0]
-        kp1 = Keypoints(keypoints1, descriptors1)
-        self.keypoints.append(kp1)
+        self.keypoints.append(lf1)
+        self.poses.append(pose1)
         point_indices = self.points.add(points)
-        associate_points(kp0, kp1, matches01, point_indices)
+        associate_points(lf0, lf1, matches01, point_indices)
         return True
 
     def try_continue(self, keypoints1, descriptors1):
@@ -127,11 +133,6 @@ class VisualOdometry(object):
         triangulation(self.matcher, self.points, descriptors_, keyframe1)
         return True
 
-    def init_first_keyframe(self, keypoints, descriptors):
-        R, t = np.identity(3), np.zeros(3)
-        self.keypoints.append(Keypoints(keypoints, descriptors))
-        self.poses.append(Pose(R, t))
-
     @property
     def n_active_keyframes(self):
         return len(self.keypoints)
@@ -142,13 +143,15 @@ class VisualOdometry(object):
 
         keypoints = self.camera_model.undistort(keypoints)
 
+        lf = LocalFeatures(keypoints, descriptors)
+
         if len(self.n_active_keyframes) == 0:
-            self.init_first_keyframe(keypoints, descriptors)
+            self.init_first(lf)
             return True
 
         if len(self.n_active_keyframes) == 1:
-            return self.try_initialize_from_two(keypoints, descriptors)
-        return self.try_continue(keypoints, descriptors)
+            return self.try_init_second(lf)
+        return self.try_continue(lf)
 
     def try_remove(self):
         if self.keyframes.active_size <= self.min_active_keyframes:
