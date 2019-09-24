@@ -1,18 +1,30 @@
+from collections import namedtuple
+
 from autograd import numpy as np
 
 
-class Keypoints(object):
+# just to enable accessing by name
+# ex. localfeatures.triangulated.descriptors
+KD = namedtuple("KeypointDescriptor", ["keypoints", "descriptors"])
+
+
+class LocalFeatures(object):
     def __init__(self, keypoints, descriptors):
         self.keypoints = keypoints
         self.descriptors = descriptors
-        self.point_indices = PointIndices(len(keypoints))
+        self.point_indices = -np.ones(len(keypoints), dtype=np.int64)
 
     def get(self, indices_or_mask=None):
-        keypoints, descriptors = self.keypoints, self.descriptors
         if indices_or_mask is None:
-            return keypoints, descriptors
-        return keypoints[indices_or_mask], descriptors[indices_or_mask]
+            return KD(self.keypoints, self.descriptors)
+        return KD(self.keypoints[indices_or_mask],
+                  self.descriptors[indices_or_mask])
 
+    @property
+    def is_triangulated(self):
+        return self.point_indices >= 0
+
+    @property
     def triangulated(self):
         """
         Get keypoints that have been used for triangulation.
@@ -20,6 +32,7 @@ class Keypoints(object):
         mask = self.point_indices.is_triangulated
         return self.keypoints.get(mask)
 
+    @property
     def untriangulated(self):
         """
         Get keypoints that have not been used for triangulation.
@@ -29,19 +42,4 @@ class Keypoints(object):
         return self.keypoints.get(~mask)
 
     def associate_points(self, indices, point_indices):
-        self.point_indices.subscribe(indices, point_indices)
-
-
-class PointIndices(object):
-    def __init__(self, size):
-        self.point_indices = -np.ones(size, dtype=np.int64)
-
-    def subscribe(self, indices, point_indices):
         self.point_indices[indices] = point_indices
-
-    @property
-    def is_triangulated(self):
-        return self.point_indices >= 0
-
-    def get(self):
-        return self.point_indices[self.is_triangulated]
