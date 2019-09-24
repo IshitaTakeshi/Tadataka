@@ -85,8 +85,7 @@ class VisualOdometry(object):
         return self.points.get()
 
     def export_poses(self):
-        return self.keyframes.get_poses()
-
+        return [(pose.R, pose.t) for pose in self.poses]
 
     def add(self, image):
         keypoints, descriptors = extract_keypoints(image)
