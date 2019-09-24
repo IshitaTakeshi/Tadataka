@@ -22,14 +22,22 @@ def add_noise(descriptors, indices):
     return descriptors
 
 
-camera_parameters = CameraParameters(
-    focal_length=[1., 1.],
-    offset=[0., 0.]
-)
-
+camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
 
-points = cubic_lattice(3)
+points_true = np.array([
+   [4, -1, 3],
+   [1, -3, -2],
+   [-2, 3, -2],
+   [0, 0, 0],
+   [-3, -2, -5],
+   [-3, -1, 2],
+   [-4, -2, 3],
+   [4, 1, 1],
+   [-2, 3, 1],
+   [4, 1, 2],
+   [-4, 4, -1]
+])
 
 omegas = np.array([
     [0, 0, 0],
