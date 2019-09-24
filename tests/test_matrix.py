@@ -29,3 +29,26 @@ def test_motion_matrix():
             [0, 0, 0, 1]
         ])
     )
+
+def test_inv_motion_matirx():
+    R = random_rotation_matrix(3)
+    t = np.random.uniform(-1, 1, 3)
+    T = motion_matrix(R, t)
+    assert_array_almost_equal(inv_motion_matrix(R, t), np.linalg.inv(T))
+
+
+def test_motion_matrix():
+    R = random_rotation_matrix(3)
+    t = np.random.uniform(-1, 1, 3)
+    T = motion_matrix(R, t)
+    assert_array_equal(T[0:3, 0:3], R)
+    assert_array_equal(T[0:3, 3], t)
+
+
+def test_get_rotation_translation():
+    R = random_rotation_matrix(3)
+    t = np.random.uniform(-1, 1, 3)
+
+    R_, t_ = get_rotation_translation(motion_matrix(R, t))
+    assert_array_equal(R, R_)
+    assert_array_equal(t, t_)
