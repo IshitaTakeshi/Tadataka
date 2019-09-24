@@ -65,17 +65,21 @@ def triangulation(matcher, points, descriptors_, keyframe1):
         associate_points(keyframe0, keyframe1, matches01, point_indices)
 
 
+def get_array_len_geq(min_length):
+    return lambda array: len(array) >= min_length
+
+
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model, matcher=match,
-                 min_keypoints=8, min_active_keyframes=8, min_inliers=8):
-        self.min_inliers = min_inliers
+                 min_keypoints=8, min_active_keyframes=8, min_matches=8):
         self.matcher = match
-        self.min_keypoints = min_keypoints
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
         self.points = Points()
         self.keypoints = []
         self.poses = []
+        self.keypoints_condition = get_array_len_geq(min_keypoints)
+        self.inlier_condition = get_array_len_geq(min_matches)
 
     def export_points(self):
         return self.points.get()
@@ -83,8 +87,6 @@ class VisualOdometry(object):
     def export_poses(self):
         return self.keyframes.get_poses()
 
-    def inlier_condition(self, matches):
-        return len(matches) >= self.min_inliers
 
     def add(self, image):
         keypoints, descriptors = extract_keypoints(image)
@@ -148,10 +150,6 @@ class VisualOdometry(object):
         if len(self.n_active_keyframes) == 1:
             return self.try_initialize_from_two(keypoints, descriptors)
         return self.try_continue(keypoints, descriptors)
-
-    def can_add_keyframe(self, R, t, points, matches):
-        return self.inlier_condition(matches)
-               # and self.pose_condition(R, t, points))
 
     def try_remove(self):
         if self.keyframes.active_size <= self.min_active_keyframes:
