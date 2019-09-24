@@ -19,3 +19,9 @@ def solve_pnp(points, keypoints):
                                     keypoints.astype(np.float64),
                                     np.identity(3), np.zeros(4))
     return omega.flatten(), t.flatten()
+
+
+def estimate_pose(points, keypoints):
+    omega, t = solve_pnp(points, keypoints)
+    R = rodrigues(omega.reshape(1, -1))[0]
+    return R, t

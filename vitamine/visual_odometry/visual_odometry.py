@@ -11,11 +11,6 @@ from vitamine.visual_odometry.keypoint import Keypoints
 from vitamine.visual_odometry.triangulation import Triangulation
 
 
-def estimate_pose(point_indices0, keypoints1, matches01):
-    indices0, indices1 = matches01[:, 0], matches01[:, 1]
-    points_ = points.get(point_indices0[indices0])
-    return estimate_pose(points_, keypoints1[indices1])
-
 
 def find_best_match(matcher, active_descriptors, descriptors1):
     matchesx1 = [matcher(d0, descriptors1) for d0 in active_descriptors]
