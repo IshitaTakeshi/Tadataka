@@ -18,18 +18,28 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     return matchesx1[argmax], argmax
 
 
-def init_points_(keypoints0, keypoints1, matches01):
+def init_points(local_features0, local_features1, matcher, inlier_condition,
+                valid_depth_ratio=0.8):
+
+    keypoints0, descriptors0 = local_features0.get()
+    keypoints1, descriptors1 = local_features1.get()
+
+    matches01 = matcher(descriptors0, descriptors1)
+    print("len(matches01)", len(matches01))
+    if not inlier_condition(matches01):
+        raise NotEnoughInliersException("Not enough matches found")
+
     R, t, points, valid_depth_mask = pose_point_from_keypoints(
         keypoints0[matches01[:, 0]],
         keypoints1[matches01[:, 1]]
     )
-    return R, t, points[valid_depth_mask], matches01[valid_depth_mask]
 
+    if np.sum(valid_depth_mask) / len(valid_depth_mask) < valid_depth_ratio:
+        raise InvalidDepthsException(
+            "Most of points are behind cameras. Maybe wrong matches?"
+        )
 
-def init_points(matcher, keypoints0, keypoints1,
-                descriptors0, descriptors1):
-    matches01 = matcher(descriptors0, descriptors1)
-    return init_points_(keypoints0, keypoints1, matches01)
+    return Pose(R, t), points[valid_depth_mask], matches01[valid_depth_mask]
 
 
 def associate_points(local_features0, local_features1,
