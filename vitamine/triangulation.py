@@ -132,15 +132,15 @@ def pose_point_from_keypoints(keypoints0, keypoints1):
     E = estimate_fundamental(keypoints0, keypoints1)
 
     # R <- {R1, R2}, t <- {t1, t2} satisfy
-    # K * [R | t] * homegeneous(X) = homogeneous(keypoint)
+    # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
     R1, R2, t1, t2 = extract_poses(E)
 
     n_max_valid_depth = -1
-    argmax_R, argmax_t, argmax_X = None, None, None
+    argmax_R, argmax_t, argmax_points = None, None, None
     argmax_mask = None
 
     for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        X, valid_depth_mask = points_from_known_poses(
+        points, valid_depth_mask = points_from_known_poses(
             R0, R_, t0, t_, keypoints0, keypoints1)
         n_valid_depth = np.sum(valid_depth_mask)
 
@@ -149,5 +149,5 @@ def pose_point_from_keypoints(keypoints0, keypoints1):
         if n_valid_depth > n_max_valid_depth:
             n_max_valid_depth = n_valid_depth
             argmax_mask = valid_depth_mask
-            argmax_R, argmax_t, argmax_X = R_, t_, X
-    return argmax_R, argmax_t, argmax_X, argmax_mask
+            argmax_R, argmax_t, argmax_points = R_, t_, points
+    return argmax_R, argmax_t, argmax_points, argmax_mask
