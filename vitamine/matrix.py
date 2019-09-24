@@ -1,6 +1,24 @@
 from autograd import numpy as np
 
 
+def inv_motion_matirx(T):
+    R, t = get_rotation_translation(T)
+    return motion_matrix(R.T, np.dot(R.T, t))
+
+
+def get_rotation_translation(T):
+    R = T[0:3, 0:3]
+    t = T[0:3, 3]
+    return R, t
+
+
+def motion_matrix(R, t):
+    T = np.empty((3, 4))
+    T[0:3, 0:3] = R
+    T[0:3, 3] = t
+    return T
+
+
 def homogeneous_matrix(A, b):
     """
     Example:
