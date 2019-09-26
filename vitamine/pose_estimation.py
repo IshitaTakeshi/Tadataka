@@ -1,9 +1,10 @@
 from autograd import numpy as np
 
-from vitamine.exceptions import NotEnoughInliersException
-
 # TODO make this independent from cv2
 import cv2
+
+from vitamine.exceptions import NotEnoughInliersException
+from vitamine.so3 import rodrigues
 
 
 min_correspondences = 4
