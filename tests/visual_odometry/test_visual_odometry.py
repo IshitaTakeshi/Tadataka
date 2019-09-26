@@ -81,12 +81,12 @@ def test_find_best_match():
     assert(argmax == 1)
 
 
-def test_try_initialize_from_two():
+def test_init_first():
+    lf0 = LocalFeatures(keypoints_true[0], descriptors)
     vo = VisualOdometry(camera_parameters, FOV(0.0))
-    vo.init_first_keyframe(observations[0], descriptors)
-    assert_array_equal(vo.poses[0].R, np.identity(3))
-    assert_array_equal(vo.poses[0].t, np.zeros(3))
-    vo.try_initialize_from_two(observations[1], descriptors)
+    vo.init_first(lf0)
+    assert(vo.local_features[0] is lf0)
+    assert(vo.poses[0] == Pose.identity())
 
 
 def test_triangulation():
