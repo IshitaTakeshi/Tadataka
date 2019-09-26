@@ -12,6 +12,7 @@ class LocalFeatures(object):
     def __init__(self, keypoints, descriptors):
         self.keypoints = keypoints
         self.descriptors = descriptors
+        # -1 for untriangulated
         self.point_indices = -np.ones(len(keypoints), dtype=np.int64)
 
     def get(self, indices_or_mask=None):
@@ -24,22 +25,29 @@ class LocalFeatures(object):
     def is_triangulated(self):
         return self.point_indices >= 0
 
-    @property
     def triangulated(self):
         """
         Get keypoints that have been used for triangulation.
         """
-        mask = self.point_indices.is_triangulated
-        return self.keypoints.get(mask)
+        return self.get(self.is_triangulated)
 
-    @property
     def untriangulated(self):
         """
         Get keypoints that have not been used for triangulation.
         These keypoints don't have corresponding 3D points.
         """
-        mask = self.point_indices.is_triangulated
-        return self.keypoints.get(~mask)
+        return self.get(~self.is_triangulated)
 
     def associate_points(self, indices, point_indices):
-        self.point_indices[indices] = point_indices
+        untriangulated = np.where(~self.is_triangulated)[0]
+        self.point_indices[untriangulated[indices]] = point_indices
+
+
+def associate_points(lf0, lf1, matches01, point_indices):
+    lf0.associate_points(matches01[:, 0], point_indices)
+    lf1.associate_points(matches01[:, 1], point_indices)
+
+
+def copy_point_indices(local_features_src, local_features_dst, matches01):
+    point_indices = local_features_src.point_indices[matches01[:, 0]]
+    local_features_dst.associate_points(matches01[:, 1], point_indices)
