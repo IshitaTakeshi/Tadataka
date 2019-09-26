@@ -138,16 +138,26 @@ class VisualOdometry(object):
             return False
 
         keypoints = self.camera_model.undistort(keypoints)
+        return self.try_add_keyframe(LocalFeatures(keypoints, descriptors))
 
-        lf = LocalFeatures(keypoints, descriptors)
-
-        if len(self.n_active_keyframes) == 0:
-            self.init_first(lf)
+    def try_add_keyframe(self, local_features):
+        if self.n_active_keyframes == 0:
+            self.init_first(local_features)
+            self.active_indices.add_new()
             return True
 
-        if len(self.n_active_keyframes) == 1:
-            return self.try_init_second(lf)
-        return self.try_continue(lf)
+        if self.n_active_keyframes == 1:
+            success = self.try_init_second(local_features)
+            if not success:
+                return False
+            self.active_indices.add_new()
+            return True
+
+        success = self.try_add_more(local_features)
+        if not success:
+            return False
+        self.active_indices.add_new()
+        return True
 
     def try_remove(self):
         if self.keyframes.active_size <= self.min_active_keyframes:
