@@ -5,6 +5,8 @@ from numpy.testing import assert_array_almost_equal
 
 from vitamine.dataset.observations import generate_translations
 from vitamine.so3 import rodrigues
+
+from vitamine.exceptions import NotEnoughInliersException
 from vitamine.camera import CameraParameters
 from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.observations import generate_observations
@@ -55,6 +57,6 @@ def test_solve_pnp():
     # this should be able to run
     solve_pnp(points[0:4], keypoints0[0:4])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotEnoughInliersException):
         # not enough correspondences
         solve_pnp(points[0:3], keypoints0[0:3])
