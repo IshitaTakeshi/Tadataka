@@ -82,19 +82,28 @@ class VisualOdometry(object):
         self.poses.append(Pose.identity())
 
     def try_init_second(self, lf1):
-        lf0 = self.keypoints[0]
+        lf0 = self.local_features[0]
+
+        keypoints0, descriptors0 = lf0.get()
+        keypoints1, descriptors1 = lf1.get()
+
+        matches01 = self.matcher(descriptors0, descriptors1)
+        if not self.inlier_condition(matches01):
+            print_error("Not enough matches found")
+            return False
 
         try:
-            pose1, points, matches01 = init_points(lf0, lf1, self.matcher,
-                                                   self.inlier_condition)
+            pose1, points, matches01 = pose_point_from_keypoints(
+                keypoints0, keypoints1, matches01
+            )
         except InvalidDepthsException as e:
             print_error(str(e))
             return False
-        except NotEnoughInliersException as e:
-            print_error(str(e))
-            return False
 
-        self.keypoints.append(lf1)
+        # if not pose_condition(pose0, pose1):
+        #     return False
+
+        self.local_features.append(lf1)
         self.poses.append(pose1)
         point_indices = self.points.add(points)
         associate_points(lf0, lf1, matches01, point_indices)
