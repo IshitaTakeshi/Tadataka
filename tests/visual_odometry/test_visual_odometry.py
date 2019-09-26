@@ -54,15 +54,14 @@ omegas = np.array([
 
 
 rotations = rodrigues(omegas)
-translations = generate_translations(rotations, points)
-observations, positive_depth_mask = generate_observations(
-    rotations, translations, points, projection
+translations = generate_translations(rotations, points_true)
+keypoints_true, positive_depth_mask = generate_observations(
+    rotations, translations, points_true, projection
 )
 
 # generate dummy descriptors
 # allocate sufficient lengths of descriptors for redundancy
-descriptors = random_binary((len(points), 256))
-
+descriptors = random_binary((len(points_true), 256))
 
 
 def test_find_best_match():
