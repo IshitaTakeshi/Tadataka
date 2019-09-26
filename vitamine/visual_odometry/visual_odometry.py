@@ -61,11 +61,12 @@ class VisualOdometry(object):
         self.matcher = match
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
-        self.points = Points()
-        self.keypoints = []
-        self.poses = []
         self.keypoints_condition = get_array_len_geq(min_keypoints)
         self.inlier_condition = get_array_len_geq(min_matches)
+        self.active_indices = KeyframeIndices()
+        self.points = Points()
+        self.local_features = []
+        self.poses = []
 
     def export_points(self):
         return self.points.get()
@@ -78,7 +79,7 @@ class VisualOdometry(object):
         return self.try_add(keypoints, descriptors)
 
     def init_first(self, local_features):
-        self.keypoints.append(local_features)
+        self.local_features.append(local_features)
         self.poses.append(Pose.identity())
 
     def try_init_second(self, lf1):
