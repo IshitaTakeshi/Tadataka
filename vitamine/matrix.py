@@ -1,9 +1,9 @@
 from autograd import numpy as np
 
 
-def inv_motion_matirx(T):
+def inv_motion_matrix(T):
     R, t = get_rotation_translation(T)
-    return motion_matrix(R.T, np.dot(R.T, t))
+    return motion_matrix(R.T, -np.dot(R.T, t))
 
 
 def get_rotation_translation(T):
