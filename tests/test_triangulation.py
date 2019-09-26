@@ -229,9 +229,11 @@ def test_pose_point_from_keypoints():
     keypoints0 = projection.compute(transform(R0, t0, X_true))
     keypoints1 = projection.compute(transform(R1, t1, X_true))
 
-    K = camera_parameters.matrix
-
     R, t, X, mask = pose_point_from_keypoints(keypoints0, keypoints1)
+
+    # cannot evaluate pose (R, t) diretly
+    # because the scale cannot be known
+
     assert_array_almost_equal(
         projection.compute(X),
         keypoints0

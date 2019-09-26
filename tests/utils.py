@@ -42,6 +42,7 @@ def relative_error(x_true, x_pred):
 def random_binary(size):
     return np.random.randint(0, 2, size, dtype=np.bool)
 
+
 def random_rotation_matrix(size):
     A = np.random.random((size, size))
     return np.linalg.svd(np.dot(A.T, A))[0]
