@@ -1,17 +1,21 @@
 from autograd import numpy as np
-from numpy.testing import (assert_array_almost_equal,
-                           assert_array_equal, assert_equal)
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 from vitamine.so3 import rodrigues
 from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.points import cubic_lattice
 from vitamine.dataset.observations import (
     generate_observations, generate_translations)
+from vitamine.rigid.transformation import transform
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
 from vitamine.keypoints import match
 from vitamine.visual_odometry.visual_odometry import (
-    Triangulation, VisualOdometry, find_best_match)
+    VisualOdometry, find_best_match,
+    triangulation, match_triangulate)
+from vitamine.visual_odometry.pose import Pose
+from vitamine.visual_odometry.point import Points
+from vitamine.visual_odometry.keypoint import LocalFeatures
 from vitamine.rigid.transformation import transform_all
 from tests.utils import random_binary
 
@@ -51,7 +55,6 @@ omegas = np.array([
     [-np.pi / 4, np.pi / 4, 0],
     [0, np.pi / 8, -np.pi / 4]
 ])
-
 
 rotations = rodrigues(omegas)
 translations = generate_translations(rotations, points_true)
