@@ -18,51 +18,14 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     return matchesx1[argmax], argmax
 
 
-def init_points(local_features0, local_features1, matcher, inlier_condition,
-                valid_depth_ratio=0.8):
-
-    keypoints0, descriptors0 = local_features0.get()
-    keypoints1, descriptors1 = local_features1.get()
-
     matches01 = matcher(descriptors0, descriptors1)
-    print("len(matches01)", len(matches01))
-    if not inlier_condition(matches01):
-        raise NotEnoughInliersException("Not enough matches found")
-
-    R, t, points, valid_depth_mask = pose_point_from_keypoints(
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
-
-    if np.sum(valid_depth_mask) / len(valid_depth_mask) < valid_depth_ratio:
-        raise InvalidDepthsException(
-            "Most of points are behind cameras. Maybe wrong matches?"
-        )
-
-    return Pose(R, t), points[valid_depth_mask], matches01[valid_depth_mask]
 
 
-def associate_points(local_features0, local_features1,
-                     matches01, point_indices):
-    local_features0.associate_points(matches01[:, 0], point_indices)
-    local_features1.associate_points(matches01[:, 1], point_indices)
 
 
-def triangulation(matcher, points, descriptors_, keyframe1):
-    triangulator = Triangulation(keyframe1.R, keyframe1.t,
-                                 keyframe1.keypoints,
-                                 keyframe1.descriptors)
 
-    for descriptors0 in descriptors_:
-        points_, matches01 = triangulator.triangulate(
-            keyframe0.R, keyframe0.t,
-            keypoints0, descriptors0
-        )
-        if len(matches01) == 0:
-            continue
 
-        point_indices = points.add(points_)
-        associate_points(keyframe0, keyframe1, matches01, point_indices)
+
 
 
 def get_array_len_geq(min_length):
