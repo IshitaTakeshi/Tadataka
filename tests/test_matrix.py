@@ -1,8 +1,10 @@
 from autograd import numpy as np
 from numpy.testing import (
     assert_array_almost_equal, assert_array_equal, assert_equal)
+from vitamine.matrix import (
+    solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation)
 
-from vitamine.matrix import solve_linear, motion_matrix
+from tests.utils import random_rotation_matrix
 
 
 def test_solve_linear():
@@ -30,11 +32,12 @@ def test_motion_matrix():
         ])
     )
 
+
 def test_inv_motion_matirx():
     R = random_rotation_matrix(3)
     t = np.random.uniform(-1, 1, 3)
     T = motion_matrix(R, t)
-    assert_array_almost_equal(inv_motion_matrix(R, t), np.linalg.inv(T))
+    assert_array_almost_equal(inv_motion_matrix(T), np.linalg.inv(T))
 
 
 def test_motion_matrix():
