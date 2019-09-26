@@ -66,21 +66,19 @@ descriptors = random_binary((len(points_true), 256))
 
 def test_find_best_match():
     descriptors_ = [
-        descriptors[0:12],  # 12 points can match
-        add_noise(descriptors, [1, 3, 5, 8, 9]),  # 22 points can match
-        descriptors[12:27],  # 15 points can match
-        add_noise(descriptors, np.arange(3, 12))  # 18 points can match
+        descriptors[0:3],  # 3 points can match
+        add_noise(descriptors, [1, 3, 6]),  # 11 points can match
+        descriptors[4:8],  # 4 points can match
+        add_noise(descriptors, np.arange(6, 11))  # 9 points can match
     ]
 
     expected = np.vstack((
-        [0, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15,
-         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
-        [0, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15,
-         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
+        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13],
+        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
     )).T
     matches01, argmax = find_best_match(match, descriptors_, descriptors)
     assert_array_equal(matches01, expected)
-    assert_equal(argmax, 1)
+    assert(argmax == 1)
 
 
 def test_try_initialize_from_two():
