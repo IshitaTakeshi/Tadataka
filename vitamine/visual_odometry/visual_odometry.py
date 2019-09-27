@@ -23,6 +23,18 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     return matchesx1[argmax], argmax
 
 
+def copy_triangulated(matcher, local_features_list, lf1):
+    for lf0 in local_features_list:
+        # copy point indices from lf0 to lf1
+        descriptors0 = lf0.triangulated().descriptors
+        descriptors1 = lf1.untriangulated().descriptors
+        if len(descriptors0) == 0 or len(descriptors1) == 0:
+            continue
+        matches01 = matcher(descriptors0, descriptors1)
+        point_indices = lf0.triangulated_point_indices(matches01[:, 0])
+        lf1.associate_points(matches01[:, 1], point_indices)
+
+
 def triangulation(matcher, points,
                   pose_list, local_features_list, pose0, lf0):
     assert(len(local_features_list) == len(pose_list))
