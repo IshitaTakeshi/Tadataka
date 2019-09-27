@@ -205,7 +205,7 @@ class VisualOdometry(object):
 
     @property
     def n_active_keyframes(self):
-        return len(self.keypoints)
+        return len(self.active_indices)
 
     def try_add(self, keypoints, descriptors):
         if len(keypoints) < self.min_keypoints:
