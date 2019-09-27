@@ -25,6 +25,7 @@ def find_best_match(matcher, active_descriptors, descriptors1):
 
 def triangulation(matcher, points,
                   pose_list, local_features_list, pose0, lf0):
+    assert(len(local_features_list) == len(pose_list))
     keypoints0, descriptors0 = lf0.get()
 
     matches0x = []
@@ -55,7 +56,8 @@ def triangulation(matcher, points,
 
     for matches01, lf1 in zip(matches0x, local_features_list):
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        lf1.point_indices[indices1] = lf0.point_indices[indices0]
+        point_indices = lf0.point_indices[indices0]
+        lf1.associate_points(indices1, point_indices)
 
 
 def get_correspondences(matcher, lf0, active_features):
