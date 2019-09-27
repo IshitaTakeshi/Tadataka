@@ -38,9 +38,14 @@ def copy_triangulated(matcher, local_features_list, lf1):
 def triangulation(matcher, points,
                   pose_list, local_features_list, pose0, lf0):
     assert(len(local_features_list) == len(pose_list))
+    # any keypoints don't have corresponding 3D points
+    assert(np.all(~lf0.is_triangulated))
+
+    # we focus on only untriangulated points
     keypoints0, descriptors0 = lf0.get()
 
     matches0x = []
+    # triangulate untriangulated points
     for lf1, pose1 in zip(local_features_list, pose_list):
         keypoints1, descriptors1 = lf1.untriangulated()
         matches01 = matcher(descriptors0, descriptors1)
@@ -48,11 +53,11 @@ def triangulation(matcher, points,
 
         # keep elements that are not triangulated yet
         mask = ~lf0.is_triangulated[matches01[:, 0]]
-        matches01 = matches01[mask]
-
         if np.sum(mask) == 0:
             # all matched keypoints are already triangulated
             continue
+
+        matches01 = matches01[mask]
 
         try:
             points_, matches01 = points_from_known_poses(
@@ -66,10 +71,11 @@ def triangulation(matcher, points,
         point_indices_ = points.add(points_)
         lf0.point_indices[matches01[:, 0]] = point_indices_
 
-    for matches01, lf1 in zip(matches0x, local_features_list):
+    for lf1, matches01 in zip(local_features_list, matches0x):
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        point_indices = lf0.point_indices[indices0]
-        lf1.associate_points(indices1, point_indices)
+        # copy point indices back to each lf1
+        lf1.associate_points(indices1, lf0.point_indices[indices0])
+
 
 
 def get_correspondences(matcher, lf0, active_features):
@@ -88,8 +94,6 @@ def get_correspondences(matcher, lf0, active_features):
         point_indices.append(p)
         keypoints0_matched.append(keypoints0[matches01[:, 0]])
 
-    print("point_indices")
-    print(point_indices)
     if len(point_indices) == 0:
         raise NotEnoughInliersException("No matches found")
 
@@ -102,7 +106,6 @@ def estimate_pose(matcher, points, lf0, active_features):
     point_indices, keypoints = get_correspondences(
         matcher, lf0, active_features
     )
-    print(point_indices)
     points_ = points.get(point_indices)
 
     try:
