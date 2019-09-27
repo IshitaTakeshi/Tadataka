@@ -176,6 +176,13 @@ class VisualOdometry(object):
 
     def try_continue(self, keypoints1, descriptors1):
         active_keyframes = self.keyframes.get_active()
+    @property
+    def active_local_features(self):
+        return [self.local_features[i] for i in self.active_indices]
+
+    @property
+    def active_poses(self):
+        return [self.poses[i] for i in self.active_indices]
 
         descriptors_ = [kf.triangulated()[1] for kf in active_keyframes]
         matches01, index = find_best_match(matcher, descriptors_, descriptors1)
