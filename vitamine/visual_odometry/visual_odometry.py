@@ -174,8 +174,6 @@ class VisualOdometry(object):
         associate_points(lf0, lf1, matches01, point_indices)
         return True
 
-    def try_continue(self, keypoints1, descriptors1):
-        active_keyframes = self.keyframes.get_active()
     @property
     def active_local_features(self):
         return [self.local_features[i] for i in self.active_indices]
@@ -184,20 +182,25 @@ class VisualOdometry(object):
     def active_poses(self):
         return [self.poses[i] for i in self.active_indices]
 
-        descriptors_ = [kf.triangulated()[1] for kf in active_keyframes]
-        matches01, index = find_best_match(matcher, descriptors_, descriptors1)
-        keyframe0 = active_keyframes[argmax]
+    def try_add_more(self, lf1):
+        active_features = self.active_local_features
 
-        R1, t1 = estimate_pose(keyframe0.get_point_indices(),
-                               keypoints, matches01, self.points)
+        pose1 = estimate_pose(self.matcher, self.points, lf1, active_features)
+        if pose1 is None:  # pose could not be estimated
+            return None
 
-        if not self.can_add_keyframe(R1, t1, points, matches01):
-            return False
+        # if not self.pose_condition(active_poses[-1], pose1):
+        #     # if pose1 is too close from the latest active pose
+        #     return None
 
-        self.keyframes.add(keyframe1)
-        descriptors_ = [kf.untriangulated()[1] for kf in active_keyframes]
-        matches01, index = find_best_match(matcher, descriptors_, descriptors1)
-        triangulation(self.matcher, self.points, descriptors_, keyframe1)
+        triangulation(self.matcher, self.points,
+                      self.active_poses, active_features, pose1, lf1)
+
+        # copy triangulated point indices back to lf1
+        copy_triangulated(self.matcher, active_features, lf1)
+
+        self.local_features.append(lf1)
+        self.poses.append(pose1)
         return True
 
     @property
