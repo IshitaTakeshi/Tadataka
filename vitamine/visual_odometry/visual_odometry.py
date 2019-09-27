@@ -48,6 +48,9 @@ def triangulation(matcher, points,
     # triangulate untriangulated points
     for lf1, pose1 in zip(local_features_list, pose_list):
         keypoints1, descriptors1 = lf1.untriangulated()
+        if len(descriptors1) == 0:
+            continue
+
         matches01 = matcher(descriptors0, descriptors1)
         matches0x.append(matches01)
 
@@ -208,7 +211,7 @@ class VisualOdometry(object):
         return len(self.active_indices)
 
     def try_add(self, keypoints, descriptors):
-        if len(keypoints) < self.min_keypoints:
+        if not self.keypoints_condition(keypoints):
             return False
 
         keypoints = self.camera_model.undistort(keypoints)
@@ -234,8 +237,8 @@ class VisualOdometry(object):
         return True
 
     def try_remove(self):
-        if self.keyframes.active_size <= self.min_active_keyframes:
+        if self.n_active_keyframes <= self.min_active_keyframes:
             return False
 
-        self.keyframes.remove(self.keyframes.oldest_keyframe_id)
+        self.active_indices.remove(0)
         return True
