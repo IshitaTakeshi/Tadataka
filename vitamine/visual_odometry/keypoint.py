@@ -8,12 +8,20 @@ from autograd import numpy as np
 KD = namedtuple("KeypointDescriptor", ["keypoints", "descriptors"])
 
 
+def init_point_indices(size):
+    return -np.ones(size, dtype=np.int64)
+
+
+def is_triangulated(point_indices):
+    return point_indices >= 0
+
+
 class LocalFeatures(object):
     def __init__(self, keypoints, descriptors):
         self.keypoints = keypoints
         self.descriptors = descriptors
         # -1 for untriangulated
-        self.point_indices = -np.ones(len(keypoints), dtype=np.int64)
+        self.point_indices = init_point_indices(len(keypoints))
 
     def get(self, indices_or_mask=None):
         if indices_or_mask is None:
@@ -23,7 +31,7 @@ class LocalFeatures(object):
 
     @property
     def is_triangulated(self):
-        return self.point_indices >= 0
+        return is_triangulated(self.point_indices)
 
     def triangulated(self):
         """
