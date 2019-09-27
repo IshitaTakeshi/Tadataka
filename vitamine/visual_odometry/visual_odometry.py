@@ -2,14 +2,19 @@ from collections import deque
 
 from autograd import numpy as np
 
+from vitamine.exceptions import (
+    InvalidDepthsException, NotEnoughInliersException, print_error)
 from vitamine.keypoints import extract_keypoints, match
 from vitamine.camera_distortion import CameraModel
-from vitamine.triangulation import pose_point_from_keypoints
-from vitamine.visual_odometry.pose import Pose, estimate_pose
+from vitamine.visual_odometry.pose import Pose
+from vitamine import pose_estimation as PE
 from vitamine.visual_odometry.point import Points
-from vitamine.visual_odometry.keypoint import Keypoints
-from vitamine.visual_odometry.triangulation import Triangulation
-
+from vitamine.visual_odometry.keypoint import (
+    LocalFeatures, associate_points, copy_point_indices,
+    init_point_indices, is_triangulated)
+from vitamine.visual_odometry.triangulation import (
+    pose_point_from_keypoints, points_from_known_poses)
+from vitamine.visual_odometry.keyframe_index import KeyframeIndices
 
 
 def find_best_match(matcher, active_descriptors, descriptors1):
