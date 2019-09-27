@@ -18,37 +18,42 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     return matchesx1[argmax], argmax
 
 
-def match_triangulate(matcher, points, lf0, lf1, pose0, pose1):
-    keypoints0, descriptors0 = lf0.untriangulated()
-    keypoints1, descriptors1 = lf1.untriangulated()
-    matches01 = matcher(descriptors0, descriptors1)
-
-    if len(matches01) == 0:
-        return
-
-    try:
-        points_, matches01 = points_from_known_poses(
-            keypoints0, keypoints1, pose0, pose1, matches01)
-    except InvalidDepthsException as e:
-        print_error(str(e))
-        return
-
-    # subscribe points and associate it with keypoints
-    point_indices = points.add(points_)
-    associate_points(lf0, lf1, matches01, point_indices)
-
-
 def triangulation(matcher, points,
-                  local_features_list, pose_list, lf0, pose0):
-    descriptors0 = lf0.untriangulated().descriptors
+                  pose_list, local_features_list, pose0, lf0):
+    keypoints0, descriptors0 = lf0.get()
 
-    for i, (lf1, pose1) in enumerate(zip(local_features_list, pose_list)):
-        match_triangulate(matcher, points, lf0, lf1, pose0, pose1)
-
-    for lf1 in local_features_list:
-        descriptors1 = lf1.untriangulated().descriptors
+    matches0x = []
+    for lf1, pose1 in zip(local_features_list, pose_list):
+        keypoints1, descriptors1 = lf1.untriangulated()
         matches01 = matcher(descriptors0, descriptors1)
-        copy_point_indices(lf0, lf1, matches01)
+        matches0x.append(matches01)
+
+        # keep elements that are not triangulated yet
+        mask = ~lf0.is_triangulated[matches01[:, 0]]
+        matches01 = matches01[mask]
+
+        if np.sum(mask) == 0:
+            # all matched keypoints are already triangulated
+            continue
+
+        try:
+            points_, matches01 = points_from_known_poses(
+                keypoints0, keypoints1,
+                pose0, pose1, matches01
+            )
+        except InvalidDepthsException as e:
+            print_error(str(e))
+            continue
+
+        point_indices_ = points.add(points_)
+        lf0.point_indices[matches01[:, 0]] = point_indices_
+
+    for matches01, lf1 in zip(matches0x, local_features_list):
+        indices0, indices1 = matches01[:, 0], matches01[:, 1]
+        lf1.point_indices[indices1] = lf0.point_indices[indices0]
+
+
+        matches01 = matcher(descriptors0, descriptors1)
 
 
 def get_array_len_geq(min_length):
