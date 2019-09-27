@@ -53,7 +53,44 @@ def triangulation(matcher, points,
         lf1.point_indices[indices1] = lf0.point_indices[indices0]
 
 
+def get_correspondences(matcher, lf0, active_features):
+    keypoints0, descriptors0 = lf0.get()
+
+    point_indices = []
+    keypoints0_matched = []
+    for lf1 in active_features:
+        descriptors1 = lf1.triangulated().descriptors
         matches01 = matcher(descriptors0, descriptors1)
+        if len(matches01) == 0:
+            continue
+
+        p = lf1.triangulated_point_indices(matches01[:, 1])
+
+        point_indices.append(p)
+        keypoints0_matched.append(keypoints0[matches01[:, 0]])
+
+    print("point_indices")
+    print(point_indices)
+    if len(point_indices) == 0:
+        raise NotEnoughInliersException("No matches found")
+
+    point_indices = np.concatenate(point_indices)
+    keypoints0_matched = np.vstack(keypoints0_matched)
+    return point_indices, keypoints0_matched
+
+
+def estimate_pose(matcher, points, lf0, active_features):
+    point_indices, keypoints = get_correspondences(
+        matcher, lf0, active_features
+    )
+    print(point_indices)
+    points_ = points.get(point_indices)
+
+    try:
+        R, t = PE.estimate_pose(points_, keypoints)
+    except NotEnoughInliersException:
+        return None
+    return Pose(R, t)
 
 
 def get_array_len_geq(min_length):
