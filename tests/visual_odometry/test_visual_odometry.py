@@ -1,5 +1,8 @@
 from autograd import numpy as np
+
 from numpy.testing import assert_array_almost_equal, assert_array_equal
+import pytest
+
 from vitamine.so3 import rodrigues
 from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.points import cubic_lattice
@@ -24,6 +27,11 @@ def add_noise(descriptors, indices):
     descriptors = np.copy(descriptors)
     descriptors[indices] = random_binary((len(indices), descriptors.shape[1]))
     return descriptors
+
+
+def break_other_than(descriptors, indices):
+    indices_to_break = np.setxor1d(np.arange(len(descriptors)), indices)
+    return add_noise(descriptors, indices_to_break)
 
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
@@ -64,15 +72,32 @@ keypoints_true, positive_depth_mask = generate_observations(
 
 # generate dummy descriptors
 # allocate sufficient lengths of descriptors for redundancy
-descriptors = random_binary((len(points_true), 256))
+descriptors = random_binary((len(points_true), 1024))
+
+def test_break_other_than():
+    descriptors0 = break_other_than(descriptors, [0, 1, 2, 4, 8, 10])
+    descriptors1 = add_noise(descriptors, [3, 5, 6, 7, 9, 11, 12, 13])
+
+    assert_array_equal(
+        match(descriptors, descriptors0),
+        match(descriptors, descriptors1)
+    )
+
+    descriptors0 = break_other_than(descriptors, np.arange(4, 14))
+    descriptors1 = add_noise(descriptors, np.arange(0, 4))
+
+    assert_array_equal(
+        match(descriptors, descriptors0),
+        match(descriptors, descriptors1)
+    )
 
 
 def test_find_best_match():
     descriptors_ = [
         descriptors[0:3],  # 3 points can match
-        add_noise(descriptors, [1, 3, 6]),  # 11 points can match
+        break_other_than(descriptors, [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]),
         descriptors[4:8],  # 4 points can match
-        add_noise(descriptors, np.arange(6, 11))  # 9 points can match
+        break_other_than(descriptors, [0, 1, 2, 3, 4])
     ]
 
     expected = np.vstack((
@@ -124,18 +149,29 @@ def test_initialize_second():
 
     def case2():
         # descriptors[0:4] cannot match
-        descriptors0 = add_noise(descriptors, np.arange(0, 4))
+        descriptors0 = break_other_than(
+            descriptors,
+            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        )
         # descriptors[4:7] cannot match
-        descriptors1 = add_noise(descriptors, np.arange(4, 7))
+        descriptors1 = break_other_than(
+            descriptors,
+            [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13]
+        )
         # descriptors[4:6] cannot match
-        descriptors2 = add_noise(descriptors, np.arange(4, 6))
+        descriptors2 = break_other_than(
+            descriptors,
+            [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13]
+        )
+        # point_indices   0  1  2  3   4   5   6   7
+        # matches02.T = [[6, 7, 8, 9, 10, 11, 12, 13],
+        #                [6, 7, 8, 9, 10, 11, 12, 13]]
         lf0 = LocalFeatures(keypoints_true[0], descriptors0)
         lf1 = LocalFeatures(keypoints_true[1], descriptors1)
         lf2 = LocalFeatures(keypoints_true[2], descriptors2)
 
         vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
         assert(vo.try_add_keyframe(lf0))
-        print("lf1")
         # number of matches = 7
         # not enough matches found between descriptors0 and descriptors1
         assert(not vo.try_add_keyframe(lf1))
