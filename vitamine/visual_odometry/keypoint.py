@@ -46,7 +46,12 @@ class LocalFeatures(object):
         """
         return self.get(~self.is_triangulated)
 
+    def triangulated_point_indices(self, indices):
+        point_indices = self.point_indices[self.is_triangulated]
+        return point_indices[indices]
+
     def associate_points(self, indices, point_indices):
+        # select only untriangulated elements
         untriangulated = np.where(~self.is_triangulated)[0]
         self.point_indices[untriangulated[indices]] = point_indices
 
