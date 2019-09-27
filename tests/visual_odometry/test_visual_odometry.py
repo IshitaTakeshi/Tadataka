@@ -461,3 +461,31 @@ def test_triangulation():
                        [0, 1, -1, -1, 2, 7, -1, 3, -1, 4, -1, 8, 5, 6])
     assert_array_equal(lf3.point_indices,
                        [0, 1, -1, -1, -1, 7, -1, 3, -1, 4, 9, -1, -1, 6])
+
+
+def test_try_remove():
+    vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
+
+    assert(vo.try_add(keypoints_true[0], descriptors))
+    assert(vo.n_active_keyframes == 1)
+
+    assert(vo.try_add(keypoints_true[1], descriptors))
+    assert(vo.n_active_keyframes == 2)
+
+    assert(vo.try_add(keypoints_true[2], descriptors))
+    assert(vo.n_active_keyframes == 3)
+
+    assert(vo.try_add(keypoints_true[3], descriptors))
+    assert(vo.n_active_keyframes == 4)
+
+    assert(not vo.try_remove())
+    assert(vo.n_active_keyframes == 4)
+
+    assert(vo.try_add(keypoints_true[4], descriptors))
+    assert(vo.n_active_keyframes == 5)
+
+    assert(vo.try_remove())
+    assert(vo.n_active_keyframes == 4)
+
+    assert(not vo.try_remove())
+    assert(vo.n_active_keyframes == 4)
