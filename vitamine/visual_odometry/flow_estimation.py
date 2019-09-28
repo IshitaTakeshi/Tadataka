@@ -1,29 +1,9 @@
 from skimage import transform as tf
 from skimage.measure import ransac
 
-from vitamine.flow_estimation.keypoints import extract_keypoints, match
+from vitamine.keypoints import extract_keypoints, match
 from vitamine.coordinates import xy_to_yx
 from vitamine.transform import AffineTransform
-
-
-# TODO move to utils or somewhere
-def affine_params_from_matrix(matrix):
-    A, b = matrix[0:2, 0:2], matrix[0:2, 2]
-    return A, b
-
-
-def estimate_affine_from_keypoints(keypoints1, keypoints2):
-    # estimate inliers using ransac on FundamentalMatrixTransform
-    # it's possible to estimate AffineTransform in RANSAC, however,
-    # we can get more inliers using FundamentalMatrixTransform
-    tform, inliers_mask = ransac((keypoints1, keypoints2),
-                                 tf.AffineTransform,
-                                 random_state=3939, min_samples=8,
-                                 residual_threshold=1, max_trials=5000)
-
-    # estimate affine transform between two views using the estimated inliers
-    A, b = affine_params_from_matrix(tform.params)
-    return A, b, inliers_mask
 
 
 # for debug
@@ -43,20 +23,32 @@ def plot_matches(image1, image2, keypoints1, keypoints2, inliers_mask):
     plt.show()
 
 
-def estimate_affine_transform(image1, image2):
-    """
-    Extract keypoints from each image and estimate affine correnpondence
-    between them
-    """
+# TODO move to utils or somewhere
+def affine_params_from_matrix(matrix):
+    A, b = matrix[0:2, 0:2], matrix[0:2, 2]
+    return A, b
 
+
+def ransac_affine(keypoints1, keypoints2):
+    # estimate inliers using ransac on AffineTransform
+    tform, inliers_mask = ransac((keypoints1, keypoints2),
+                                 tf.AffineTransform,
+                                 random_state=3939, min_samples=8,
+                                 residual_threshold=1, max_trials=5000)
+    return tform.params, inliers_mask
+
+
+def ransac_fundamental(keypoints1, keypoints2):
+    # estimate inliers using ransac on FundamentalMatrixTransform
+    tform, inliers_mask = ransac((keypoints1, keypoints2),
+                                 tf.FundamentalMatrixTransform,
+                                 random_state=3939, min_samples=8,
+                                 residual_threshold=1, max_trials=5000)
+    return tform.params, inliers_mask
+
+
+def extract_and_match(image1, image2):
     keypoints1, descriptors1 = extract_keypoints(image1)
     keypoints2, descriptors2 = extract_keypoints(image2)
-
     matches12 = match(descriptors1, descriptors2)
-
-    keypoints1 = keypoints1[matches12[:, 0]]
-    keypoints2 = keypoints2[matches12[:, 1]]
-
-    A, b, inliers_mask = estimate_affine_from_keypoints(keypoints1, keypoints2)
-    # plot_matches(image1, image2, keypoints1, keypoints2, inliers_mask)
-    return AffineTransform(A, b)
+    return keypoints1[matches12[:, 0]],  keypoints2[matches12[:, 1]]
