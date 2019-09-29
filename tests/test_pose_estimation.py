@@ -53,10 +53,10 @@ def test_solve_pnp():
         assert_array_almost_equal(t_true, t_pred)
 
     keypoints0 = keypoints[0]
-    # 4 correspondences
+    # 6 correspondences
     # this should be able to run
-    solve_pnp(points[0:4], keypoints0[0:4])
+    solve_pnp(points[0:6], keypoints0[0:6])
 
     with pytest.raises(NotEnoughInliersException):
         # not enough correspondences
-        solve_pnp(points[0:3], keypoints0[0:3])
+        solve_pnp(points[0:5], keypoints0[0:5])

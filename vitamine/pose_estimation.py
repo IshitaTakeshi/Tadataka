@@ -7,7 +7,7 @@ from vitamine.exceptions import NotEnoughInliersException
 from vitamine.so3 import rodrigues
 
 
-min_correspondences = 4
+min_correspondences = 6
 
 
 def solve_pnp(points, keypoints):
