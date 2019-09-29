@@ -18,6 +18,7 @@ def is_triangulated(point_indices):
 
 class LocalFeatures(object):
     def __init__(self, keypoints, descriptors):
+        assert(len(keypoints) == len(descriptors))
         self.keypoints = keypoints
         self.descriptors = descriptors
         # -1 for untriangulated
