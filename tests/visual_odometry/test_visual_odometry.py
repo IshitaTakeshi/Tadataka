@@ -184,7 +184,7 @@ def test_get_correspondences():
         keypoints0 = keypoints_true[0]
         lf0 = LocalFeatures(keypoints0, descriptors0)
 
-        point_indices, keypoints = get_correspondences(match, lf0, [lf1, lf2])
+        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
 
         assert_array_equal(point_indices,
                            [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
@@ -208,7 +208,7 @@ def test_get_correspondences():
         keypoints0 = keypoints_true[0, 2:14]
         lf0 = LocalFeatures(keypoints0, descriptors0)
 
-        point_indices, keypoints = get_correspondences(match, lf0, [lf1, lf2])
+        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
 
         assert_array_equal(point_indices,
                            [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
@@ -238,7 +238,7 @@ def test_get_correspondences():
         )
 
         with pytest.raises(NotEnoughInliersException):
-            get_correspondences(match, lf0, [lf1, lf2])
+            get_correspondences(match, [lf1, lf2], lf0)
 
     case1()
     case2()
@@ -272,7 +272,7 @@ def test_estimate_pose():
         [-1, -1, -1, -1, 4, 5, 6, 7, -1, 9, -1, -1, 12, 13]
     )
 
-    point_indices, keypoints = get_correspondences(match, lf0, [lf1, lf2])
+    point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
     point_indices = [2, 3, 4, 9, 12, 13, 4, 5, 6, 7, 9, 12, 13]
     points_ = points.get(point_indices)
     keypoints0 = keypoints_true[0]
@@ -284,7 +284,7 @@ def test_estimate_pose():
     ])
 
     from vitamine import pose_estimation as PE
-    pose = estimate_pose(match, points, lf0, [lf1, lf2])
+    pose = estimate_pose(match, points, [lf1, lf2], lf0)
     assert_array_almost_equal(pose.R, rotations[0])
     assert_array_almost_equal(pose.t, translations[0])
     assert(pose == Pose(rotations[0], translations[0]))

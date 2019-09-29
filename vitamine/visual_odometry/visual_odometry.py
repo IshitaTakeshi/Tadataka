@@ -23,7 +23,7 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     return matchesx1[argmax], argmax
 
 
-def get_correspondences(matcher, lf0, active_features):
+def get_correspondences(matcher, active_features, lf0):
     keypoints0, descriptors0 = lf0.get()
 
     point_indices = []
@@ -47,9 +47,9 @@ def get_correspondences(matcher, lf0, active_features):
     return point_indices, keypoints0_matched
 
 
-def estimate_pose(matcher, points, lf0, active_features):
+def estimate_pose(matcher, points, active_features, lf0):
     point_indices, keypoints = get_correspondences(
-        matcher, lf0, active_features
+        matcher, active_features, lf0
     )
     points_ = points.get(point_indices)
 
@@ -130,7 +130,7 @@ class VisualOdometry(object):
     def try_add_more(self, lf1):
         active_features = self.active_local_features
 
-        pose1 = estimate_pose(self.matcher, self.points, lf1, active_features)
+        pose1 = estimate_pose(self.matcher, self.points, active_features, lf1)
         if pose1 is None:  # pose could not be estimated
             return None
 
