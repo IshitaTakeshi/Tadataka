@@ -205,7 +205,7 @@ def test_get_correspondences():
         #                 0  6  7  8  1   2   3
         # matches02.T = [[2, 3, 4, 5, 7, 10, 11],
         #                [4, 5, 6, 7, 9, 12, 13]]
-        keypoints0 = keypoints_true[0]
+        keypoints0 = keypoints_true[0, 2:14]
         lf0 = LocalFeatures(keypoints0, descriptors0)
 
         point_indices, keypoints = get_correspondences(match, lf0, [lf1, lf2])
@@ -300,10 +300,13 @@ def test_try_add_more():
                                     [0, 1, 2, 4, 6, 7, 8, 10, 11, 12, 13])
     descriptors2 = break_other_than(descriptors,
                                     [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    descriptors3 = break_other_than(descriptors,
+                                    [1, 3, 4, 5, 6, 8, 9])
 
     lf0 = LocalFeatures(keypoints_true[0], descriptors0)
     lf1 = LocalFeatures(keypoints_true[1], descriptors1)
     lf2 = LocalFeatures(keypoints_true[2], descriptors2)
+    lf3 = LocalFeatures(keypoints_true[3], descriptors3)
 
     assert(vo.try_add_keyframe(lf0))
     assert(vo.n_active_keyframes == 1)
@@ -333,6 +336,7 @@ def test_try_add_more():
     #                [1, 4, 6, 7, 8, 10, 11, 12]]
     assert(vo.try_add_keyframe(lf2))
     assert(vo.n_active_keyframes == 3)
+
     lf0, lf1, lf2 = vo.active_local_features
     assert(len(vo.export_points()) == 13)
     assert_array_equal(lf0.point_indices,
@@ -343,6 +347,20 @@ def test_try_add_more():
     # so they should not be triangulated
     assert_array_equal(lf2.point_indices,
                        [-1, 11, -1, -1, 2, 9, 3, 4, 12, 10, 5, 6, 7, -1])
+
+    pose0, pose1, pose2 = vo.active_poses
+    point_indices0 = lf0.point_indices[lf0.is_triangulated]
+    point_indices1 = lf1.point_indices[lf1.is_triangulated]
+    point_indices2 = lf2.point_indices[lf2.is_triangulated]
+    P0 = transform(pose0.R, pose0.t, vo.points.get(point_indices0))
+    P1 = transform(pose1.R, pose1.t, vo.points.get(point_indices1))
+    P2 = transform(pose2.R, pose2.t, vo.points.get(point_indices2))
+    assert_array_almost_equal(projection.compute(P0),
+                              keypoints_true[0, lf0.is_triangulated])
+    assert_array_almost_equal(projection.compute(P1),
+                              keypoints_true[1, lf1.is_triangulated])
+    assert_array_almost_equal(projection.compute(P2),
+                              keypoints_true[2, lf2.is_triangulated])
 
 
 def test_try_remove():
