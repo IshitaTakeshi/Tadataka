@@ -39,10 +39,21 @@ def relative_error(x_true, x_pred):
     return np.linalg.norm(x_true - x_pred) / np.linalg.norm(x_true)
 
 
+def random_rotation_matrix(size):
+    A = np.random.random((size, size))
+    return np.linalg.svd(np.dot(A.T, A))[0]
+
+
 def random_binary(size):
     return np.random.randint(0, 2, size, dtype=np.bool)
 
 
-def random_rotation_matrix(size):
-    A = np.random.random((size, size))
-    return np.linalg.svd(np.dot(A.T, A))[0]
+def add_noise(descriptors, indices):
+    descriptors = np.copy(descriptors)
+    descriptors[indices] = random_binary((len(indices), descriptors.shape[1]))
+    return descriptors
+
+
+def break_other_than(descriptors, indices):
+    indices_to_break = np.setxor1d(np.arange(len(descriptors)), indices)
+    return add_noise(descriptors, indices_to_break)
