@@ -13,7 +13,7 @@ from vitamine.visual_odometry.keypoint import (
     LocalFeatures, associate_points, copy_point_indices,
     init_point_indices, is_triangulated)
 from vitamine.visual_odometry.triangulation import (
-    pose_point_from_keypoints, points_from_known_poses)
+    triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices
 
 
@@ -21,64 +21,6 @@ def find_best_match(matcher, active_descriptors, descriptors1):
     matchesx1 = [matcher(d0, descriptors1) for d0 in active_descriptors]
     argmax = np.argmax([len(m) for m in matchesx1])
     return matchesx1[argmax], argmax
-
-
-def copy_triangulated(matcher, local_features_list, lf1):
-    for lf0 in local_features_list:
-        # copy point indices from lf0 to lf1
-        descriptors0 = lf0.triangulated().descriptors
-        descriptors1 = lf1.untriangulated().descriptors
-        if len(descriptors0) == 0 or len(descriptors1) == 0:
-            continue
-        matches01 = matcher(descriptors0, descriptors1)
-        point_indices = lf0.triangulated_point_indices(matches01[:, 0])
-        lf1.associate_points(matches01[:, 1], point_indices)
-
-
-def triangulation(matcher, points,
-                  pose_list, local_features_list, pose0, lf0):
-    assert(len(local_features_list) == len(pose_list))
-    # any keypoints don't have corresponding 3D points
-    assert(np.all(~lf0.is_triangulated))
-
-    # we focus on only untriangulated points
-    keypoints0, descriptors0 = lf0.get()
-
-    matches0x = []
-    # triangulate untriangulated points
-    for lf1, pose1 in zip(local_features_list, pose_list):
-        keypoints1, descriptors1 = lf1.untriangulated()
-        if len(descriptors1) == 0:
-            continue
-
-        matches01 = matcher(descriptors0, descriptors1)
-        matches0x.append(matches01)
-
-        # keep elements that are not triangulated yet
-        mask = ~lf0.is_triangulated[matches01[:, 0]]
-        if np.sum(mask) == 0:
-            # all matched keypoints are already triangulated
-            continue
-
-        matches01 = matches01[mask]
-
-        try:
-            points_, matches01 = points_from_known_poses(
-                keypoints0, keypoints1,
-                pose0, pose1, matches01
-            )
-        except InvalidDepthsException as e:
-            print_error(str(e))
-            continue
-
-        point_indices_ = points.add(points_)
-        lf0.point_indices[matches01[:, 0]] = point_indices_
-
-    for lf1, matches01 in zip(local_features_list, matches0x):
-        indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        # copy point indices back to each lf1
-        lf1.associate_points(indices1, lf0.point_indices[indices0])
-
 
 
 def get_correspondences(matcher, lf0, active_features):
