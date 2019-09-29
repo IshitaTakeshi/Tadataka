@@ -1,1 +1,0 @@
-from vitamine.rigid import coordinates
