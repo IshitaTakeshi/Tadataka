@@ -1,6 +1,6 @@
 from autograd import numpy as np
 
-from vitamine.exceptions import InvalidDepthsException
+from vitamine.exceptions import InvalidDepthsException, print_error
 from vitamine import triangulation as TR
 from vitamine.visual_odometry.pose import Pose
 
