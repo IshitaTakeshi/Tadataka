@@ -15,7 +15,7 @@ setup(
         'scikit-image',
         'matplotlib',
         'numpy',
-        'julia',
+        # 'julia',
         'opencv-python'  # TODO make independent from this
     ]
 )
