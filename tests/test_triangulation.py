@@ -8,7 +8,7 @@ from autograd.numpy.linalg import inv, norm
 from vitamine.projection import PerspectiveProjection
 from vitamine.camera import CameraParameters
 from vitamine.so3 import tangent_so3, rodrigues
-from vitamine.rigid.transformation import transform, transform_all
+from vitamine.rigid_transform import transform, transform_all
 from vitamine.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
     linear_triangulation, points_from_known_poses, pose_point_from_keypoints)

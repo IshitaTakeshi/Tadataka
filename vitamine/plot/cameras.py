@@ -3,7 +3,7 @@ from autograd import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from vitamine.rigid.transformation import transform_all
+from vitamine.rigid_transform import transform_all
 
 
 def cameras_poly3d(camera_rotations, camera_locations, scale=1.0):

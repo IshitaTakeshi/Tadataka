@@ -6,7 +6,7 @@ from vitamine.camera import CameraParameters
 from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.observations import (
     generate_translations, generate_observations)
-from vitamine.rigid.transformation import transform_all
+from vitamine.rigid_transform import transform_all
 
 
 points = np.array([

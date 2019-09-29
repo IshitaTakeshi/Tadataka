@@ -1,7 +1,7 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from autograd import numpy as np
 from vitamine.visual_odometry import local_ba
-from vitamine.rigid.transformation import transform_all
+from vitamine.rigid_transform import transform_all
 from vitamine.so3 import rodrigues
 from vitamine.camera import CameraParameters
 from vitamine.visual_odometry.local_ba import (

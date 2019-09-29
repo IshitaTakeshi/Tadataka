@@ -8,7 +8,7 @@ from vitamine.projection import PerspectiveProjection
 from vitamine.dataset.points import cubic_lattice
 from vitamine.dataset.observations import (
     generate_observations, generate_translations)
-from vitamine.rigid.transformation import transform
+from vitamine.rigid_transform import transform
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
@@ -20,7 +20,7 @@ from vitamine.visual_odometry.visual_odometry import (
 from vitamine.visual_odometry.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import LocalFeatures
-from vitamine.rigid.transformation import transform_all
+from vitamine.rigid_transform import transform_all
 from vitamine.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 

@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 from vitamine.so3 import rodrigues
-from vitamine.rigid.transformation import transform_all
+from vitamine.rigid_transform import transform_all
 
 
 def generate_observations(rotations, translations, points, projection):
