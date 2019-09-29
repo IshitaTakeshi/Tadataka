@@ -21,7 +21,7 @@ from vitamine.visual_odometry.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import LocalFeatures
 from vitamine.rigid.transformation import transform_all
-from tests.utils import random_binary, break_other_than
+from vitamine.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 
 

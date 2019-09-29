@@ -1,8 +1,10 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
-from vitamine.utils import is_in_image_range, radian_to_degree, indices_other_than
+from vitamine.utils import (
+    is_in_image_range, radian_to_degree, indices_other_than)
 from vitamine.keypoints import match
-from tests.utils import add_noise, break_other_than, random_binary
+from vitamine.utils import add_noise, break_other_than, random_binary
+
 
 def test_break_other_than():
     descriptors = random_binary((14, 1024))

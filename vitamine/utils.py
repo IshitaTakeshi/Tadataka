@@ -1,6 +1,10 @@
 from autograd import numpy as np
 
 
+def random_binary(size):
+    return np.random.randint(0, 2, size, dtype=np.bool)
+
+
 def indices_other_than(size, indices):
     """
     size: size of the array you want to get elements from
@@ -26,3 +30,14 @@ def is_in_image_range(keypoints, image_shape):
 
 def radian_to_degree(radian):
     return radian / np.pi * 180
+
+
+def add_noise(descriptors, indices):
+    descriptors = np.copy(descriptors)
+    descriptors[indices] = random_binary((len(indices), descriptors.shape[1]))
+    return descriptors
+
+
+def break_other_than(descriptors, indices):
+    indices_to_break = np.setxor1d(np.arange(len(descriptors)), indices)
+    return add_noise(descriptors, indices_to_break)
