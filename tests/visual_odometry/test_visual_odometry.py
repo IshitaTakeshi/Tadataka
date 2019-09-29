@@ -16,23 +16,13 @@ from vitamine.keypoints import match
 from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import (
     VisualOdometry, find_best_match, estimate_pose,
-    triangulation, get_correspondences, copy_triangulated)
+    get_correspondences)
 from vitamine.visual_odometry.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import LocalFeatures
 from vitamine.rigid.transformation import transform_all
-from tests.utils import random_binary
-
-
-def add_noise(descriptors, indices):
-    descriptors = np.copy(descriptors)
-    descriptors[indices] = random_binary((len(indices), descriptors.shape[1]))
-    return descriptors
-
-
-def break_other_than(descriptors, indices):
-    indices_to_break = np.setxor1d(np.arange(len(descriptors)), indices)
-    return add_noise(descriptors, indices_to_break)
+from tests.utils import random_binary, break_other_than
+from tests.data import dummy_points as points_true
 
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
@@ -57,23 +47,6 @@ keypoints_true, positive_depth_mask = generate_observations(
 # generate dummy descriptors
 # allocate sufficient lengths of descriptors for redundancy
 descriptors = random_binary((len(points_true), 1024))
-
-def test_break_other_than():
-    descriptors0 = break_other_than(descriptors, [0, 1, 2, 4, 8, 10])
-    descriptors1 = add_noise(descriptors, [3, 5, 6, 7, 9, 11, 12, 13])
-
-    assert_array_equal(
-        match(descriptors, descriptors0),
-        match(descriptors, descriptors1)
-    )
-
-    descriptors0 = break_other_than(descriptors, np.arange(4, 14))
-    descriptors1 = add_noise(descriptors, np.arange(0, 4))
-
-    assert_array_equal(
-        match(descriptors, descriptors0),
-        match(descriptors, descriptors1)
-    )
 
 
 def test_find_best_match():
