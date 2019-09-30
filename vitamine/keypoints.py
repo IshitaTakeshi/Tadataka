@@ -1,7 +1,7 @@
 from autograd import numpy as np
 
 from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
-                             BRIEF)
+                             BRIEF, ORB)
 from skimage import transform
 
 from vitamine.coordinates import yx_to_xy
@@ -14,6 +14,7 @@ brief = BRIEF(
     sigma=0.1
 )
 
+orb = ORB(n_keypoints=100)
 
 def extract_brief(image):
     keypoints = corner_peaks(corner_harris(image), min_distance=5)
@@ -24,8 +25,6 @@ def extract_brief(image):
 
 
 def extract_orb(image):
-    from skimage.feature import ORB
-    orb = ORB(n_keypoints=100)
     orb.detect_and_extract(image)
     return yx_to_xy(orb.keypoints), orb.descriptors
 
