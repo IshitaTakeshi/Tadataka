@@ -1,10 +1,12 @@
 from autograd import numpy as np
+import cv2
+from skimage import img_as_ubyte
 
 from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
                              BRIEF, ORB)
 from skimage import transform
 
-from vitamine.coordinates import yx_to_xy
+from vitamine.coordinates import yx_to_xy, xy_to_yx
 
 
 brief = BRIEF(
@@ -15,9 +17,14 @@ brief = BRIEF(
 )
 
 orb = ORB(n_keypoints=100)
+star_detector = cv2.xfeatures2d.StarDetector_create()
+
 
 def extract_brief(image):
-    keypoints = corner_peaks(corner_harris(image), min_distance=5)
+    keypoints = star_detector.detect(img_as_ubyte(image), None)
+    keypoints = np.array([list(p.pt) for p in keypoints])
+    keypoints = xy_to_yx(keypoints)
+
     brief.extract(image, keypoints)
     keypoints = keypoints[brief.mask]
     descriptors = brief.descriptors

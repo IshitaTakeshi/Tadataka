@@ -16,6 +16,8 @@ setup(
         'matplotlib',
         'numpy',
         # 'julia',
-        'opencv-python'  # TODO make independent from this
+        # TODO make independent from them
+        'opencv-python',
+        'opencv-contrib-python'
     ]
 )
