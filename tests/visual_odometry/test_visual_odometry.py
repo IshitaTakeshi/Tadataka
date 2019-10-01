@@ -289,6 +289,12 @@ def test_estimate_pose():
     assert(pose == Pose(rotations[0], translations[0]))
 
 
+def assert_projection_equal(points, lf, pose, keypoints):
+    point_indices = lf.point_indices[lf.is_triangulated]
+    P = transform(pose.R, pose.t, points.get(point_indices))
+    assert_array_almost_equal(projection.compute(P),
+                              keypoints[lf.is_triangulated])
+
 def test_try_add_more():
     # TODO test with keypoints of different lengths
     vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
@@ -323,6 +329,10 @@ def test_try_add_more():
     assert_array_equal(lf1.point_indices,
                        [0, -1, 1, -1, 2, -1, 3, 4, -1, -1, 5, 6, 7, 8])
 
+    pose0, pose1 = vo.active_poses
+    assert_projection_equal(vo.points, lf0, pose0, keypoints_true[0])
+    assert_projection_equal(vo.points, lf1, pose1, keypoints_true[1])
+
     # lf0 and lf1 are already observed and lf2 is added
     # point_indices   2     3  4      5   6   7      existing
     # point_indices      9       10                  newly triangulated
@@ -348,18 +358,9 @@ def test_try_add_more():
                        [-1, 11, -1, -1, 2, 9, 3, 4, 12, 10, 5, 6, 7, -1])
 
     pose0, pose1, pose2 = vo.active_poses
-    point_indices0 = lf0.point_indices[lf0.is_triangulated]
-    point_indices1 = lf1.point_indices[lf1.is_triangulated]
-    point_indices2 = lf2.point_indices[lf2.is_triangulated]
-    P0 = transform(pose0.R, pose0.t, vo.points.get(point_indices0))
-    P1 = transform(pose1.R, pose1.t, vo.points.get(point_indices1))
-    P2 = transform(pose2.R, pose2.t, vo.points.get(point_indices2))
-    assert_array_almost_equal(projection.compute(P0),
-                              keypoints_true[0, lf0.is_triangulated])
-    assert_array_almost_equal(projection.compute(P1),
-                              keypoints_true[1, lf1.is_triangulated])
-    assert_array_almost_equal(projection.compute(P2),
-                              keypoints_true[2, lf2.is_triangulated])
+    assert_projection_equal(vo.points, lf0, pose0, keypoints_true[0])
+    assert_projection_equal(vo.points, lf1, pose1, keypoints_true[1])
+    assert_projection_equal(vo.points, lf2, pose2, keypoints_true[2])
 
 
 def test_try_remove():
