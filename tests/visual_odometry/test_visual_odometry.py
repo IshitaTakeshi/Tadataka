@@ -283,8 +283,7 @@ def test_estimate_pose():
         keypoints0[7], keypoints0[9], keypoints0[12], keypoints0[13]
     ])
 
-    from vitamine import pose_estimation as PE
-    pose = estimate_pose(match, points, [lf1, lf2], lf0)
+    pose = estimate_pose(match, points, [lf1, lf2], lf0, Pose.identity())
     assert_array_almost_equal(pose.R, rotations[0])
     assert_array_almost_equal(pose.t, translations[0])
     assert(pose == Pose(rotations[0], translations[0]))
