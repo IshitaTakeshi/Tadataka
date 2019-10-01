@@ -2,6 +2,11 @@ from numpy.testing import assert_array_almost_equal
 from autograd import numpy as np
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import Normalizer, FOV, calc_factors
+from vitamine.projection import PerspectiveProjection
+from vitamine.rigid_transform import transform
+from vitamine.pose_estimation import solve_pnp
+from vitamine.so3 import rodrigues
+from tests.data import dummy_points as points_true
 
 
 def test_normalizer():
@@ -9,20 +14,45 @@ def test_normalizer():
         focal_length=[2., 3.],
         offset=[-1., 4.]
     )
-    keypoints = np.array([
-        [4, 3],
-        [2, 1],
-        [1, 9]
-    ])
-    expected = np.array([
-        [5 / 2, -1 / 3],
-        [3 / 2, -3 / 3],
-        [2 / 2, 5 / 3]
-    ])
-    assert_array_almost_equal(
-        Normalizer(camera_parameters).normalize(keypoints),
-        expected
-    )
+    projection = PerspectiveProjection(camera_parameters)
+
+    normalizer = Normalizer(camera_parameters)
+
+    def case1():
+        keypoints = np.array([
+            [4, 3],
+            [2, 1],
+            [1, 9]
+        ])
+        expected = np.array([
+            [5 / 2, -1 / 3],
+            [3 / 2, -3 / 3],
+            [2 / 2, 5 / 3]
+        ])
+        assert_array_almost_equal(
+            normalizer.normalize(keypoints),
+            expected
+        )
+
+    def case2():
+        omega_true = np.array([-1.0, 0.2, 3.1])
+        t_true = np.array([-0.8, 1.0, 8.3])
+
+        R = rodrigues(np.atleast_2d(omega_true))[0]
+        P = transform(R, t_true, points_true)
+        keypoints_true = projection.compute(P)
+
+        # poses should be able to be estimated without a camera matrix
+        keypoints_ = normalizer.normalize(keypoints_true)
+        omega_pred, t_pred = solve_pnp(points_true, keypoints_,
+                                       omega_true, t_true)
+
+        assert_array_almost_equal(omega_true, omega_pred)
+        assert_array_almost_equal(t_true, t_pred)
+
+
+    case1()
+    case2()
 
 
 def test_fov_undistort():
