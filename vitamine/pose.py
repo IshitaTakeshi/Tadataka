@@ -12,6 +12,7 @@ class Pose(object):
 
         self.t = t
 
+    @property
     def R(self):
         return exp_so3(self.omega)
 
