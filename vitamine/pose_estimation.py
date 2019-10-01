@@ -32,9 +32,3 @@ def solve_pnp(points, keypoints, initial_omega=None, initial_translation=None):
                                     useExtrinsicGuess=True,
                                     flags=cv2.SOLVEPNP_EPNP)
     return omega.flatten(), t.flatten()
-
-
-def estimate_pose(points, keypoints):
-    omega, t = solve_pnp(points, keypoints)
-    R = rodrigues(omega.reshape(1, -1))[0]
-    return R, t

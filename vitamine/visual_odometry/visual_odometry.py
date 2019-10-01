@@ -15,6 +15,7 @@ from vitamine.visual_odometry.keypoint import (
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices
+from vitamine.so3 import rodrigues
 
 
 def find_best_match(matcher, active_descriptors, descriptors1):
@@ -54,9 +55,13 @@ def estimate_pose(matcher, points, active_features, lf0):
     points_ = points.get(point_indices)
 
     try:
-        R, t = PE.estimate_pose(points_, keypoints)
+        omega, t = PE.solve_pnp(points_, keypoints,
+                                inital_pose.omega,
+                                inital_pose.translation)
     except NotEnoughInliersException:
         return None
+
+    R = rodrigues(np.atleast_2d(omega))[0]
     return Pose(R, t)
 
 
