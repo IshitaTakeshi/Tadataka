@@ -9,6 +9,8 @@ from skimage import transform
 from vitamine.coordinates import yx_to_xy, xy_to_yx
 
 
+star_detector = cv2.xfeatures2d.StarDetector_create()
+
 brief = BRIEF(
     descriptor_size=512,
     patch_size=64,
@@ -17,17 +19,21 @@ brief = BRIEF(
 )
 
 orb = ORB(n_keypoints=100)
-star_detector = cv2.xfeatures2d.StarDetector_create()
+
+
+def extract_keypoints_(image):
+    keypoints = star_detector.detect(img_as_ubyte(image), None)
+    return np.array([list(p.pt) for p in keypoints])
 
 
 def extract_brief(image):
-    keypoints = star_detector.detect(img_as_ubyte(image), None)
-    keypoints = np.array([list(p.pt) for p in keypoints])
+    keypoints = extract_keypoints_(image)
     keypoints = xy_to_yx(keypoints)
 
     brief.extract(image, keypoints)
     keypoints = keypoints[brief.mask]
     descriptors = brief.descriptors
+
     return yx_to_xy(keypoints), descriptors
 
 
