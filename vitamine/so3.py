@@ -10,6 +10,7 @@ def is_rotation_matrix(R):
     return (np.isclose(np.dot(R, R.T), I).all() and
             np.isclose(np.linalg.det(R), 1.0))
 
+
 def is_almost_zero(x):
     return np.isclose(x, 0)
 
@@ -150,3 +151,8 @@ def rodrigues(omegas):
     C = np.einsum('ijk,ikl->ijl', K, K)  # [dot(L, L) for L in K]
     C = np.einsum('i,ijk->ijk', 1-np.cos(theta), C)
     return A + B + C
+
+
+def exp_so3(omega):
+    assert(omega.shape == (3,))
+    return rodrigues(np.atleast_2d(omega))[0]
