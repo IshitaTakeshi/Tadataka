@@ -8,7 +8,7 @@ from vitamine.projection import PerspectiveProjection
 from vitamine.camera import CameraParameters
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated)
-from vitamine.visual_odometry.pose import Pose
+from vitamine.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.keypoints import match
 from vitamine.rigid_transform import transform
@@ -75,10 +75,10 @@ def test_copy_triangulated():
 
 
 def test_triangulation():
-    pose0 = Pose(rotations[0], translations[0])
-    pose1 = Pose(rotations[1], translations[1])
-    pose2 = Pose(rotations[2], translations[2])
-    pose3 = Pose(rotations[3], translations[3])
+    pose0 = Pose(omegas[0], translations[0])
+    pose1 = Pose(omegas[1], translations[1])
+    pose2 = Pose(omegas[2], translations[2])
+    pose3 = Pose(omegas[3], translations[3])
 
     def case1():
         # test the case that lf1, lf2, lf3 are already observed and lf0 is added
