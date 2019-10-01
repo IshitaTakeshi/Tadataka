@@ -1,7 +1,40 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_equal
 
-from vitamine.so3 import tangent_so3, inv_rodrigues, rodrigues
+from vitamine.so3 import (is_rotation_matrix, tangent_so3,
+                          inv_rodrigues, rodrigues)
+
+
+def test_is_rotation_matrix():
+    M = np.array([[-1, 0, 0],
+                  [0, -1, 0],
+                  [0, 0, 1]])
+    assert(is_rotation_matrix(M))
+
+    M = np.array([[0, 0, 1],
+                  [0, 1, 0],
+                  [-1, 0, 0]])
+    assert(is_rotation_matrix(M))
+
+    M = np.array([[1, 0, 0],
+                  [0, 1 / np.sqrt(2), -1 / np.sqrt(2)],
+                  [0, 1 / np.sqrt(2), 1 / np.sqrt(2)]])
+    assert(is_rotation_matrix(M))
+
+    M = np.array([[-7 / 25, 0, -24 / 25],
+                  [0, -1, 0],
+                  [-24 / 25, 0, 7 / 25]])
+    assert(is_rotation_matrix(M))
+
+    M = np.array([[0, 0, 1],
+                  [0, 1, 0],
+                  [-2, 0, 0]])
+    assert(not is_rotation_matrix(M))
+
+    M = np.array([[0, 0, 1],
+                  [0, 1, 0],
+                  [-1, 1, 0]])
+    assert(not is_rotation_matrix(M))
 
 
 def test_inv_rodrigues():

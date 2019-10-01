@@ -4,6 +4,12 @@ from autograd import numpy as np
 EPSILON = 1e-16
 
 
+def is_rotation_matrix(R):
+    assert(R.shape[0] == R.shape[1])
+    I = np.identity(3)
+    return (np.isclose(np.dot(R, R.T), I).all() and
+            np.isclose(np.linalg.det(R), 1.0))
+
 def is_almost_zero(x):
     return np.isclose(x, 0)
 
@@ -41,6 +47,8 @@ def log_so3(R):
     # Computer Science 527 (2013).
     # https://www2.cs.duke.edu/courses/fall13/compsci527/notes/rodrigues.pdf
 
+    assert(is_rotation_matrix(R))
+
     c = (np.trace(R) - 1) / 2
 
     rho = np.array([
@@ -68,8 +76,6 @@ def log_so3(R):
 
 
 def inv_rodrigues(RS):
-    assert(np.all([np.isclose(np.dot(R.T, R), np.identity(3)).all() for R in RS]))
-    assert(np.isclose(np.linalg.det(RS), 1.0).all())
     assert(RS.shape[1] == RS.shape[2] == 3)
     return np.vstack([log_so3(R) for R in RS])
 
