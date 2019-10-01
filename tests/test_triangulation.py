@@ -1,7 +1,7 @@
 import itertools
 
 from autograd import numpy as np
-from numpy.testing import (assert_array_almost_equal,
+from numpy.testing import (assert_array_equal, assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
 from autograd.numpy.linalg import inv, norm
 
@@ -13,10 +13,9 @@ from vitamine.triangulation import (
     estimate_fundamental, fundamental_to_essential, extract_poses,
     linear_triangulation, points_from_known_poses, pose_point_from_keypoints)
 
-
 # TODO add the case such that x[3] = 0
 
-X_true = np.array([
+points_true = np.array([
    [4, -1, 3],
    [1, -3, -2],
    [-2, 3, -2],
@@ -29,23 +28,32 @@ X_true = np.array([
    [-4, 4, -1]
 ])
 
-rotations = np.array([
-    [[1, 0, 0],
-     [0, 0, -1],
-     [0, 1, 0]],
-    [[1 / np.sqrt(2), -1 / np.sqrt(2), 0],
-     [1 / np.sqrt(2), 1 / np.sqrt(2), 0],
-     [0, 0, 1]],
-    [[1, 0, 0],
-     [0, 1, 0],
-     [0, 0, 1]],
+from vitamine.dataset.observations import (
+    generate_translations)
+
+omegas = np.array([
+    [0, 0, 0],
+    [0, 2 * np.pi / 8, 0],
+    [0, 4 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 0],
+    [2 * np.pi / 8, 1 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 1 * np.pi / 8],
 ])
 
-translations = np.array([
-    [-8, 4, 8],
-    [-4, 8, 9],
-    [-4, 1, 7]
-])
+rotations = rodrigues(omegas)
+translations = generate_translations(rotations, points_true)
+
+# rotations = np.array([
+#     [[1, 0, 0],
+#      [0, 1, 0],
+#      [0, 0, 1]],
+# ])
+#
+# translations = np.array([
+#     [-8, 4, 8],
+#     [4, 8, 9],
+#     [4, 1, 7]
+# ])
 
 
 
@@ -60,10 +68,9 @@ def test_estimate_fundamental():
         offset=[0.8, 0.2]
     )
     projection = PerspectiveProjection(camera_parameters)
-
     R, t = rotations[0], translations[0]
-    keypoints0 = projection.compute(X_true)
-    keypoints1 = projection.compute(transform(R, t, X_true))
+    keypoints0 = projection.compute(points_true)
+    keypoints1 = projection.compute(transform(R, t, points_true))
 
     K = camera_parameters.matrix
     K_inv = np.linalg.inv(K)
@@ -71,9 +78,7 @@ def test_estimate_fundamental():
     F = estimate_fundamental(keypoints0, keypoints1)
     E = fundamental_to_essential(F, K)
 
-    N = X_true.shape[0]
-
-    for i in range(N):
+    for i in range(points_true.shape[0]):
         x0 = np.append(keypoints0[i], 1)
         x1 = np.append(keypoints1[i], 1)
         assert_almost_equal(x1.dot(F).dot(x0), 0)
@@ -107,23 +112,25 @@ def test_fundamental_to_essential():
 
 
 def test_linear_triangulation():
-    camera_parameters = CameraParameters(
-        focal_length=[1., 1.],
-        offset=[0., 0.]
+    projection = PerspectiveProjection(
+        CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
-    projection = PerspectiveProjection(camera_parameters)
 
+    t0, t1 = translations[0:2]
     R0, t0 = rotations[0], translations[0]
     R1, t1 = rotations[1], translations[1]
 
-    keypoints0 = projection.compute(transform(R0, t0, X_true))
-    keypoints1 = projection.compute(transform(R1, t1, X_true))
+    R0 = np.array([[1, 0, 0],
+                   [0, 0, -1],
+                   [0, 1, 0]])
+    R1 = np.array([[1, 0, 0],
+                   [0, 1, 0],
+                   [0, 0, 1]])
+    keypoints0 = projection.compute(transform(R0, t0, points_true))
+    keypoints1 = projection.compute(transform(R1, t1, points_true))
 
-    K = camera_parameters.matrix
-
-    N = X_true.shape[0]
-    for i in range(N):
-        x_true = X_true[i]
+    for i in range(points_true.shape[0]):
+        x_true = points_true[i]
         x, depth0, depth1 = linear_triangulation(
             R0, R1, t0, t1, keypoints0[i], keypoints1[i])
         assert_array_almost_equal(x, x_true)
@@ -158,87 +165,110 @@ def test_extract_poses():
 
 
 def test_points_from_known_poses():
-    camera_parameters = CameraParameters(
-        focal_length=[1., 1.],
-        offset=[0., 0.]
+    projection = PerspectiveProjection(
+        CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
-    K = camera_parameters.matrix
-
-    projection = PerspectiveProjection(camera_parameters)
-
-    points = np.array([
-        [-1, 3, 2],
-        [1, 1, 1],
-        [0, 4, 8]
+    X_true = np.array([
+        [-1, -6, 5],
+        [9, 1, 8],
+        [-9, -2, 6],
+        [-3, 3, 6],
+        [3, -1, 4],
+        [-3, 7, -9],
+        [7, 1, 4],
+        [6, 5, 3],
+        [0, -4, 1],
+        [9, -1, 7]
     ])
 
-    R = np.array([
+    def run(R1, R2, t1, t2):
+        P1 = transform(R1, t1, X_true)
+        P2 = transform(R2, t2, X_true)
+        depth_mask_true = np.logical_and(P1[:, 2] > 0, P2[:, 2] > 0)
+        keypoints1 = projection.compute(P1)
+        keypoints2 = projection.compute(P2)
+
+        X_pred, valid_depth_mask = points_from_known_poses(
+            R1, R2, t1, t2,
+            keypoints1, keypoints2
+        )
+
+        P1 = transform(R1, t1, X_pred)
+        P2 = transform(R2, t2, X_pred)
+        assert_array_equal(valid_depth_mask, depth_mask_true)
+        assert_array_almost_equal(projection.compute(P1), keypoints1)
+        assert_array_almost_equal(projection.compute(P2), keypoints2)
+
+
+    R1 = np.array([[-1, 0, 0],
+                   [0, 0, 1],
+                   [0, 1, 0]])
+    R2 = np.array([[1, 0, 0],
+                   [0, 0, -1],
+                   [0, 1, 0]])
+    t1 = np.array([0, 0, 3])
+    t2 = np.array([0, 1, 0])
+    run(R1, R2, t1, t2)
+
+    R1 = np.array([[-1, 0, 0],
+                   [0, -1, 0],
+                   [0, 0, 1]])
+    R2 = np.array([[0, 1, 0],
+                   [1, 0, 0],
+                   [0, 0, -1]])
+    t1 = np.array([3, 0, 2])
+    t2 = np.array([1, 1, -3])
+    run(R1, R2, t1, t2)
+
+    R1 = np.array([[1 / np.sqrt(2), -1 / np.sqrt(2), 0],
+                   [1 / np.sqrt(2), 1 / np.sqrt(2), 0],
+                   [0, 0, 1]])
+    R2 = np.array([[-7 / 25, 0, -24 / 25],
+                   [0, -1, 0],
+                   [-24 / 25, 0, 7 / 25]])
+    t1 = np.array([-3.0, 3.0, 4.0])
+    t2 = np.array([-1.0, 1.0, 1.5])
+    run(R1, R2, t1, t2)
+
+
+def test_pose_point_from_keypoints():
+    projection = PerspectiveProjection(
+        CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
+    )
+
+    X_true = np.array([
+        [-1, -6, 5],
+        [9, 1, 8],
+        [-9, -2, 6],
+        [-3, 3, 6],
+        [3, -1, 4],
+        [-3, 7, -9],
+        [7, 1, 4],
+        [6, 5, 3],
+        [0, -4, 1],
+        [9, -1, 7]
+    ])
+
+    R_true = np.array([
         [-1, 0, 0],
         [0, 0, 1],
         [0, 1, 0],
     ])
-    t = np.array([0, 1, 0])
+    t = np.array([0, 0, 5])
 
-    keypoints0 = projection.compute(points)
-    keypoints1 = projection.compute(transform(R, t, points))
-    # obviously points are in front of the both camers (depth > 0)
-    X, valid_depth_mask = points_from_known_poses(
-        np.identity(3), R, np.zeros(3), t,
-        keypoints0, keypoints1
-    )
-    assert_array_almost_equal(
-        projection.compute(X),
-        keypoints0
-    )
-    assert_array_almost_equal(
-        projection.compute(transform(R, t, points)),
-        keypoints1
-    )
-    assert_equal(valid_depth_mask, np.array([1, 1, 1], dtype=np.bool))
+    P0 = X_true
+    P1 = transform(R_true, t, X_true)
+    depth_mask_true = np.logical_and(P0[:, 2] > 0, P1[:, 2] > 0)
+    keypoints0 = projection.compute(P0)
+    keypoints1 = projection.compute(P1)
 
-    t = np.array([0, 0, -2])
+    R, t, X, depth_mask = pose_point_from_keypoints(keypoints0, keypoints1)
 
-    keypoints0 = projection.compute(points)
-    keypoints1 = projection.compute(transform(R, t, points))
-    # points[1] is behind the 2nd camera
-    X, valid_depth_mask = points_from_known_poses(
-        np.identity(3), R, np.zeros(3), t,
-        keypoints0, keypoints1
-    )
+    assert_array_equal(depth_mask, depth_mask_true)
 
-    assert_array_almost_equal(
-        projection.compute(X),
-        keypoints0
-    )
-    assert_array_almost_equal(
-        projection.compute(transform(R, t, points)),
-        keypoints1
-    )
-    assert_equal(valid_depth_mask, np.array([1, 0, 1], dtype=np.bool))
-
-
-def test_pose_point_from_keypoints():
-    camera_parameters = CameraParameters(
-        focal_length=[1., 1.],
-        offset=[0., 0.]
-    )
-    projection = PerspectiveProjection(camera_parameters)
-
-    R0, t0 = rotations[0], translations[0]
-    R1, t1 = rotations[1], translations[1]
-    keypoints0 = projection.compute(transform(R0, t0, X_true))
-    keypoints1 = projection.compute(transform(R1, t1, X_true))
-
-    R, t, X, mask = pose_point_from_keypoints(keypoints0, keypoints1)
-
-    # cannot evaluate pose (R, t) diretly
-    # because the scale cannot be known
-
-    assert_array_almost_equal(
-        projection.compute(X),
-        keypoints0
-    )
-    assert_array_almost_equal(
-        projection.compute(transform(R, t, X)),
-        keypoints1
-    )
+    # we regard that the 0th pose as an origin
+    assert_array_almost_equal(projection.compute(X),
+                              keypoints0)
+    # 1st pose is the relative pose from the 0th pose
+    assert_array_almost_equal(projection.compute(transform(R, t, X)),
+                              keypoints1)
