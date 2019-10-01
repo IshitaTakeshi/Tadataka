@@ -4,40 +4,74 @@ from autograd import numpy as np
 EPSILON = 1e-16
 
 
-def log_so3(RS):
-    # FIXME
-    # this implementation cannot calculate omega correctly
-    # in the case if R is symmetric but not identity, such as
-    #
-    #     [-1 0 0]
-    # R = [0 -1 0]
-    #     [0 0 0]
-    #
-    # The corresponding omega = [0 0 0] and theta = pi but
-    # exp(omega * theta) = identity
-    #
-    # This happens because omega is at singularity
+def is_almost_zero(x):
+    return np.isclose(x, 0)
 
+
+def flip_omega(omega):
+    # omega = [x, y, z] have to satisfy the condition below:
+    # if x == 0:
+    #     if y == 0:
+    #         z == pi
+    #     else:
+    #         y > 0
+    # else:
+    #     x > 0
+
+    x, y, z = omega
+    if is_almost_zero(x) and is_almost_zero(y) and z < 0:
+        # this handles only one case: [0, 0, -pi] -> [0, 0, pi]
+        return -omega
+    if is_almost_zero(x) and y < 0:
+        # this condition can catch many cases
+        # ex.
+        # [0, -pi, 0] -> [0, pi, 0]
+        # [0, -pi / sqrt(2), -pi / sqrt(2)] ->
+        # [0,  pi / sqrt(2),  pi / sqrt(2)]
+        return -omega
+    if x < 0:
+        # [-3 * pi / 5, 0,  4 * pi / 5] ->
+        # [ 3 * pi / 5, 0, -4 * pi / 5]
+        return -omega
+    return omega
+
+
+def log_so3(R):
+    # Tomasi, Carlo. "Vector representation of rotations."
+    # Computer Science 527 (2013).
+    # https://www2.cs.duke.edu/courses/fall13/compsci527/notes/rodrigues.pdf
+
+    c = (np.trace(R) - 1) / 2
+
+    rho = np.array([
+        R[2, 1] - R[1, 2],
+        R[0, 2] - R[2, 0],
+        R[1, 0] - R[0, 1]
+    ]) / 2
+
+    s2 = np.sum(np.power(rho, 2))
+
+    if is_almost_zero(s2) and np.isclose(c, 1):
+        # diagonal elements are [1, 1, 1]
+        return np.zeros(3)
+
+    if is_almost_zero(s2) and np.isclose(c, -1):
+        U = R + np.identity(3)
+        argmax = np.argmax(np.linalg.norm(U, axis=0))
+        v = U[:, argmax]
+        u = v / np.linalg.norm(v)
+        return flip_omega(np.pi * u)
+
+    s = np.sqrt(s2)
+    theta = np.arctan2(s, c)
+    return theta * rho / s
+
+
+def inv_rodrigues(RS):
+    assert(np.all([np.isclose(np.dot(R.T, R), np.identity(3)).all() for R in RS]))
+    assert(np.isclose(np.linalg.det(RS), 1.0).all())
     assert(RS.shape[1] == RS.shape[2] == 3)
-    N = RS.shape[0]
-
-    traces = np.trace(RS, axis1=1, axis2=2)
-    thetas = np.arccos((traces - 1) / 2)
-
-    mask = np.abs(thetas) > EPSILON
-
-    omegas = np.empty((N, 3))
-
-    omegas[np.logical_not(mask), :] = 0.
-
-    omegas[mask, 0] = RS[mask, 2, 1] - RS[mask, 1, 2]
-    omegas[mask, 1] = RS[mask, 0, 2] - RS[mask, 2, 0]
-    omegas[mask, 2] = RS[mask, 1, 0] - RS[mask, 0, 1]
-
-    sins = np.sin(thetas[mask]).reshape(-1, 1)  # align shape as omegas
-    omegas[mask] = omegas[mask] / (2 * sins)
-
-    return omegas, thetas
+    return np.vstack([log_so3(R) for R in RS])
 
 
 def tangent_so3(V):
@@ -74,7 +108,7 @@ def tangent_so3(V):
     return np.einsum('ijkl,ij->ikl', G, V)
 
 
-def rodrigues(V):
+def rodrigues(omegas):
     """
     see
     https://docs.opencv.org/2.4/modules/calib3d/doc/
@@ -91,11 +125,11 @@ def rodrigues(V):
     cos(theta) * I + (1-cos(theta)) * outer(r, r) + sin(theta) * K
     """
 
-    assert(V.shape[1] == 3)
+    assert(omegas.shape[1] == 3)
 
-    N = V.shape[0]
+    N = omegas.shape[0]
 
-    theta = np.linalg.norm(V, axis=1)
+    theta = np.linalg.norm(omegas, axis=1)
 
     A = np.zeros((N, 3, 3))
     A[:, [0, 1, 2], [0, 1, 2]] = 1  # [np.eye(3) for i in range(N)]
@@ -104,7 +138,7 @@ def rodrigues(V):
         return A
 
     # Add EPSILON to avoid division by zero
-    K = tangent_so3(V / (theta[:, np.newaxis] + EPSILON))
+    K = tangent_so3(omegas / (theta[:, np.newaxis] + EPSILON))
 
     B = np.einsum('i,ijk->ijk', np.sin(theta), K)
     C = np.einsum('ijk,ikl->ijl', K, K)  # [dot(L, L) for L in K]

@@ -1,51 +1,54 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_equal
 
-from vitamine.so3 import tangent_so3, log_so3, rodrigues
+from vitamine.so3 import tangent_so3, inv_rodrigues, rodrigues
 
 
-def test_log_so3():
-    # FIXME the current implementation of log_so3 cannot calculate
-    # the cases commented out below
+def test_inv_rodrigues():
     RS = np.array([
         [[1, 0, 0],
          [0, 1, 0],
          [0, 0, 1]],
-      # [[-1, 0, 0],
-      #  [0, -1, 0],
-      #  [0, 0, 1]],
+        [[1, 0, 0],
+         [0, -1, 0],
+         [0, 0, -1]],
+        [[-1, 0, 0],
+         [0, 1, 0],
+         [0, 0, -1]],
+        [[-1, 0, 0],
+         [0, -1, 0],
+         [0, 0, 1]],
         [[0, 0, 1],
          [0, 1, 0],
          [-1, 0, 0]],
         [[1, 0, 0],
          [0, 1 / np.sqrt(2), -1 / np.sqrt(2)],
-         [0, 1 / np.sqrt(2), 1 / np.sqrt(2)]]
+         [0, 1 / np.sqrt(2), 1 / np.sqrt(2)]],
+        [[1 / 2, 1 / np.sqrt(2), 1 / 2],
+         [-1 / np.sqrt(2), 0, 1 / np.sqrt(2)],
+         [1 / 2, -1 / np.sqrt(2), 1 / 2]],
+        [[-1, 0, 0],
+         [0, 0, -1],
+         [0, -1, 0]],
+        [[-7 / 25, 0, -24 / 25],
+         [0, -1, 0],
+         [-24 / 25, 0, 7 / 25]]
     ])
     omegas = np.array([
         [0, 0, 0],
-      # [0, 0, np.pi],
+        [np.pi, 0, 0],
+        [0, np.pi, 0],
+        [0, 0, np.pi],
         [0, np.pi / 2, 0],
-        [np.pi / 4, 0, 0]]
-    )
-
-    omegas_expected = np.array([
-        [0, 0, 0],
-      # [0, 0, 1],
-        [0, 1, 0],
-        [1, 0, 0]
+        [np.pi / 4, 0, 0],
+        [-np.pi / np.sqrt(8), 0, -np.pi / np.sqrt(8)],
+        [0, np.pi / np.sqrt(2), -np.pi / np.sqrt(2)],
+        [3 * np.pi / 5, 0, -4 * np.pi / 5],
     ])
-    thetas_expected = np.array([
-        0,
-      # np.pi,
-        np.pi / 2,
-        np.pi / 4
-    ])
-
-    omegas_pred, thetas_pred = log_so3(RS)
-    assert_equal(omegas_pred.shape[0], thetas_pred.shape[0])
-    assert_equal(omegas_pred.shape, omegas.shape)
-    assert_array_almost_equal(thetas_expected, thetas_pred)
-    assert_array_almost_equal(omegas_expected, omegas_pred)
+    assert_array_almost_equal(rodrigues(omegas), RS)
+    print(omegas)
+    print(inv_rodrigues(RS))
+    assert_array_almost_equal(omegas, inv_rodrigues(RS))
 
 
 def test_tangents_so3():
