@@ -6,7 +6,7 @@ from vitamine.exceptions import (
     InvalidDepthsException, NotEnoughInliersException, print_error)
 from vitamine.keypoints import extract_keypoints, match
 from vitamine.camera_distortion import CameraModel
-from vitamine.visual_odometry.pose import Pose
+from vitamine.pose import Pose
 from vitamine import pose_estimation as PE
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import (
@@ -61,8 +61,7 @@ def estimate_pose(matcher, points, active_features, lf0):
     except NotEnoughInliersException:
         return None
 
-    R = rodrigues(np.atleast_2d(omega))[0]
-    return Pose(R, t)
+    return Pose(omega, t)
 
 
 def get_array_len_geq(min_length):

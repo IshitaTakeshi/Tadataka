@@ -17,7 +17,7 @@ from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import (
     VisualOdometry, find_best_match, estimate_pose,
     get_correspondences)
-from vitamine.visual_odometry.pose import Pose
+from vitamine.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import LocalFeatures
 from vitamine.rigid_transform import transform_all

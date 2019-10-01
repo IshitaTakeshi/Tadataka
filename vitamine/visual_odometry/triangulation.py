@@ -2,7 +2,7 @@ from autograd import numpy as np
 
 from vitamine.exceptions import InvalidDepthsException, print_error
 from vitamine import triangulation as TR
-from vitamine.visual_odometry.pose import Pose
+from vitamine.pose import Pose
 
 
 def depth_mask_condition(mask, min_positive_dpth_ratio=0.8):
