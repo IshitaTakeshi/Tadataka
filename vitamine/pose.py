@@ -1,16 +1,24 @@
 from autograd import numpy as np
 
-from vitamine.so3 import rodrigues
+from vitamine.so3 import exp_so3, log_so3
 
 
 class Pose(object):
-    def __init__(self, R, t):
-        self.R, self.t = R, t
+    def __init__(self, R_or_omega, t):
+        if np.ndim(R_or_omega) == 1:
+            self.omega = R_or_omega
+        elif np.ndim(R_or_omega) == 2:
+            self.omega = log_so3(R_or_omega)
+
+        self.t = t
+
+    def R(self):
+        return exp_so3(self.omega)
 
     @staticmethod
     def identity():
-        return Pose(np.identity(3), np.zeros(3))
+        return Pose(np.zeros(3), np.zeros(3))
 
     def __eq__(self, other):
-        return (np.isclose(self.R, other.R).all() and
+        return (np.isclose(self.omega, other.omega).all() and
                 np.isclose(self.t, other.t).all())

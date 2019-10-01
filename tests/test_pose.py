@@ -1,10 +1,23 @@
 from autograd import numpy as np
-from vitamine.visual_odometry.pose import Pose
+
+from vitamine.pose import Pose
+from tests.utils import random_rotation_matrix
 
 
 def test_eq():
-    R0 = np.identity(3)
-    R1 = np.arange(9).reshape(3, 3)
+    omega0 = np.zeros(3)
+    omega1 = np.arange(3)
+    t0 = np.zeros(3)
+    t1 = np.arange(3)
+
+    assert(Pose(omega0, t0) == Pose(omega0, t0))
+    assert(Pose(omega1, t1) == Pose(omega1, t1))
+    assert(Pose(omega0, t0) != Pose(omega0, t1))
+    assert(Pose(omega0, t0) != Pose(omega1, t0))
+    assert(Pose(omega0, t0) != Pose(omega1, t1))
+
+    R0 = random_rotation_matrix(3)
+    R1 = random_rotation_matrix(3)
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
