@@ -6,6 +6,16 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from vitamine.rigid_transform import transform_all
 
 
+def plot_cameras(ax, camera_rotations, camera_locations):
+    ax.add_collection3d(
+        cameras_poly3d(
+            np.array(camera_rotations),
+            np.array(camera_locations)
+        )
+    )
+    return ax
+
+
 def cameras_poly3d(camera_rotations, camera_locations, scale=1.0):
     # this code is the modified version of
     # [an answer](https://stackoverflow.com/a/44920709)
