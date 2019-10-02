@@ -49,23 +49,6 @@ keypoints_true, positive_depth_mask = generate_observations(
 descriptors = random_binary((len(points_true), 1024))
 
 
-def test_find_best_match():
-    descriptors_ = [
-        descriptors[0:3],  # 3 points can match
-        break_other_than(descriptors, [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]),
-        descriptors[4:8],  # 4 points can match
-        break_other_than(descriptors, [0, 1, 2, 3, 4])
-    ]
-
-    expected = np.vstack((
-        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13],
-        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
-    )).T
-    matches01, argmax = find_best_match(match, descriptors_, descriptors)
-    assert_array_equal(matches01, expected)
-    assert(argmax == 1)
-
-
 def test_init_first():
     lf0 = LocalFeatures(keypoints_true[0], descriptors)
     vo = VisualOdometry(camera_parameters, FOV(0.0))

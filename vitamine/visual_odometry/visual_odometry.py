@@ -18,12 +18,6 @@ from vitamine.visual_odometry.keyframe_index import KeyframeIndices
 from vitamine.so3 import rodrigues
 
 
-def find_best_match(matcher, active_descriptors, descriptors1):
-    matchesx1 = [matcher(d0, descriptors1) for d0 in active_descriptors]
-    argmax = np.argmax([len(m) for m in matchesx1])
-    return matchesx1[argmax], argmax
-
-
 def get_correspondences(matcher, active_features, lf0):
     keypoints0, descriptors0 = lf0.get()
 
