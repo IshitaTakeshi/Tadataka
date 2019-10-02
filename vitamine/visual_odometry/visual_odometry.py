@@ -55,9 +55,7 @@ def estimate_pose(matcher, points, active_features, lf0):
     points_ = points.get(point_indices)
 
     try:
-        omega, t = PE.solve_pnp(points_, keypoints,
-                                inital_pose.omega,
-                                inital_pose.translation)
+        omega, t = PE.solve_pnp(points_, keypoints)
     except NotEnoughInliersException:
         return None
 
