@@ -4,14 +4,13 @@ from autograd import numpy as np
 
 from vitamine.exceptions import (
     InvalidDepthsException, NotEnoughInliersException, print_error)
-from vitamine.keypoints import extract_keypoints, match
+from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.camera_distortion import CameraModel
 from vitamine.pose import Pose
 from vitamine import pose_estimation as PE
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import (
-    LocalFeatures, associate_points, copy_point_indices,
-    init_point_indices, is_triangulated)
+    LocalFeatures, associate_points)
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices
@@ -63,9 +62,10 @@ def get_array_len_geq(min_length):
 
 
 class VisualOdometry(object):
-    def __init__(self, camera_parameters, distortion_model, matcher=match,
+    def __init__(self, camera_parameters, distortion_model,
+                 matcher=Matcher(enable_ransac=True),
                  min_keypoints=8, min_active_keyframes=8, min_matches=8):
-        self.matcher = match
+        self.matcher = matcher
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
         self.keypoints_condition = get_array_len_geq(min_keypoints)
