@@ -188,26 +188,28 @@ def test_get_correspondences():
         assert_array_equal(keypoints, expected)
 
     def case2():
-        descriptors0 = break_other_than(descriptors[2:14],
-                                        [0, 1, 2, 3, 4, 5, 7, 10, 11])
+        descriptors0 = break_other_than(descriptors,
+                                        [2, 3, 4, 5, 6, 7, 9, 12, 13])
         #                 4  5  0  1   2   3
-        # matches01.T = [[0, 1, 2, 7, 10, 11],
+        # matches01.T = [[2, 3, 4, 9, 12, 13],
         #                [2, 3, 4, 9, 12, 13]]
         #                 0  6  7  8  1   2   3
-        # matches02.T = [[2, 3, 4, 5, 7, 10, 11],
+        # matches02.T = [[4, 5, 6, 7, 9, 12, 13],
         #                [4, 5, 6, 7, 9, 12, 13]]
-        keypoints0 = keypoints_true[0, 2:14]
+        keypoints0 = keypoints_true[0]
         lf0 = LocalFeatures(keypoints0, descriptors0)
 
-        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
+        point_indices, keypoints = get_correspondences(
+            matcher, [lf1, lf2], lf0
+        )
 
         assert_array_equal(point_indices,
                            [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
         expected = np.vstack([
-            keypoints0[0], keypoints0[1], keypoints0[2],
-            keypoints0[7], keypoints0[10], keypoints0[11],
             keypoints0[2], keypoints0[3], keypoints0[4],
-            keypoints0[5], keypoints0[7], keypoints0[10], keypoints0[11]
+            keypoints0[9], keypoints0[12], keypoints0[13],
+            keypoints0[4], keypoints0[5], keypoints0[6],
+            keypoints0[7], keypoints0[9], keypoints0[12], keypoints0[13]
         ])
         assert_array_equal(keypoints, expected)
 
