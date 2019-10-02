@@ -70,11 +70,13 @@ def test_try_init_second():
         assert(vo.try_add_keyframe(lf0))
         assert(vo.try_add_keyframe(lf1))
 
-        (R0, t0), (R1, t1) = vo.export_poses()
+        pose0, pose1 = vo.poses
         points_pred = vo.export_points()
 
-        keypoints_pred0 = projection.compute(transform(R0, t0, points_pred))
-        keypoints_pred1 = projection.compute(transform(R1, t1, points_pred))
+        P0 = transform(pose0.R, pose0.t, points_pred)
+        P1 = transform(pose1.R, pose1.t, points_pred)
+        keypoints_pred0 = projection.compute(P0)
+        keypoints_pred1 = projection.compute(P1)
 
         assert_array_almost_equal(keypoints_true0, keypoints_pred0)
         assert_array_almost_equal(keypoints_true1, keypoints_pred1)
@@ -128,9 +130,11 @@ def test_try_init_second():
                            [-1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7])
 
         points_pred = vo.export_points()
-        (R0, t0), (R2, t2) = vo.export_poses()
-        keypoints_pred0 = projection.compute(transform(R0, t0, points_pred))
-        keypoints_pred2 = projection.compute(transform(R2, t2, points_pred))
+        pose0, pose2 = vo.poses
+        P0 = transform(pose0.R, pose0.t, points_pred)
+        P2 = transform(pose2.R, pose2.t, points_pred)
+        keypoints_pred0 = projection.compute(P0)
+        keypoints_pred2 = projection.compute(P2)
 
         assert_array_almost_equal(keypoints_true[0, 6:14], keypoints_pred0)
         assert_array_almost_equal(keypoints_true[2, 6:14], keypoints_pred2)
