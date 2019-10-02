@@ -49,3 +49,21 @@ def match(descriptors0, descriptors1):
     return match_descriptors(descriptors0, descriptors1,
                              metric="hamming", cross_check=True,
                              max_ratio=0.8)
+
+
+def ransac_affine(keypoints1, keypoints2):
+    # estimate inliers using ransac on AffineTransform
+    tform, inliers_mask = ransac((keypoints1, keypoints2),
+                                 tf.AffineTransform,
+                                 random_state=3939, min_samples=8,
+                                 residual_threshold=1, max_trials=100)
+    return tform.params, inliers_mask
+
+
+def ransac_fundamental(keypoints1, keypoints2):
+    # estimate inliers using ransac on FundamentalMatrixTransform
+    tform, inliers_mask = ransac((keypoints1, keypoints2),
+                                 tf.FundamentalMatrixTransform,
+                                 random_state=3939, min_samples=8,
+                                 residual_threshold=1, max_trials=100)
+    return tform.params, inliers_mask
