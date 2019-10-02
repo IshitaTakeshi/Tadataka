@@ -56,8 +56,3 @@ class LocalFeatures(object):
 def associate_points(lf0, lf1, matches01, point_indices):
     lf0.associate_points(matches01[:, 0], point_indices)
     lf1.associate_points(matches01[:, 1], point_indices)
-
-
-def copy_point_indices(local_features_src, local_features_dst, matches01):
-    point_indices = local_features_src.point_indices[matches01[:, 0]]
-    local_features_dst.associate_points(matches01[:, 1], point_indices)

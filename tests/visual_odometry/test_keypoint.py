@@ -49,17 +49,3 @@ def test_associate_points():
 
     assert_array_equal(lf0.point_indices, [-1, 3, 0, -1, 1, -1, 4, 5, 2])
     assert_array_equal(lf1.point_indices, [-1, 0, 1, -1, 2, 3, 4, -1, 5])
-
-
-def test_copy_point_indices():
-    lf0 = LocalFeatures(keypoints, descriptors)
-    lf1 = LocalFeatures(keypoints, descriptors)
-
-    matches01 = np.vstack(([1, 2, 6, 8],
-                           [4, 3, 8, 1])).T
-
-    lf0.associate_points([1, 2, 4, 5, 6, 8], np.arange(6))
-                                         #  0  1  2   3  4  5  6   7  8
-    assert_array_equal(lf0.point_indices, [-1, 0, 1, -1, 2, 3, 4, -1, 5])
-    copy_point_indices(lf0, lf1, matches01)
-    assert_array_equal(lf1.point_indices, [-1, 5, -1, 1, 0, -1, -1, -1, 4])
