@@ -19,20 +19,22 @@ from vitamine.so3 import rodrigues
 
 
 def get_correspondences(matcher, active_features, lf0):
-    keypoints0, descriptors0 = lf0.get()
+    # accumulate indices of all triangulated points
+    # that can be matched with lf0's descriptors
+    kd0 = lf0.get()
 
     point_indices = []
     keypoints0_matched = []
     for lf1 in active_features:
-        descriptors1 = lf1.triangulated().descriptors
-        matches01 = matcher(descriptors0, descriptors1)
+        matches01 = matcher(kd0, lf1.triangulated())
+
         if len(matches01) == 0:
             continue
 
         p = lf1.triangulated_point_indices(matches01[:, 1])
 
         point_indices.append(p)
-        keypoints0_matched.append(keypoints0[matches01[:, 0]])
+        keypoints0_matched.append(kd0.keypoints[matches01[:, 0]])
 
     if len(point_indices) == 0:
         raise NotEnoughInliersException("No matches found")
@@ -80,8 +82,7 @@ class VisualOdometry(object):
         return [(pose.R, pose.t) for pose in self.poses]
 
     def add(self, image):
-        keypoints, descriptors = extract_keypoints(image)
-        return self.try_add(keypoints, descriptors)
+        return self.try_add(extract_keypoints(image))
 
     def init_first(self, local_features):
         self.local_features.append(local_features)
@@ -90,17 +91,16 @@ class VisualOdometry(object):
     def try_init_second(self, lf1):
         lf0 = self.local_features[0]
 
-        keypoints0, descriptors0 = lf0.get()
-        keypoints1, descriptors1 = lf1.get()
+        kd0, kd1 = lf0.get(), lf1.get()
+        matches01 = self.matcher(kd0, kd1)
 
-        matches01 = self.matcher(descriptors0, descriptors1)
         if not self.inlier_condition(matches01):
             print_error("Not enough matches found")
             return False
 
         try:
             pose1, points, matches01 = pose_point_from_keypoints(
-                keypoints0, keypoints1, matches01
+                kd0.keypoints, kd1.keypoints, matches01
             )
         except InvalidDepthsException as e:
             print_error(str(e))
@@ -148,11 +148,14 @@ class VisualOdometry(object):
     def n_active_keyframes(self):
         return len(self.active_indices)
 
-    def try_add(self, keypoints, descriptors):
+    def try_add(self, kd):
+        keypoints, descriptors = kd
+
         if not self.keypoints_condition(keypoints):
             return False
 
         keypoints = self.camera_model.undistort(keypoints)
+
         return self.try_add_keyframe(LocalFeatures(keypoints, descriptors))
 
     def try_add_keyframe(self, local_features):
