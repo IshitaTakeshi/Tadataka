@@ -81,6 +81,7 @@ def test_triangulation():
     pose1 = Pose(omegas[1], translations[1])
     pose2 = Pose(omegas[2], translations[2])
     pose3 = Pose(omegas[3], translations[3])
+    pose4 = Pose(omegas[4], translations[4])
 
     def case1():
         # test the case that lf1, lf2, lf3 are already observed and lf0 is added
@@ -105,10 +106,19 @@ def test_triangulation():
         descriptors3 = break_other_than(descriptors,
                                         [0, 1, 2, 5, 7, 9, 10, 13])
 
+        # point_indices   0  1  2  3  4   9   6   existing
+        # matches04.T = [[0, 1, 4, 7, 9, 10, 13],
+        #                [0, 1, 4, 7, 9, 10, 13]]
+
+        descriptors4 = break_other_than(descriptors,
+                                        [0, 1, 4, 7, 9, 10, 13])
+
         lf0 = LocalFeatures(keypoints_true[0], descriptors0)
         lf1 = LocalFeatures(keypoints_true[1], descriptors1)
         lf2 = LocalFeatures(keypoints_true[2], descriptors2)
         lf3 = LocalFeatures(keypoints_true[3], descriptors3)
+        lf4 = LocalFeatures(keypoints_true[4], descriptors4)
+
         points = Points()
         triangulation(matcher, points,
                       [pose1, pose2, pose3, pose4],
@@ -122,6 +132,9 @@ def test_triangulation():
                            [0, 1, -1, -1, 2, 7, -1, 3, -1, 4, -1, 8, 5, 6])
         assert_array_equal(lf3.point_indices,
                            [0, 1, -1, -1, -1, 7, -1, 3, -1, 4, 9, -1, -1, 6])
+        assert_array_equal(lf4.point_indices,
+                           [0, 1, -1, -1, 2, -1, -1, 3, -1, 4, 9, -1, -1, 6])
+
 
         point_indices0 = lf0.point_indices[lf0.is_triangulated]
         point_indices1 = lf1.point_indices[lf1.is_triangulated]
