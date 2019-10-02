@@ -76,3 +76,37 @@ def ransac_fundamental(keypoints1, keypoints2):
                                  random_state=3939, min_samples=8,
                                  residual_threshold=1, max_trials=100)
     return tform.params, inliers_mask
+
+
+class Matcher(object):
+    def __init__(self, enable_ransac=True):
+        self.enable_ransac = enable_ransac
+
+    def __call__(self, kd1, kd2):
+        def empty_match():
+            return np.empty((0, 2), dtype=np.int64)
+
+        # kd1, kd2 are instances of KeypointDescriptor
+        keypoints1, descriptors1 = kd1
+        keypoints2, descriptors2 = kd2
+
+        if len(keypoints1) == 0 or len(keypoints2) == 0:
+            return empty_match()
+
+        matches12 = match(descriptors1, descriptors2)
+
+        if len(matches12) == 0:
+            return empty_match()
+
+        if not self.enable_ransac:
+            return matches12
+
+        keypoints1 = keypoints1[matches12[:, 0]]
+        keypoints2 = keypoints2[matches12[:, 1]]
+
+        if len(matches12) < 8:
+            _, inliers_mask = ransac_affine(keypoints1, keypoints2)
+            return matches12[inliers_mask]
+
+        _, inliers_mask = ransac_fundamental(keypoints1, keypoints2)
+        return matches12[inliers_mask]
