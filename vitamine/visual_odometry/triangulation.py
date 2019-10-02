@@ -45,17 +45,18 @@ def triangulation(matcher, points,
     assert(np.all(~lf0.is_triangulated))
 
     # we focus on only untriangulated points
-    keypoints0, descriptors0 = lf0.get()
+    kd0 = lf0.get()
 
-    matches0x = []
+    P = []
     # triangulate untriangulated points
-    for lf1, pose1 in zip(local_features_list, pose_list):
-        keypoints1, descriptors1 = lf1.untriangulated()
-        if len(descriptors1) == 0:
+    for i, (lf1, pose1) in enumerate(zip(local_features_list, pose_list)):
+        kd1 = lf1.untriangulated()
+        if len(kd1.keypoints) == 0:
             continue
 
-        matches01 = matcher(descriptors0, descriptors1)
-        matches0x.append(matches01)
+        matches01 = matcher(kd0, kd1)
+
+        P.append((lf1, matches01))
 
         # keep elements that are not triangulated yet
         mask = ~lf0.is_triangulated[matches01[:, 0]]
@@ -67,29 +68,29 @@ def triangulation(matcher, points,
 
         try:
             points_, matches01 = points_from_known_poses(
-                keypoints0, keypoints1,
+                kd0.keypoints, kd1.keypoints,
                 pose0, pose1, matches01
             )
         except InvalidDepthsException as e:
             print_error(str(e))
-            continue
+            raise InvalidDepthsException(
+                f"Failed to triangulate with {i}th pose"
+            )
 
         point_indices_ = points.add(points_)
         lf0.point_indices[matches01[:, 0]] = point_indices_
 
-    for lf1, matches01 in zip(local_features_list, matches0x):
+    # copy point indices back to each lf1
+    for lf1, matches01 in P:
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        # copy point indices back to each lf1
         lf1.associate_points(indices1, lf0.point_indices[indices0])
 
 
 def copy_triangulated(matcher, local_features_list, lf1):
     for lf0 in local_features_list:
         # copy point indices from lf0 to lf1
-        descriptors0 = lf0.triangulated().descriptors
-        descriptors1 = lf1.untriangulated().descriptors
-        if len(descriptors0) == 0 or len(descriptors1) == 0:
+        matches01 = matcher(lf0.triangulated(), lf1.untriangulated())
+        if len(matches01) == 0:
             continue
-        matches01 = matcher(descriptors0, descriptors1)
         point_indices = lf0.triangulated_point_indices(matches01[:, 0])
         lf1.associate_points(matches01[:, 1], point_indices)

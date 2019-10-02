@@ -353,22 +353,22 @@ def test_try_add_more():
 def test_try_remove():
     vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
 
-    assert(vo.try_add(keypoints_true[0], descriptors))
+    assert(vo.try_add(KD(keypoints_true[0], descriptors)))
     assert(vo.n_active_keyframes == 1)
 
-    assert(vo.try_add(keypoints_true[1], descriptors))
+    assert(vo.try_add(KD(keypoints_true[1], descriptors)))
     assert(vo.n_active_keyframes == 2)
 
-    assert(vo.try_add(keypoints_true[2], descriptors))
+    assert(vo.try_add(KD(keypoints_true[2], descriptors)))
     assert(vo.n_active_keyframes == 3)
 
-    assert(vo.try_add(keypoints_true[3], descriptors))
+    assert(vo.try_add(KD(keypoints_true[3], descriptors)))
     assert(vo.n_active_keyframes == 4)
 
     assert(not vo.try_remove())
     assert(vo.n_active_keyframes == 4)
 
-    assert(vo.try_add(keypoints_true[4], descriptors))
+    assert(vo.try_add(KD(keypoints_true[4], descriptors)))
     assert(vo.n_active_keyframes == 5)
 
     assert(vo.try_remove())
