@@ -39,14 +39,16 @@ def extract_brief(image):
 
     brief.extract(image, keypoints)
     keypoints = keypoints[brief.mask]
-    descriptors = brief.descriptors
+    keypoints = yx_to_xy(keypoints)
 
-    return yx_to_xy(keypoints), descriptors
+    return KeypointDescriptor(keypoints, brief.descriptors)
 
 
 def extract_orb(image):
     orb.detect_and_extract(image)
-    return yx_to_xy(orb.keypoints), orb.descriptors
+    keypoints = yx_to_xy(orb.keypoints)
+    descriptors = orb.descriptors
+    return KeypointDescriptor(keypoints, descriptors)
 
 
 extract_keypoints = extract_brief
