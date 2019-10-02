@@ -128,7 +128,7 @@ class VisualOdometry(object):
 
         pose1 = estimate_pose(self.matcher, self.points, active_features, lf1)
         if pose1 is None:  # pose could not be estimated
-            return None
+            return False
 
         # if not self.pose_condition(active_poses[-1], pose1):
         #     # if pose1 is too close from the latest active pose
