@@ -53,7 +53,7 @@ descriptors = random_binary((len(points_true), 1024))
 
 def test_init_first():
     lf0 = LocalFeatures(keypoints_true[0], descriptors)
-    vo = VisualOdometry(camera_parameters, FOV(0.0))
+    vo = VisualOdometry(camera_parameters, FOV(0.0), matcher=matcher)
     vo.init_first(lf0)
     assert(vo.local_features[0] is lf0)
     assert(vo.poses[0] == Pose.identity())
@@ -68,7 +68,7 @@ def test_try_init_second():
         lf0 = LocalFeatures(keypoints_true0, descriptors)
         lf1 = LocalFeatures(keypoints_true1, descriptors)
 
-        vo = VisualOdometry(camera_parameters, FOV(0.0))
+        vo = VisualOdometry(camera_parameters, FOV(0.0), matcher=matcher)
         assert(vo.try_add_keyframe(lf0))
         assert(vo.try_add_keyframe(lf1))
 
@@ -114,7 +114,8 @@ def test_try_init_second():
         lf1 = LocalFeatures(keypoints_true[1], descriptors1)
         lf2 = LocalFeatures(keypoints_true[2], descriptors2)
 
-        vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
+        vo = VisualOdometry(camera_parameters, FOV(0.0),
+                            matcher=matcher, min_matches=8)
         assert(vo.try_add_keyframe(lf0))
         # number of matches = 7
         # not enough matches found between descriptors0 and descriptors1
@@ -291,7 +292,8 @@ def assert_projection_equal(points, lf, pose, keypoints):
 
 def test_try_add_more():
     # TODO test with keypoints of different lengths
-    vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
+    vo = VisualOdometry(camera_parameters, FOV(0.0),
+                        matcher=matcher, min_matches=8)
 
     descriptors0 = break_other_than(descriptors,
                                     [0, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13])
@@ -358,7 +360,8 @@ def test_try_add_more():
 
 
 def test_try_remove():
-    vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
+    vo = VisualOdometry(camera_parameters, FOV(0.0),
+                        matcher=matcher, min_active_keyframes=4)
 
     assert(vo.try_add(KD(keypoints_true[0], descriptors)))
     assert(vo.n_active_keyframes == 1)
