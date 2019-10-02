@@ -134,8 +134,12 @@ class VisualOdometry(object):
         #     # if pose1 is too close from the latest active pose
         #     return None
 
-        triangulation(self.matcher, self.points,
-                      self.active_poses, active_features, pose1, lf1)
+        try:
+            triangulation(self.matcher, self.points,
+                          self.active_poses, active_features, pose1, lf1)
+        except InvalidDepthsException as e:
+            print_error(str(e))
+            return False
 
         # copy triangulated point indices back to lf1
         copy_triangulated(self.matcher, active_features, lf1)
