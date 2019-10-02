@@ -16,6 +16,10 @@ class Pose(object):
     def R(self):
         return exp_so3(self.omega)
 
+    def __str__(self):
+        with np.printoptions(precision=3, suppress=True):
+            return "omega = " + str(self.omega)  + "   t = " + str(self.t)
+
     @staticmethod
     def identity():
         return Pose(np.zeros(3), np.zeros(3))
