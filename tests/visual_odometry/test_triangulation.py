@@ -1,19 +1,19 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from vitamine.so3 import rodrigues
+from vitamine.camera import CameraParameters
 from vitamine.dataset.observations import (
     generate_observations, generate_translations)
+from vitamine.keypoints import Matcher
 from vitamine.projection import PerspectiveProjection
-from vitamine.camera import CameraParameters
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated)
 from vitamine.pose import Pose
-from vitamine.visual_odometry.point import Points
-from vitamine.keypoints import match
 from vitamine.rigid_transform import transform
-from vitamine.visual_odometry.keypoint import LocalFeatures
+from vitamine.so3 import rodrigues
 from vitamine.utils import random_binary, break_other_than
+from vitamine.visual_odometry.point import Points
+from vitamine.visual_odometry.keypoint import LocalFeatures
 from tests.data import dummy_points as points_true
 
 

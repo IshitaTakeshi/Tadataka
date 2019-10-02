@@ -12,11 +12,11 @@ from vitamine.rigid_transform import transform
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
-from vitamine.keypoints import match
+from vitamine.keypoints import KeypointDescriptor as KD
+from vitamine.keypoints import Matcher
 from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import (
-    VisualOdometry, find_best_match, estimate_pose,
-    get_correspondences)
+    VisualOdometry, estimate_pose, get_correspondences)
 from vitamine.pose import Pose
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.keypoint import LocalFeatures

@@ -1,8 +1,7 @@
 from numpy.testing import assert_array_equal
 from autograd import numpy as np
 
-from vitamine.visual_odometry.keypoint import (
-    LocalFeatures, associate_points, copy_point_indices)
+from vitamine.visual_odometry.keypoint import LocalFeatures, associate_points
 from tests.utils import random_binary
 
 
