@@ -25,6 +25,8 @@ from vitamine.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 
 
+matcher = Matcher(enable_ransac=False)
+
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
 
@@ -171,7 +173,9 @@ def test_get_correspondences():
         keypoints0 = keypoints_true[0]
         lf0 = LocalFeatures(keypoints0, descriptors0)
 
-        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
+        point_indices, keypoints = get_correspondences(
+            matcher, [lf1, lf2], lf0
+        )
 
         assert_array_equal(point_indices,
                            [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
@@ -225,7 +229,7 @@ def test_get_correspondences():
         )
 
         with pytest.raises(NotEnoughInliersException):
-            get_correspondences(match, [lf1, lf2], lf0)
+            get_correspondences(matcher, [lf1, lf2], lf0)
 
     case1()
     case2()
@@ -259,7 +263,8 @@ def test_estimate_pose():
         [-1, -1, -1, -1, 4, 5, 6, 7, -1, 9, -1, -1, 12, 13]
     )
 
-    point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
+    point_indices, keypoints = get_correspondences(matcher, [lf1, lf2], lf0)
+
     point_indices = [2, 3, 4, 9, 12, 13, 4, 5, 6, 7, 9, 12, 13]
     points_ = points.get(point_indices)
     keypoints0 = keypoints_true[0]
@@ -270,7 +275,7 @@ def test_estimate_pose():
         keypoints0[7], keypoints0[9], keypoints0[12], keypoints0[13]
     ])
 
-    pose = estimate_pose(match, points, [lf1, lf2], lf0)
+    pose = estimate_pose(matcher, points, [lf1, lf2], lf0)
     assert_array_almost_equal(pose.R, rotations[0])
     assert_array_almost_equal(pose.t, translations[0])
     assert(pose == Pose(rotations[0], translations[0]))

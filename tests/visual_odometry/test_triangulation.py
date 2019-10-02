@@ -17,6 +17,8 @@ from vitamine.visual_odometry.keypoint import LocalFeatures
 from tests.data import dummy_points as points_true
 
 
+matcher = Matcher(enable_ransac=False)
+
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
 
@@ -69,7 +71,7 @@ def test_copy_triangulated():
         [-1, -1, -1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, -1]
     )
 
-    copy_triangulated(match, [lf1, lf2], lf0)
+    copy_triangulated(matcher, [lf1, lf2], lf0)
     assert_array_equal(lf0.point_indices,
                        [0, -1, 1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, 8])
 
@@ -108,8 +110,10 @@ def test_triangulation():
         lf2 = LocalFeatures(keypoints_true[2], descriptors2)
         lf3 = LocalFeatures(keypoints_true[3], descriptors3)
         points = Points()
-        triangulation(match, points,
-                      [pose1, pose2, pose3], [lf1, lf2, lf3], pose0, lf0)
+        triangulation(matcher, points,
+                      [pose1, pose2, pose3, pose4],
+                      [lf1, lf2, lf3, lf4],
+                      pose0, lf0)
         assert_array_equal(lf0.point_indices,
                            [0, 1, -1, -1, 2, 7, -1, 3, -1, 4, 9, 8, 5, 6])
         assert_array_equal(lf1.point_indices,
@@ -167,7 +171,7 @@ def test_triangulation():
         lf2 = LocalFeatures(keypoints2, descriptors2)
         lf3 = LocalFeatures(keypoints3, descriptors3)
         points = Points()
-        triangulation(match, points,
+        triangulation(matcher, points,
                       [pose1, pose2, pose3], [lf1, lf2, lf3], pose0, lf0)
         assert_array_equal(lf0.point_indices,
                            [0, 1, -1, -1, 2, 5, -1, 3, -1, 4])
