@@ -1,11 +1,7 @@
-from collections import namedtuple
-
 from autograd import numpy as np
 
-
-# just to enable accessing by name
-# ex. localfeatures.triangulated.descriptors
-KD = namedtuple("KeypointDescriptor", ["keypoints", "descriptors"])
+from vitamine.keypoints import match, ransac_affine, ransac_fundamental
+from vitamine.keypoints import KeypointDescriptor as KD
 
 
 def init_point_indices(size):
