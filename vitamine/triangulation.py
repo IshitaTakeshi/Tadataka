@@ -1,7 +1,7 @@
 import itertools
 
 from autograd import numpy as np
-from skimage.transform import FundamentalMatrixTransform
+from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
 
 from vitamine.matrix import solve_linear, motion_matrix
 from vitamine.so3 import rodrigues
@@ -36,8 +36,6 @@ def calc_depth(P, x):
 def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
     P0 = motion_matrix(R0, t0)
     P1 = motion_matrix(R1, t1)
-
-    # print(X[0:3, 0].shape)
 
     x0, y0 = keypoints0
     x1, y1 = keypoints1
@@ -109,6 +107,12 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1):
             R0, R1, t0, t1, keypoints0[i], keypoints1[i])
         valid_depth_mask[i] = depth0 > 0 and depth1 > 0
     return points, valid_depth_mask
+
+
+def estimate_homography(keypoints1, keypoints2):
+    tform = ProjectiveTransform()
+    tform.estimate(keypoints1, keypoints2)
+    return tform.params
 
 
 def estimate_fundamental(keypoints1, keypoints2):
