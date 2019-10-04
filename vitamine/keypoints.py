@@ -10,6 +10,7 @@ from skimage import transform as tf
 from skimage.measure import ransac
 
 from vitamine.coordinates import yx_to_xy, xy_to_yx
+from vitamine.cost import transfer_outlier_detector
 
 
 KeypointDescriptor = namedtuple("KeypointDescriptor",
@@ -64,7 +65,7 @@ def ransac_affine(keypoints1, keypoints2):
     # estimate inliers using ransac on AffineTransform
     tform, inliers_mask = ransac((keypoints1, keypoints2),
                                  tf.AffineTransform,
-                                 random_state=3939, min_samples=8,
+                                 random_state=3939,
                                  residual_threshold=1, max_trials=100)
     return tform.params, inliers_mask
 
@@ -79,8 +80,18 @@ def ransac_fundamental(keypoints1, keypoints2):
 
 
 class Matcher(object):
-    def __init__(self, enable_ransac=True):
+    def __init__(self, enable_ransac=True, enable_transfer_detection=True):
         self.enable_ransac = enable_ransac
+        self.enable_transfer_detection = enable_transfer_detection
+
+    def _ransac(self, keypoints1, keypoints2):
+        assert(len(keypoints1) == len(keypoints2))
+
+        if len(keypoints1) < 8:
+            _, inliers_mask = ransac_affine(keypoints1, keypoints2)
+            return inliers_mask
+        _, inliers_mask = ransac_fundamental(keypoints1, keypoints2)
+        return inliers_mask
 
     def __call__(self, kd1, kd2):
         def empty_match():
@@ -98,15 +109,17 @@ class Matcher(object):
         if len(matches12) == 0:
             return empty_match()
 
-        if not self.enable_ransac:
+        if len(matches12) < 2:
             return matches12
 
-        keypoints1 = keypoints1[matches12[:, 0]]
-        keypoints2 = keypoints2[matches12[:, 1]]
+        if self.enable_ransac:
+            mask = self._ransac(keypoints1[matches12[:, 0]],
+                                keypoints2[matches12[:, 1]])
+            matches12 = matches12[mask]
 
-        if len(matches12) < 8:
-            _, inliers_mask = ransac_affine(keypoints1, keypoints2)
-            return matches12[inliers_mask]
+        if self.enable_transfer_detection:
+            mask = transfer_outlier_detector(keypoints1[matches12[:, 0]],
+                                             keypoints2[matches12[:, 1]])
+            matches12 = matches12[mask]
 
-        _, inliers_mask = ransac_fundamental(keypoints1, keypoints2)
-        return matches12[inliers_mask]
+        return matches12
