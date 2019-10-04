@@ -61,6 +61,16 @@ def get_array_len_geq(min_length):
     return lambda array: len(array) >= min_length
 
 
+def reprojection_error(pose, points, keypoints_true):
+    from vitamine.camera import CameraParameters
+    from vitamine.projection import PerspectiveProjection
+    from vitamine.rigid_transform import transform
+    camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
+    projection = PerspectiveProjection(camera_parameters)
+    keypoints_pred = projection.compute(transform(pose.R, pose.t, points))
+    return squared_norm(keypoints_true-keypoints_pred)
+
+
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model,
                  matcher=Matcher(enable_ransac=True),
