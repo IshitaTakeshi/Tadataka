@@ -1,24 +1,23 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_almost_equal
-from vitamine.stat import zca_whitening, normalize_mean
+from vitamine.stat import zca_whitening, normalize_mean, ChiSquaredTest
 
 
 def test_chi_squared_test():
-    X = np.array([
-        [-1, 0, 1],
-        [0, 2, 4]
-    ])
+    X = np.random.normal(size=(100000, 2))
+    mask = ChiSquaredTest(p=0.95, dof=2).test(X)
+    # 95% of elemest should be classified as inliers
+    assert_array_almost_equal(np.sum(mask) / len(mask), 0.95, decimal=3)
 
-    mean = np.mean(X, axis=0, keepdims=True)
-    Y = X - mean
+    X = np.random.normal(size=(100000, 2))
+    mask = ChiSquaredTest(p=0.98, dof=2).test(X)
+    # 98% of elemest should be classified as inliers
+    assert_array_almost_equal(np.sum(mask) / len(mask), 0.98, decimal=3)
 
-    for y in Y:
-        print(np.dot(y, y))
-    # print(np.power(x - m, 2))
-    # print(np.sum(np.power(X - mean, 2), axis=1))
-    C = np.cov(X)
-    print(C)
 
+def test_normalize_mean():
+    X = np.random.uniform(-10, 10, (20, 3))
+    assert_array_almost_equal(np.mean(normalize_mean(X), axis=0), np.zeros(3))
 
 
 def test_zca_whitening():
