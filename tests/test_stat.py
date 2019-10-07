@@ -14,6 +14,15 @@ def test_chi_squared_test():
     # 98% of elemest should be classified as inliers
     assert_array_almost_equal(np.sum(mask) / len(mask), 0.98, decimal=3)
 
+    # samples are normalized even
+    # if they follow a non-standard normal distribution
+    X = np.random.multivariate_normal(mean=[-1.0, 2.0],
+                                      cov=[[2.0, 0.5],
+                                           [0.5, 2.0]],
+                                      size=100000)
+    mask = ChiSquaredTest(p=0.95, dof=2).test(X)
+    # 95% of elemest should be classified as inliers
+    assert_array_almost_equal(np.sum(mask) / len(mask), 0.95, decimal=3)
 
 def test_normalize_mean():
     X = np.random.uniform(-10, 10, (20, 3))
