@@ -17,7 +17,7 @@ from vitamine.visual_odometry.keypoint import LocalFeatures
 from tests.data import dummy_points as points_true
 
 
-matcher = Matcher(enable_ransac=False)
+matcher = Matcher(enable_ransac=False, enable_transfer_detection=False)
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
