@@ -22,7 +22,7 @@ class ChiSquaredTest(object):
         # if p = 0.95, 95% of data samples are regarded as inliers
         # in the assumption that the samples follow
         # the standard normal distribution
-        self.threshold = chi2.ppf(0.95, 2)
+        self.threshold = chi2.ppf(p, dof)
 
     def test(self, X):
         Y = zca_whitening(normalize_mean(X))
