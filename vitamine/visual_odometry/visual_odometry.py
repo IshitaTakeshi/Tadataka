@@ -33,7 +33,8 @@ def reprojection_error(pose, points, keypoints_true):
 
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model,
-                 matcher=Matcher(enable_ransac=True),
+                 matcher=Matcher(enable_ransac=True,
+                                 enable_homography_filter=True),
                  min_keypoints=8, min_active_keyframes=8, min_matches=8):
         self.matcher = matcher
         self.min_active_keyframes = min_active_keyframes

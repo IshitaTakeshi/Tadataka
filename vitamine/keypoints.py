@@ -80,9 +80,9 @@ def ransac_fundamental(keypoints1, keypoints2):
 
 
 class Matcher(object):
-    def __init__(self, enable_ransac=True, enable_transfer_detection=True):
+    def __init__(self, enable_ransac=True, enable_homography_filter=True):
         self.enable_ransac = enable_ransac
-        self.enable_transfer_detection = enable_transfer_detection
+        self.enable_homography_filter = enable_homography_filter
 
     def _ransac(self, keypoints1, keypoints2):
         assert(len(keypoints1) == len(keypoints2))
@@ -117,7 +117,7 @@ class Matcher(object):
                                 keypoints2[matches12[:, 1]])
             matches12 = matches12[mask]
 
-        if self.enable_transfer_detection:
+        if self.enable_homography_filter:
             mask = transfer_outlier_detector(keypoints1[matches12[:, 0]],
                                              keypoints2[matches12[:, 1]])
             matches12 = matches12[mask]

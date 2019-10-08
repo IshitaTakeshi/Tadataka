@@ -24,7 +24,7 @@ from vitamine.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 
 
-matcher = Matcher(enable_ransac=False, enable_transfer_detection=False)
+matcher = Matcher(enable_ransac=False, enable_homography_filter=False)
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
