@@ -32,12 +32,11 @@ projection = PerspectiveProjection(camera_parameters)
 
 omegas = np.array([
     [0, 0, 0],
-    [0, np.pi / 2, 0],
-    [np.pi / 2, 0, 0],
-    [0, np.pi / 4, 0],
-    [0, -np.pi / 4, 0],
-    [-np.pi / 4, np.pi / 4, 0],
-    [0, np.pi / 8, -np.pi / 4]
+    [0, 2 * np.pi / 8, 0],
+    [0, 4 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 0],
+    [2 * np.pi / 8, 1 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 1 * np.pi / 8],
 ])
 
 rotations = rodrigues(omegas)
