@@ -4,7 +4,7 @@ from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import Normalizer, FOV, calc_factors
 from vitamine.projection import PerspectiveProjection
 from vitamine.rigid_transform import transform
-from vitamine.pose_estimation import solve_pnp
+from vitamine.pose import solve_pnp
 from vitamine.so3 import exp_so3
 from tests.data import dummy_points as points
 
@@ -43,12 +43,12 @@ def test_normalizer():
 
         # poses should be able to be estimated without a camera matrix
         keypoints_ = normalizer.normalize(keypoints_true)
-        omega_pred, t_pred = solve_pnp(points, keypoints_)
+        pose = solve_pnp(points, keypoints_)
 
-        P = transform(exp_so3(omega_pred), t_pred, points)
+        P = transform(exp_so3(pose.omega), pose.t, points)
         keypoints_pred = projection.compute(P)
 
-        assert_array_almost_equal(t_true, t_pred)
+        assert_array_almost_equal(t_true, pose.t)
         assert_array_almost_equal(keypoints_true, keypoints_pred)
 
 

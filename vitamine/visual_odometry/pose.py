@@ -1,6 +1,5 @@
 from autograd import numpy as np
-from vitamine import pose_estimation as PE
-from vitamine.pose import Pose
+from vitamine.pose import Pose, solve_pnp
 from vitamine.visual_odometry.keypoint import is_triangulated
 from vitamine.exceptions import NotEnoughInliersException
 
@@ -33,8 +32,6 @@ def estimate_pose(points, matches, point_indices_list, keypoints0):
     keypoints_ = keypoints0[keypoint_indices]
 
     try:
-        omega, t = PE.solve_pnp(points_, keypoints_)
+        return solve_pnp(points_, keypoints_)
     except NotEnoughInliersException:
         return None
-
-    return Pose(omega, t)
