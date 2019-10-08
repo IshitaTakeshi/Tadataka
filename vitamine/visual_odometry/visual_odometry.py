@@ -5,12 +5,12 @@ from autograd import numpy as np
 from vitamine.exceptions import (
     InvalidDepthsException, NotEnoughInliersException, print_error)
 from vitamine.keypoints import extract_keypoints, Matcher
+from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.pose import Pose
-from vitamine import pose_estimation as PE
 from vitamine.visual_odometry.point import Points
-from vitamine.visual_odometry.keypoint import (
-    LocalFeatures, associate_points)
+from vitamine.visual_odometry.pose import estimate_pose
+from vitamine.visual_odometry.keypoint import init_point_indices
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices
@@ -82,7 +82,8 @@ class VisualOdometry(object):
         self.inlier_condition = get_array_len_geq(min_matches)
         self.active_indices = KeyframeIndices()
         self.points = Points()
-        self.local_features = []
+        self.keypoint_descriptor_list = []
+        self.point_indices_list = []
         self.poses = []
 
     def export_points(self):
@@ -94,14 +95,13 @@ class VisualOdometry(object):
     def add(self, image):
         return self.try_add(extract_keypoints(image))
 
-    def init_first(self, local_features):
-        self.local_features.append(local_features)
+    def init_first(self, kd, point_indices):
+        self.keypoint_descriptor_list.append(kd)
+        self.point_indices_list.append(point_indices)
         self.poses.append(Pose.identity())
 
-    def try_init_second(self, lf1):
-        lf0 = self.local_features[0]
-
-        kd0, kd1 = lf0.get(), lf1.get()
+    def try_init_second(self, kd1, point_indices1):
+        kd0 = self.keypoint_descriptor_list[0]
         matches01 = self.matcher(kd0, kd1)
 
         if not self.inlier_condition(matches01):
@@ -116,46 +116,49 @@ class VisualOdometry(object):
             print_error(str(e))
             return False
 
-        # if not pose_condition(pose0, pose1):
-        #     return False
-
-        self.local_features.append(lf1)
+        self.keypoint_descriptor_list.append(kd1)
         self.poses.append(pose1)
         point_indices = self.points.add(points)
-        associate_points(lf0, lf1, matches01, point_indices)
+        point_indices0 = self.point_indices_list[0]
+        point_indices0[matches01[:, 0]] = point_indices
+        point_indices1[matches01[:, 1]] = point_indices
+        self.point_indices_list.append(point_indices1)
         return True
 
-    @property
-    def active_local_features(self):
-        return [self.local_features[i] for i in self.active_indices]
+    def get_active(self, array):
+        return [array[i] for i in self.active_indices]
 
-    @property
-    def active_poses(self):
-        return [self.poses[i] for i in self.active_indices]
-
-    def try_add_more(self, lf1):
-        active_features = self.active_local_features
-
-        pose1 = estimate_pose(self.matcher, self.points, active_features, lf1)
-        if pose1 is None:  # pose could not be estimated
+    def try_add_more(self, kd0, point_indices0):
+        active_kds = self.get_active(self.keypoint_descriptor_list)
+        matches = [self.matcher(kd0, kd1) for kd1 in active_kds]
+        active_point_indices = self.get_active(self.point_indices_list)
+        pose0 = estimate_pose(self.points, matches,
+                              active_point_indices, kd0.keypoints)
+        if pose0 is None:  # pose could not be estimated
             return False
 
         # if not self.pose_condition(active_poses[-1], pose1):
         #     # if pose1 is too close from the latest active pose
         #     return None
 
+        active_poses = self.get_active(self.poses)
+
+        # copy existing point indices
+        copy_triangulated(matches, active_point_indices, point_indices0)
+
+        active_keypoints = [kd.keypoints for kd in active_kds]
+
         try:
-            triangulation(self.matcher, self.points,
-                          self.active_poses, active_features, pose1, lf1)
+            triangulation(self.points, matches,
+                          active_poses, active_keypoints, active_point_indices,
+                          pose0, kd0.keypoints, point_indices0)
         except InvalidDepthsException as e:
             print_error(str(e))
             return False
 
-        # copy triangulated point indices back to lf1
-        copy_triangulated(self.matcher, active_features, lf1)
-
-        self.local_features.append(lf1)
-        self.poses.append(pose1)
+        self.point_indices_list.append(point_indices0)
+        self.keypoint_descriptor_list.append(kd0)
+        self.poses.append(pose0)
         return True
 
     @property
@@ -169,23 +172,24 @@ class VisualOdometry(object):
             return False
 
         keypoints = self.camera_model.undistort(keypoints)
+        return self.try_add_keyframe(KD(keypoints, descriptors))
 
-        return self.try_add_keyframe(LocalFeatures(keypoints, descriptors))
+    def try_add_keyframe(self, kd):
+        point_indices = init_point_indices(len(kd.keypoints))
 
-    def try_add_keyframe(self, local_features):
         if self.n_active_keyframes == 0:
-            self.init_first(local_features)
+            self.init_first(kd, point_indices)
             self.active_indices.add_new()
             return True
 
         if self.n_active_keyframes == 1:
-            success = self.try_init_second(local_features)
+            success = self.try_init_second(kd, point_indices)
             if not success:
                 return False
             self.active_indices.add_new()
             return True
 
-        success = self.try_add_more(local_features)
+        success = self.try_add_more(kd, point_indices)
         if not success:
             return False
         self.active_indices.add_new()
