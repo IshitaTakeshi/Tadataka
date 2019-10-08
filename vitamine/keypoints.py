@@ -65,7 +65,7 @@ def ransac_affine(keypoints1, keypoints2):
     # estimate inliers using ransac on AffineTransform
     tform, inliers_mask = ransac((keypoints1, keypoints2),
                                  tf.AffineTransform,
-                                 random_state=3939,
+                                 min_samples=2, random_state=3939,
                                  residual_threshold=1, max_trials=100)
     return tform.params, inliers_mask
 
