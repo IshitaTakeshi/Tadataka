@@ -42,8 +42,14 @@ def solve_pnp(points, keypoints):
     if keypoints.shape[0] < min_correspondences:
         raise NotEnoughInliersException("No sufficient correspondences")
 
-    retval, omega, t = cv2.solvePnP(points.astype(np.float64),
-                                    keypoints.astype(np.float64),
-                                    np.identity(3), np.zeros(4),
-                                    flags=cv2.SOLVEPNP_UPNP)
+    retval, omega, t, inliers = cv2.solvePnPRansac(
+        points.astype(np.float64),
+        keypoints.astype(np.float64),
+        np.identity(3), np.zeros(4),
+        flags=cv2.SOLVEPNP_UPNP
+    )
+
+    if len(inliers.flatten()) == 0:
+        raise NotEnoughInliersException("No inliers found")
+
     return Pose(omega.flatten(), t.flatten())
