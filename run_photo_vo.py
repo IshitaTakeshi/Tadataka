@@ -104,27 +104,25 @@ images = [rgb2gray(imread(filename)) for filename in filenames[:4]]
 
 keypoints0, point_indices0 = add_keyframe(images[0])
 keypoints1, point_indices1 = add_keyframe(images[1])
-
+# plot_matches_(images[0], images[1], keypoints0, keypoints1,
+#               point_indices0, point_indices1)
 plot_map_(vo.export_poses(), vo.export_points())
 
-print(f"len(point_indices0) = {len(point_indices0)}")
-print(f"len(point_indices1) = {len(point_indices1)}")
-# plot_point_indices(images[0], point_indices0)
-plot_matches_(images[0], images[1], keypoints0, keypoints1,
-              point_indices0, point_indices1)
-
 keypoints2, point_indices2 = add_keyframe(images[2])
-print(f"len(point_indices2) = {len(point_indices2)}")
-plot_matches_(images[0], images[2], keypoints0, keypoints2,
-              point_indices0, point_indices2)
-plot_matches_(images[1], images[2], keypoints1, keypoints2,
-              point_indices1, point_indices2)
+# plot_matches_(images[0], images[2], keypoints0, keypoints2,
+#               point_indices0, point_indices2)
+# plot_matches_(images[1], images[2], keypoints1, keypoints2,
+#               point_indices1, point_indices2)
+plot_map_(vo.export_poses(), vo.export_points())
 
 keypoints3, point_indices3 = add_keyframe(images[3])
-print(f"len(point_indices3) = {len(point_indices3)}")
-plot_matches_(images[0], images[3], keypoints0, keypoints3,
-              point_indices0, point_indices3)
-plot_matches_(images[1], images[3], keypoints1, keypoints3,
-              point_indices1, point_indices3)
-plot_matches_(images[2], images[3], keypoints2, keypoints3,
-              point_indices2, point_indices3)
+# plot_matches_(images[0], images[3], keypoints0, keypoints3,
+#               point_indices0, point_indices3)
+# plot_matches_(images[1], images[3], keypoints1, keypoints3,
+#               point_indices1, point_indices3)
+# plot_matches_(images[2], images[3], keypoints2, keypoints3,
+#               point_indices2, point_indices3)
+plot_map_(vo.export_poses(), vo.export_points())
+
+keypoints3, point_indices3 = add_keyframe(images[4])
+plot_map_(vo.export_poses(), vo.export_points())
