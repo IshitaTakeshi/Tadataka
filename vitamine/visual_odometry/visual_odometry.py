@@ -17,46 +17,6 @@ from vitamine.visual_odometry.keyframe_index import KeyframeIndices
 from vitamine.so3 import rodrigues
 
 
-def get_correspondences(matcher, active_features, lf0):
-    # accumulate indices of all triangulated points
-    # that can be matched with lf0's descriptors
-    kd0 = lf0.get()
-
-    point_indices = []
-    keypoints0_matched = []
-    for lf1 in active_features:
-        matches01 = matcher(kd0, lf1.triangulated())
-
-        if len(matches01) == 0:
-            continue
-
-        p = lf1.triangulated_point_indices(matches01[:, 1])
-
-        point_indices.append(p)
-        keypoints0_matched.append(kd0.keypoints[matches01[:, 0]])
-
-    if len(point_indices) == 0:
-        raise NotEnoughInliersException("No matches found")
-
-    point_indices = np.concatenate(point_indices)
-    keypoints0_matched = np.vstack(keypoints0_matched)
-    return point_indices, keypoints0_matched
-
-
-def estimate_pose(matcher, points, active_features, lf0):
-    point_indices, keypoints = get_correspondences(
-        matcher, active_features, lf0
-    )
-    points_ = points.get(point_indices)
-
-    try:
-        omega, t = PE.solve_pnp(points_, keypoints)
-    except NotEnoughInliersException:
-        return None
-
-    return Pose(omega, t)
-
-
 def get_array_len_geq(min_length):
     return lambda array: len(array) >= min_length
 
