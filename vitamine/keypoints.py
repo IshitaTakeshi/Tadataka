@@ -123,3 +123,9 @@ class Matcher(object):
             matches12 = matches12[mask]
 
         return matches12
+
+
+def filter_matches(matches01, mask0, mask1):
+    indices0, indices1 = matches01[:, 0], matches01[:, 1]
+    mask = np.logical_and(mask0[indices0], mask1[indices1])
+    return matches01[mask]
