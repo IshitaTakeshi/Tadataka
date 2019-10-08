@@ -1,6 +1,5 @@
 from autograd import numpy as np
 
-from vitamine.keypoints import match, ransac_affine, ransac_fundamental
 from vitamine.keypoints import KeypointDescriptor as KD
 
 
@@ -51,8 +50,3 @@ class LocalFeatures(object):
         # select only untriangulated elements
         untriangulated = np.where(~self.is_triangulated)[0]
         self.point_indices[untriangulated[indices]] = point_indices
-
-
-def associate_points(lf0, lf1, matches01, point_indices):
-    lf0.associate_points(matches01[:, 0], point_indices)
-    lf1.associate_points(matches01[:, 1], point_indices)

@@ -1,7 +1,7 @@
 from numpy.testing import assert_array_equal
 from autograd import numpy as np
 
-from vitamine.visual_odometry.keypoint import LocalFeatures, associate_points
+from vitamine.visual_odometry.keypoint import LocalFeatures
 from tests.utils import random_binary
 
 
@@ -34,17 +34,3 @@ def test_untriangulated():
 
     assert_array_equal(keypoints_, keypoints[[0, 3, 4, 5, 8]])
     assert_array_equal(descriptors_, descriptors[[0, 3, 4, 5, 8]])
-
-
-def test_associate_points():
-    matches01 = np.vstack(([2, 4, 8, 1, 6, 7],
-                           [1, 2, 4, 5, 6, 8])).T
-    point_indices = np.arange(6)
-
-    lf0 = LocalFeatures(keypoints, descriptors)
-    lf1 = LocalFeatures(keypoints, descriptors)
-
-    associate_points(lf0, lf1, matches01, point_indices)
-
-    assert_array_equal(lf0.point_indices, [-1, 3, 0, -1, 1, -1, 4, 5, 2])
-    assert_array_equal(lf1.point_indices, [-1, 0, 1, -1, 2, 3, 4, -1, 5])
