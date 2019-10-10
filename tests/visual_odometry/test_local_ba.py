@@ -1,16 +1,8 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from autograd import numpy as np
-from vitamine.visual_odometry import local_ba
-from vitamine.rigid_transform import transform_all
-from vitamine.so3 import rodrigues
-from vitamine.camera import CameraParameters
-from vitamine.visual_odometry.local_ba import (
-    LocalBundleAdjustment, Projection, KeypointPrediction)
+
+from vitamine.visual_odometry.local_ba import LocalBundleAdjustment, Projection
 from tests.utils import unit_uniform
-
-
-camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
-projection = Projection(camera_parameters)
 
 
 def to_poses(omegas, translations):
@@ -36,30 +28,24 @@ def test_jacobian():
     mask = np.ones((n_viewpoints, n_points))
     viewpoint_indices, point_indices = np.where(mask)
 
-    keypoint_prediction = KeypointPrediction(
-        viewpoint_indices,
-        point_indices,
-        projection
-    )
-    A, B = keypoint_prediction.jacobians(poses, points)
+    projection = Projection(viewpoint_indices, point_indices)
+    A, B = projection.jacobians(poses, points)
 
-    I = zip(viewpoint_indices, point_indices)
-    for index, (j, i) in enumerate(I):
-        Q = projection.compute
-        pose, point = poses[j], points[i]
-        dpose, dpoint = dposes[j], dpoints[i]
+    Q = projection.compute
 
-        # test sign(Q(a + da, b) - Q(a, b)) == sign(A * da)
-        # where A = dQ / da
-        dx_true = Q(pose + dpose, point) - Q(pose, point)
-        dx_pred = A[index].dot(dpose)
-        assert_array_equal(np.sign(dx_true), np.sign(dx_pred))
+    # test sign(Q(a + da, b) - Q(a, b)) == sign(A * da)
+    # where A = dQ / da
+    dx_true = Q(poses + dposes, points) - Q(poses, points)
+    for index, j in enumerate(viewpoint_indices):
+        dx_pred = A[index].dot(dposes[j])
+        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
 
-        # test sign(Q(a, b + db) - Q(a, b)) == sign(B * db)
-        # where B = dQ / db
-        dx_true = Q(pose, point + dpoint) - Q(pose, point)
-        dx_pred = B[index].dot(dpoint)
-        assert_array_equal(np.sign(dx_true), np.sign(dx_pred))
+    # test sign(Q(a, b + db) - Q(a, b)) == sign(B * db)
+    # where B = dQ / db
+    dx_true = Q(poses, points + dpoints) - Q(poses, points)
+    for index, i in enumerate(point_indices):
+        dx_pred = B[index].dot(dpoints[i])
+        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
 
 
 def add_noise(array, scale):
@@ -67,12 +53,11 @@ def add_noise(array, scale):
 
 
 def test_local_bundle_adjustment():
-    return
     def error(keypoints1, keypoints2):
         return np.power(keypoints1 - keypoints2, 2).sum()
 
     def run(omegas1, translations1, points1):
-        keypoints1 = keypoint_prediction.compute(
+        keypoints1 = projection.compute(
             to_poses(omegas1, translations1), points1
         )
 
@@ -80,7 +65,7 @@ def test_local_bundle_adjustment():
         omegas2, translations2, points2 = local_ba.compute(
             omegas1, translations1, points1)
 
-        keypoints2 = keypoint_prediction.compute(
+        keypoints2 = projection.compute(
             to_poses(omegas2, translations2), points2
         )
 
@@ -105,19 +90,18 @@ def test_local_bundle_adjustment():
 
     viewpoint_indices, point_indices = np.where(mask)
 
-    keypoint_prediction = KeypointPrediction(viewpoint_indices, point_indices,
-                                             projection)
+    projection = Projection(viewpoint_indices, point_indices)
 
     omegas_true = np.pi * unit_uniform((n_viewpoints, 3))
     translations_true = unit_uniform((n_viewpoints, 3))
     points_true = unit_uniform((n_points, 3))
 
-    keypoints_true = keypoint_prediction.compute(
+    keypoints_true = projection.compute(
         to_poses(omegas_true, translations_true), points_true
     )
 
     local_ba = LocalBundleAdjustment(viewpoint_indices, point_indices,
-                                     keypoints_true, camera_parameters)
+                                     keypoints_true)
 
     omegas_noisy = add_noise(omegas_true, 0.01 * np.pi)
     translations_noisy = add_noise(translations_true, 0.01)

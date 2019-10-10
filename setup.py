@@ -15,9 +15,9 @@ setup(
         'scikit-image',
         'matplotlib',
         'numpy',
-        # 'julia',
-        # TODO make independent from them
+        # TODO make independent from opencv
         'opencv-python',
-        'opencv-contrib-python'
+        'opencv-contrib-python',
+        'sba'
     ]
 )
