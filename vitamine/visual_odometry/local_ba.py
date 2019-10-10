@@ -1,58 +1,43 @@
 from autograd import numpy as np
 from autograd import jacobian
-# from julia.SBA import Indices, sba
+from sba import SBA
 
-from vitamine.bundle_adjustment.mask import keypoint_mask
-from vitamine.rigid_transform import transform_each
-from vitamine.so3 import rodrigues
-from vitamine.projection import pi
+from vitamine.rigid_transform import transform
+from vitamine.so3 import exp_so3
 
 
 EPSILON = 1e-16
 
 
-def reverse_axes_3d(array):
-    return np.swapaxes(np.swapaxes(array, 0, 2), 0, 1)
+def projection(pose, point):
+    omega, t = pose[0:3], pose[3:6]
+    p = transform(exp_so3(omega), t, point)
+    return p[0:2] / (p[2] + EPSILON)
 
 
 class Projection(object):
-    def __init__(self, camera_parameters):
-        self.K = camera_parameters.matrix
-
-    def compute(self, pose, point):
-        omega, t = pose[0:3], pose[3:6]
-        R = rodrigues(omega.reshape(1, -1))[0]
-        p = np.dot(R, point) + t
-        p = np.dot(self.K, p)
-        return p[0:2] / (p[2] + EPSILON)
-
-
-class KeypointPrediction(object):
-    def __init__(self, viewpoint_indices, point_indices, projection):
+    def __init__(self, viewpoint_indices, point_indices):
         assert(viewpoint_indices.shape == point_indices.shape)
-        self.projection = projection
 
         self.viewpoint_indices = viewpoint_indices
         self.point_indices = point_indices
 
-        self.N = self.point_indices.shape[0]
+        self.n_visible = self.point_indices.shape[0]
 
-        self.pose_jacobian = jacobian(self.projection.compute, argnum=0)
-        self.point_jacobian = jacobian(self.projection.compute, argnum=1)
+        self.pose_jacobian = jacobian(projection, argnum=0)
+        self.point_jacobian = jacobian(projection, argnum=1)
 
     def compute(self, poses, points):
-        x_pred = np.empty((self.N, 2))
+        x_pred = np.empty((self.n_visible, 2))
 
         I = zip(self.viewpoint_indices, self.point_indices)
         for index, (j, i) in enumerate(I):
-            x_pred[index] = self.projection.compute(poses[j], points[i])
+            x_pred[index] = projection(poses[j], points[i])
         return x_pred
 
     def jacobians(self, poses, points):
-        N = self.viewpoint_indices.shape[0]
-
-        A = np.zeros((N, 2, 6))
-        B = np.zeros((N, 2, 3))
+        A = np.zeros((self.n_visible, 2, 6))
+        B = np.zeros((self.n_visible, 2, 3))
         I = zip(self.viewpoint_indices, self.point_indices)
         for index, (j, i) in enumerate(I):
             A[index] = self.pose_jacobian(poses[j], points[i])
@@ -75,34 +60,29 @@ def check_params(poses, points, keypoints):
 
 
 class LocalBundleAdjustment(object):
-    def __init__(self, viewpoint_indices, point_indices, keypoints_true,
-                 camera_parameters):
+    def __init__(self, viewpoint_indices, point_indices, keypoints_true):
         """
         I = zip(viewpoint_indices, pointpoint_indices)
         keypoints_true = [projection(poses[j], points[i]) for j, i in I]
         """
         assert(len(viewpoint_indices) == len(point_indices) == keypoints_true.shape[0])
 
-        self.prediction = KeypointPrediction(viewpoint_indices, point_indices,
-                                             Projection(camera_parameters))
+        self.projection = Projection(viewpoint_indices, point_indices)
 
         self.keypoints_true = keypoints_true
 
-        # increment every index as Julia start them from 1
-        self.indices = Indices(viewpoint_indices + 1, point_indices + 1)
+        self.sba = SBA(viewpoint_indices, point_indices)
 
     def calc_update(self, poses, points, keypoint_pred):
         assert(keypoint_pred.shape == self.keypoints_true.shape)
         check_params(poses, points, keypoint_pred)
 
-        A, B = self.prediction.jacobians(poses, points)
-        dposes, dpoints = sba(self.indices,
-                              np.swapaxes(self.keypoints_true, 0, 1),
-                              np.swapaxes(keypoint_pred, 0, 1),
-                              reverse_axes_3d(A), reverse_axes_3d(B))
+        A, B = self.projection.jacobians(poses, points)
+        dposes, dpoints = self.sba.update(self.keypoints_true,
+                                          keypoint_pred, A, B)
         assert(not np.isnan(dposes).all())
         assert(not np.isnan(dpoints).all())
-        return dposes.T, dpoints.T
+        return dposes, dpoints
 
     def compute(self, initial_omegas, initial_translations, initial_points,
                 n_max_iter=200, absolute_threshold=1e-2):
@@ -110,7 +90,7 @@ class LocalBundleAdjustment(object):
         poses = np.hstack((initial_omegas, initial_translations))
         points = initial_points
 
-        keypoint_pred = self.prediction.compute(poses, points)
+        keypoint_pred = self.projection.compute(poses, points)
         current_error = calc_error(self.keypoints_true, keypoint_pred)
 
         for iter_ in range(n_max_iter):
@@ -119,7 +99,7 @@ class LocalBundleAdjustment(object):
             new_poses = poses + dposes
             new_points = points + dpoints
 
-            keypoint_pred = self.prediction.compute(new_poses, new_points)
+            keypoint_pred = self.projection.compute(new_poses, new_points)
             new_error = calc_error(self.keypoints_true, keypoint_pred)
 
             # converged or started to diverge
