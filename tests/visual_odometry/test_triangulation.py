@@ -173,15 +173,18 @@ def test_triangulation():
         mask1 = is_triangulated(point_indices1)
         mask2 = is_triangulated(point_indices2)
         mask3 = is_triangulated(point_indices3)
+        mask4 = is_triangulated(point_indices4)
 
         P0 = transform(pose0.R, pose0.t, points.get(point_indices0[mask0]))
         P1 = transform(pose1.R, pose1.t, points.get(point_indices1[mask1]))
         P2 = transform(pose2.R, pose2.t, points.get(point_indices2[mask2]))
         P3 = transform(pose3.R, pose3.t, points.get(point_indices3[mask3]))
+        P4 = transform(pose4.R, pose4.t, points.get(point_indices4[mask4]))
         assert_array_almost_equal(projection.compute(P0), keypoints0[mask0])
         assert_array_almost_equal(projection.compute(P1), keypoints1[mask1])
         assert_array_almost_equal(projection.compute(P2), keypoints2[mask2])
         assert_array_almost_equal(projection.compute(P3), keypoints3[mask3])
+        assert_array_almost_equal(projection.compute(P4), keypoints4[mask4])
 
     def case2():
         # point_indices   0  1  2  3  4
