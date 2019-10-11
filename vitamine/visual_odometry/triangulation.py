@@ -4,7 +4,6 @@ from vitamine.exceptions import InvalidDepthsException, print_error
 from vitamine import triangulation as TR
 from vitamine.pose import Pose
 from vitamine.keypoints import filter_matches
-from vitamine.visual_odometry.keypoint import is_triangulated
 
 
 def depth_mask_condition(mask, min_positive_dpth_ratio=0.8):
@@ -49,7 +48,6 @@ def triangulation(points, matches,
     # any keypoints don't have corresponding 3D points
 
     P = []
-    # triangulate untriangulated points
     Z = zip(matches, pose_list, keypoints_list, point_indices_list)
     for matches01, pose1, keypoints1, point_indices1 in Z:
         if len(matches01) == 0:
@@ -59,8 +57,8 @@ def triangulation(points, matches,
 
         # use keypoints that are not triangulated yet
         matches01 = filter_matches(matches01,
-                                   ~is_triangulated(point_indices0),
-                                   ~is_triangulated(point_indices1))
+                                   ~point_indices0.is_triangulated,
+                                   ~point_indices1.is_triangulated)
 
         if len(matches01) == 0:
             continue
@@ -75,16 +73,16 @@ def triangulation(points, matches,
             raise InvalidDepthsException("Failed to triangulate")
 
         point_indices = points.add(points_)
-        point_indices0[matches01[:, 0]] = point_indices
+        point_indices0.subscribe(matches01[:, 0], point_indices)
 
 
     for point_indices1, matches01 in P:
         matches01 = filter_matches(matches01,
-                                   is_triangulated(point_indices0),
-                                   ~is_triangulated(point_indices1))
+                                   point_indices0.is_triangulated,
+                                   ~point_indices1.is_triangulated)
 
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        point_indices1[indices1] = point_indices0[indices0]
+        point_indices1.subscribe(indices1, point_indices0.get(indices0))
 
 
 def copy_triangulated(matches, point_indices_list, point_indices0):
@@ -97,12 +95,12 @@ def copy_triangulated(matches, point_indices_list, point_indices0):
         # copy from triangulated point_indices1
         # to untriangulated point_indices0
         matches01 = filter_matches(matches01,
-                                   ~is_triangulated(point_indices0),
-                                   is_triangulated(point_indices1))
+                                   ~point_indices0.is_triangulated,
+                                   point_indices1.is_triangulated)
         if len(matches01) == 0:
             continue
 
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        point_indices0[indices0] = point_indices1[indices1]
+        point_indices0.subscribe(indices0, point_indices1.get(indices1))
 
     return point_indices0

@@ -13,7 +13,7 @@ from vitamine.rigid_transform import transform
 from vitamine.so3 import rodrigues
 from vitamine.utils import random_binary, break_other_than
 from vitamine.visual_odometry.point import Points
-from vitamine.visual_odometry.keypoint import is_triangulated, init_point_indices
+from vitamine.point_index import PointIndices
 from tests.data import dummy_points as points_true
 
 
@@ -47,6 +47,9 @@ descriptors = random_binary((len(points_true), 1024))
 descriptors = random_binary((14, 1024))
 
 
+# TODO current matches are too simple
+# test on more complicated cases
+
 def test_copy_triangulated():
     def case1():
         # point_indices        0  1  2  3  4   5   6   7   8
@@ -57,24 +60,24 @@ def test_copy_triangulated():
         matches02 = np.array([[4, 5, 6, 7, 9, 10, 11, 12],
                               [4, 5, 6, 7, 9, 10, 11, 12]]).T
 
-        point_indices0 = init_point_indices(14)
-        point_indices1 = np.array(
-        #    0   1  2   3  4   5  6  7   8  9  10 11 12 13
-            [0, -1, 1, -1, 2, -1, 3, 4, -1, -1, 5, 6, 7, 8]
-        )
-        point_indices2 = np.array(
-        #     0   1   2   3  4  5  6  7   8  9 10 11 12  13
-            [-1, -1, -1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, -1]
-        )
+        point_indices0 = PointIndices(14)
+        point_indices1 = PointIndices(14)
+        point_indices2 = PointIndices(14)
+
+        point_indices1.subscribe([0, 2, 4, 6, 7, 10, 11, 12, 13],
+                                 [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        point_indices2.subscribe([4, 5, 6, 7, 9, 10, 11, 12],
+                                 [2, 8, 3, 4, 9, 5, 6, 7])
 
         copy_triangulated([matches01, matches02],
                           [point_indices1, point_indices2],
                           point_indices0)
-        assert_array_equal(
-            point_indices0,
-        #    0   1  2   3  4  5  6  7   8  9 10 11 12 13
-            [0, -1, 1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, 8]
-        )
+        assert_array_equal(point_indices0.is_triangulated,
+        #                   0  1  2  3  4  5  6  7  8  9 10 11 12 13
+                           [1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1])
+        assert_array_equal(point_indices0.triangulated,
+        #                   0  2  4  5  6  7  9 10 11 12 13
+                           [0, 1, 2, 8, 3, 4, 9, 5, 6, 7, 8])
 
     def case2():
         # point_indices        0  1  2   5   6   7   8
@@ -83,25 +86,25 @@ def test_copy_triangulated():
         # point_indices        2  8  3  4  9   5   6   7
         matches02 = np.array([[4, 5, 6, 7, 9, 10, 11, 12],
                               [4, 5, 6, 7, 9, 10, 11, 12]]).T
-        point_indices0 = init_point_indices(14)
-        point_indices1 = np.array(
-        #    0   1  2   3  4   5   6   7   8   9 10 11 12 13
-            [0, -1, 1, -1, 2, -1, -1, -1, -1, -1, 5, 6, 7, 8]
-        )
-        point_indices2 = np.array(
-        #     0   1   2   3  4  5  6  7   8  9 10 11 12  13
-            [-1, -1, -1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, -1]
-        )
+        point_indices0 = PointIndices(14)
+        point_indices1 = PointIndices(14)
+        point_indices2 = PointIndices(14)
+
+        point_indices1.subscribe([0, 2, 4, 10, 11, 12, 13],
+                                 [0, 1, 2, 5, 6, 7, 8])
+        point_indices2.subscribe([4, 5, 6, 7, 9, 10, 11, 12],
+                                 [2, 8, 3, 4, 9, 5, 6, 7])
 
         copy_triangulated([matches01, matches02],
                           [point_indices1, point_indices2],
                           point_indices0)
-        assert_array_equal(
-            point_indices0,
-        #    0   1  2   3  4  5  6  7   8  9 10 11 12 13
-            [0, -1, 1, -1, 2, 8, 3, 4, -1, 9, 5, 6, 7, 8]
-        )
 
+        assert_array_equal(point_indices0.is_triangulated,
+        #                  0  1  2  3  4  5  6  7  8  9 10 11 12 13
+                          [1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1])
+        assert_array_equal(point_indices0.triangulated,
+        #                  0  2  4  5  6  7  9 10 11 12 13
+                          [0, 1, 2, 8, 3, 4, 9, 5, 6, 7, 8])
     case1()
     case2()
 
@@ -137,11 +140,11 @@ def test_triangulation():
         keypoints3 = keypoints_true[3]
         keypoints4 = keypoints_true[4]
 
-        point_indices0 = init_point_indices(14)
-        point_indices1 = init_point_indices(14)
-        point_indices2 = init_point_indices(14)
-        point_indices3 = init_point_indices(14)
-        point_indices4 = init_point_indices(14)
+        point_indices0 = PointIndices(14)
+        point_indices1 = PointIndices(14)
+        point_indices2 = PointIndices(14)
+        point_indices3 = PointIndices(14)
+        point_indices4 = PointIndices(14)
 
         points = Points()
         triangulation(
@@ -153,38 +156,51 @@ def test_triangulation():
             pose0, keypoints0, point_indices0
         )
 
-        assert_array_equal(point_indices0,
-        #                   0  1   2   3  4  5   6  7   8  9 10 11 12 13
-                           [0, 1, -1, -1, 2, 7, -1, 3, -1, 4, 9, 8, 5, 6])
-        assert_array_equal(point_indices1,
-        #                   0  1   2   3  4   5   6  7   8  9  10  11 12 13
-                           [0, 1, -1, -1, 2, -1, -1, 3, -1, 4, -1, -1, 5, 6])
-        assert_array_equal(point_indices2,
-        #                   0  1   2   3  4  5   6  7   8  9  10 11 12 13
-                           [0, 1, -1, -1, 2, 7, -1, 3, -1, 4, -1, 8, 5, 6])
-        assert_array_equal(point_indices3,
-        #                   0  1   2   3   4  5   6  7   8  9 10  11  12 13
-                           [0, 1, -1, -1, -1, 7, -1, 3, -1, 4, 9, -1, -1, 6])
-        assert_array_equal(point_indices4,
-        #                   0  1   2   3  4   5   6  7   8  9 10  11  12 13
-                           [0, 1, -1, -1, 2, -1, -1, 3, -1, 4, 9, -1, -1, 6])
+        assert_array_equal(point_indices0.is_triangulated,
+        #                   0  1  2  3  4  5  6  7  8  9 10 11 12 13
+                           [1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1])
+        assert_array_equal(point_indices0.triangulated,
+        #                   0  1  4  5  7  9 10 11 12 13
+                           [0, 1, 2, 7, 3, 4, 9, 8, 5, 6])
+        assert_array_equal(point_indices2.is_triangulated,
+        #                   0  1  2  3  4  5  6  7  8  9  10 11 12 13
+                           [1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1])
+        assert_array_equal(point_indices2.triangulated,
+        #                   0  1  4  5  7  9 11 12 13
+                           [0, 1, 2, 7, 3, 4, 8, 5, 6])
+        assert_array_equal(point_indices3.is_triangulated,
+        #                   0  1  2  3  4  5  6  7  8  9 10 11 12 13
+                           [1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1])
+        assert_array_equal(point_indices3.triangulated,
+        #                   0  1  5  7  9 10 13
+                           [0, 1, 7, 3, 4, 9, 6])
+        assert_array_equal(point_indices4.is_triangulated,
+        #                   0  1  2  3  4  5  6  7  8  9 10 11 12 13
+                           [1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1])
+        assert_array_equal(point_indices4.triangulated,
+        #                   0  1  4  7  9 10 13
+                           [0, 1, 2, 3, 4, 9, 6])
 
-        mask0 = is_triangulated(point_indices0)
-        mask1 = is_triangulated(point_indices1)
-        mask2 = is_triangulated(point_indices2)
-        mask3 = is_triangulated(point_indices3)
-        mask4 = is_triangulated(point_indices4)
-
-        P0 = transform(pose0.R, pose0.t, points.get(point_indices0[mask0]))
-        P1 = transform(pose1.R, pose1.t, points.get(point_indices1[mask1]))
-        P2 = transform(pose2.R, pose2.t, points.get(point_indices2[mask2]))
-        P3 = transform(pose3.R, pose3.t, points.get(point_indices3[mask3]))
-        P4 = transform(pose4.R, pose4.t, points.get(point_indices4[mask4]))
-        assert_array_almost_equal(projection.compute(P0), keypoints0[mask0])
-        assert_array_almost_equal(projection.compute(P1), keypoints1[mask1])
-        assert_array_almost_equal(projection.compute(P2), keypoints2[mask2])
-        assert_array_almost_equal(projection.compute(P3), keypoints3[mask3])
-        assert_array_almost_equal(projection.compute(P4), keypoints4[mask4])
+        P0 = points.get(point_indices0.triangulated)
+        P1 = points.get(point_indices1.triangulated)
+        P2 = points.get(point_indices2.triangulated)
+        P3 = points.get(point_indices3.triangulated)
+        P4 = points.get(point_indices4.triangulated)
+        pred0 = projection.compute(transform(pose0.R, pose0.t, P0))
+        pred1 = projection.compute(transform(pose1.R, pose1.t, P1))
+        pred2 = projection.compute(transform(pose2.R, pose2.t, P2))
+        pred3 = projection.compute(transform(pose3.R, pose3.t, P3))
+        pred4 = projection.compute(transform(pose4.R, pose4.t, P4))
+        true0 = keypoints0[point_indices0.is_triangulated]
+        true1 = keypoints1[point_indices1.is_triangulated]
+        true2 = keypoints2[point_indices2.is_triangulated]
+        true3 = keypoints3[point_indices3.is_triangulated]
+        true4 = keypoints4[point_indices4.is_triangulated]
+        assert_array_almost_equal(true0, pred0)
+        assert_array_almost_equal(true1, pred1)
+        assert_array_almost_equal(true2, pred2)
+        assert_array_almost_equal(true3, pred3)
+        assert_array_almost_equal(true4, pred4)
 
     def case2():
         # point_indices   0  1  2  3  4
@@ -200,9 +216,9 @@ def test_triangulation():
         keypoints2 = keypoints_true[2, 0:12]
         points = Points()
 
-        point_indices0 = init_point_indices(10)
-        point_indices1 = init_point_indices(14)
-        point_indices2 = init_point_indices(12)
+        point_indices0 = PointIndices(10)
+        point_indices1 = PointIndices(14)
+        point_indices2 = PointIndices(12)
 
         triangulation(
             points,
@@ -210,23 +226,31 @@ def test_triangulation():
             [keypoints1, keypoints2], [point_indices1, point_indices2],
             pose0, keypoints0, point_indices0
         )
-        assert_array_equal(point_indices0,
-                           [0, 1, -1, -1, 2, 5, -1, 3, -1, 4])
-        assert_array_equal(point_indices1,
-                           [0, 1, -1, -1, 2, -1, -1, 3, -1, 4, -1, -1, -1, -1])
-        assert_array_equal(point_indices2,
-                           [0, 1, -1, -1, 2, 5, -1, 3, -1, 4, -1, -1])
+        assert_array_equal(point_indices0.is_triangulated,
+                           [1, 1, 0, 0, 1, 1, 0, 1, 0, 1])
+        assert_array_equal(point_indices0.triangulated,
+                           [0, 1, 2, 5, 3, 4])
+        assert_array_equal(point_indices1.is_triangulated,
+                           [1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0])
+        assert_array_equal(point_indices1.triangulated,
+                           [0, 1, 2, 3, 4])
+        assert_array_equal(point_indices2.is_triangulated,
+                           [1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0])
+        assert_array_equal(point_indices2.triangulated,
+                           [0, 1, 2, 5, 3, 4])
 
-        mask0 = is_triangulated(point_indices0)
-        mask1 = is_triangulated(point_indices1)
-        mask2 = is_triangulated(point_indices2)
-
-        P0 = transform(pose0.R, pose0.t, points.get(point_indices0[mask0]))
-        P1 = transform(pose1.R, pose1.t, points.get(point_indices1[mask1]))
-        P2 = transform(pose2.R, pose2.t, points.get(point_indices2[mask2]))
-        assert_array_almost_equal(projection.compute(P0), keypoints0[mask0])
-        assert_array_almost_equal(projection.compute(P1), keypoints1[mask1])
-        assert_array_almost_equal(projection.compute(P2), keypoints2[mask2])
+        P0 = points.get(point_indices0.triangulated)
+        P1 = points.get(point_indices1.triangulated)
+        P2 = points.get(point_indices2.triangulated)
+        pred0 = projection.compute(transform(pose0.R, pose0.t, P0))
+        pred1 = projection.compute(transform(pose1.R, pose1.t, P1))
+        pred2 = projection.compute(transform(pose2.R, pose2.t, P2))
+        true0 = keypoints0[point_indices0.is_triangulated]
+        true1 = keypoints1[point_indices1.is_triangulated]
+        true2 = keypoints2[point_indices2.is_triangulated]
+        assert_array_almost_equal(true0, pred0)
+        assert_array_almost_equal(true1, pred1)
+        assert_array_almost_equal(true2, pred2)
 
     case1()
     case2()
