@@ -132,21 +132,17 @@ def rodrigues(omegas):
 
     N = omegas.shape[0]
 
-    theta = np.linalg.norm(omegas, axis=1)
-
-    A = np.zeros((N, 3, 3))
-    A[:, [0, 1, 2], [0, 1, 2]] = 1  # [np.eye(3) for i in range(N)]
-
-    if np.all(theta == 0):
-        return A
-
     # Add EPSILON to avoid division by zero
-    K = tangent_so3(omegas / (theta[:, np.newaxis] + EPSILON))
+    theta = np.linalg.norm(omegas + EPSILON, axis=1)
+    K = tangent_so3(omegas / theta[:, np.newaxis])
 
-    B = np.einsum('i,ijk->ijk', np.sin(theta), K)
-    C = np.einsum('ijk,ikl->ijl', K, K)  # [dot(L, L) for L in K]
-    C = np.einsum('i,ijk->ijk', 1-np.cos(theta), C)
-    return A + B + C
+    I = np.zeros((N, 3, 3))
+    I[:, [0, 1, 2], [0, 1, 2]] = 1  # [np.identity(3) for i in range(N)]
+
+    A = np.einsum('i,ijk->ijk', np.sin(theta), K)
+    U = np.einsum('ijk,ikl->ijl', K, K)  # [dot(L, L) for L in K]
+    B = np.einsum('i,ijk->ijk', 1-np.cos(theta), U)
+    return I + A + B
 
 
 def exp_so3(omega):
