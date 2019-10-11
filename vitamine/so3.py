@@ -81,6 +81,19 @@ def inv_rodrigues(RS):
     return np.vstack([log_so3(R) for R in RS])
 
 
+bases_so3 = np.array([
+    [[0, 0, 0],
+     [0, 0, -1],
+     [0, 1, 0]],
+    [[0, 0, 1],
+     [0, 0, 0],
+     [-1, 0, 0]],
+    [[0, -1, 0],
+     [1, 0, 0],
+     [0, 0, 0]]
+])
+
+
 def tangent_so3(V):
     """
     V: np.ndarray
@@ -94,24 +107,7 @@ def tangent_so3(V):
     #        [0  1   0]            [-1  0  0]            [0   0  0]
 
     N = V.shape[0]
-
-    def bases(indices):
-        """
-        Generate bases of so(3)
-        """
-        G = np.zeros((N, len(indices), 3, 3))
-        for k, (i, j) in enumerate(indices):
-            G[:, k, i, j] = 1
-            G[:, k, j, i] = -1
-        return G
-
-    indices = [
-        [2, 1],
-        [0, 2],
-        [1, 0],
-    ]
-
-    G = bases(indices)
+    G = np.array([bases_so3 for i in range(N)])
     return np.einsum('ijkl,ij->ikl', G, V)
 
 
