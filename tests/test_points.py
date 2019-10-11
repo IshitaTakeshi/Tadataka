@@ -1,7 +1,7 @@
 from numpy.testing import assert_array_equal
 from autograd import numpy as np
 
-from vitamine.visual_odometry.point import Points
+from vitamine.points import Points
 
 
 def test_points():

@@ -1,7 +1,6 @@
 from autograd import numpy as np
 
 
-
 class Points(object):
     def __init__(self):
         self.points = np.empty((0, 3), dtype=np.float64)

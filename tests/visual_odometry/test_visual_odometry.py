@@ -9,7 +9,6 @@ from vitamine.dataset.points import cubic_lattice
 from vitamine.dataset.observations import (
     generate_observations, generate_translations)
 from vitamine.rigid_transform import transform
-from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
 from vitamine.keypoints import KeypointDescriptor as KD
@@ -17,7 +16,7 @@ from vitamine.keypoints import Matcher
 from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import VisualOdometry
 from vitamine.pose import Pose
-from vitamine.visual_odometry.point import Points
+from vitamine.points import Points
 from vitamine.point_index import PointIndices
 from vitamine.rigid_transform import transform_all
 from vitamine.utils import random_binary, break_other_than

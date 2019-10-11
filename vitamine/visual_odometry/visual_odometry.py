@@ -8,9 +8,9 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.pose import Pose
-from vitamine.visual_odometry.point import Points
+from vitamine.points import Points
 from vitamine.visual_odometry.pose import estimate_pose
-from vitamine.visual_odometry.keypoint import init_point_indices
+from vitamine.point_index import PointIndices
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices

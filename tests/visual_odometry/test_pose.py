@@ -5,7 +5,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 from vitamine.camera import CameraParameters
 from vitamine.projection import PerspectiveProjection
 from vitamine.point_index import PointIndices
-from vitamine.visual_odometry.point import Points
+from vitamine.points import Points
 from vitamine.visual_odometry.pose import get_correspondences, estimate_pose
 from vitamine.utils import random_binary
 from vitamine.rigid_transform import transform

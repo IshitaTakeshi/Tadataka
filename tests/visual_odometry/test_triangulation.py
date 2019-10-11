@@ -12,7 +12,7 @@ from vitamine.pose import Pose
 from vitamine.rigid_transform import transform
 from vitamine.so3 import rodrigues
 from vitamine.utils import random_binary, break_other_than
-from vitamine.visual_odometry.point import Points
+from vitamine.points import Points
 from vitamine.point_index import PointIndices
 from tests.data import dummy_points as points_true
 
