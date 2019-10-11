@@ -4,7 +4,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from vitamine.camera import CameraParameters
 from vitamine.projection import PerspectiveProjection
-from vitamine.visual_odometry.keypoint import LocalFeatures
+from vitamine.point_index import PointIndices
 from vitamine.visual_odometry.point import Points
 from vitamine.visual_odometry.pose import get_correspondences, estimate_pose
 from vitamine.utils import random_binary
@@ -16,14 +16,10 @@ from tests.data import dummy_points as points_true
 def test_get_correspondences():
     keypoints_true = np.arange(2 * 100 * 3).reshape(2, 100, 3)
 
-    point_indices1 = np.array(
-        # 0   1  2  3  4   5   6   7   8  9  10  11 12 13
-        [-1, -1, 4, 5, 0, -1, -1, -1, -1, 1, -1, -1, 2, 3]
-    )
-    point_indices2 = np.array(
-        # 0   1   2   3  4  5  6  7   8  9  10  11 12 13
-        [-1, -1, -1, -1, 0, 6, 7, 8, -1, 1, -1, -1, 2, 3]
-    )
+    point_indices1 = PointIndices(14)
+    point_indices2 = PointIndices(14)
+    point_indices1.subscribe([2, 3, 4, 9, 12, 13], [4, 5, 0, 1, 2, 3])
+    point_indices2.subscribe([4, 5, 6, 7, 9, 12, 13], [0, 6, 7, 8, 1, 2, 3])
 
     def case1():
         #                      4  5  0  1   2   3
@@ -84,14 +80,13 @@ def test_estimate_pose():
     matches02 = np.array([[4, 5, 6, 7, 9, 12, 13],
                           [4, 5, 6, 8, 9, 10, 13]]).T
 
-    point_indices1 = np.array(
-        # 0   1  2  3  4   5   6   7  8   9  10  11  12  13
-        [-1, -1, 2, 3, 4, -1, -1, -1, 9, -1, -1, 13, 12, -1]
-    )
-    point_indices2 = np.array(
-        # 0   1   2   3  4  5  6   7  8  9  10  11  12  13
-        [-1, -1, -1, -1, 4, 5, 6, -1, 7, 9, 12, -1, -1, 13]
-    )
+    point_indices1 = PointIndices(14)
+    point_indices2 = PointIndices(14)
+
+    point_indices1.subscribe([2, 3, 4, 8, 11, 12, 13],
+                             [2, 3, 4, 9, 13, 12, -1])
+    point_indices2.subscribe([4, 5, 6, 8, 9, 10, 13],
+                             [4, 5, 6, 7, 9, 12, 13])
     omega = np.array([0, -np.pi / 8, np.pi / 2])
     t = np.array([-5, 3, 8])
 

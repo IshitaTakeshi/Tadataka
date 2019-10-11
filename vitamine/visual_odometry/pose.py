@@ -1,6 +1,5 @@
 from autograd import numpy as np
 from vitamine.pose import Pose, solve_pnp
-from vitamine.visual_odometry.keypoint import is_triangulated
 from vitamine.exceptions import NotEnoughInliersException
 
 
@@ -14,13 +13,13 @@ def get_correspondences(matches, point_indices_list):
         if len(matches01) == 0:
             continue
 
-        mask = is_triangulated(point_indices1)[matches01[:, 1]]
+        mask = point_indices1.is_triangulated[matches01[:, 1]]
         if np.sum(mask) == 0:
             continue
 
         indices0, indices1 = matches01[mask, 0], matches01[mask, 1]
         keypoint_indices.append(indices0)
-        point_indices.append(point_indices1[indices1])
+        point_indices.append(point_indices1.get(indices1))
     return np.concatenate(point_indices), np.concatenate(keypoint_indices)
 
 

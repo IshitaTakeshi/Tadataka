@@ -71,8 +71,8 @@ class VisualOdometry(object):
         self.poses.append(pose1)
         point_indices = self.points.add(points)
         point_indices0 = self.point_indices_list[0]
-        point_indices0[matches01[:, 0]] = point_indices
-        point_indices1[matches01[:, 1]] = point_indices
+        point_indices0.subscribe(matches01[:, 0], point_indices)
+        point_indices1.subscribe(matches01[:, 1], point_indices)
         self.point_indices_list.append(point_indices1)
         return True
 
@@ -126,7 +126,7 @@ class VisualOdometry(object):
         return self.try_add_keyframe(KD(keypoints, descriptors))
 
     def try_add_keyframe(self, kd):
-        point_indices = init_point_indices(len(kd.keypoints))
+        point_indices = PointIndices(len(kd.keypoints))
 
         if self.n_active_keyframes == 0:
             self.init_first(kd, point_indices)
