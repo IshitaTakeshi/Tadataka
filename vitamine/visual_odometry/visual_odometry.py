@@ -4,60 +4,17 @@ from autograd import numpy as np
 
 from vitamine.exceptions import (
     InvalidDepthsException, NotEnoughInliersException, print_error)
-from vitamine.keypoints import extract_keypoints, match
+from vitamine.keypoints import extract_keypoints, Matcher
+from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
-from vitamine.visual_odometry.pose import Pose
-from vitamine import pose_estimation as PE
+from vitamine.pose import Pose
 from vitamine.visual_odometry.point import Points
-from vitamine.visual_odometry.keypoint import (
-    LocalFeatures, associate_points, copy_point_indices,
-    init_point_indices, is_triangulated)
+from vitamine.visual_odometry.pose import estimate_pose
+from vitamine.visual_odometry.keypoint import init_point_indices
 from vitamine.visual_odometry.triangulation import (
     triangulation, copy_triangulated, pose_point_from_keypoints)
 from vitamine.visual_odometry.keyframe_index import KeyframeIndices
-
-
-def find_best_match(matcher, active_descriptors, descriptors1):
-    matchesx1 = [matcher(d0, descriptors1) for d0 in active_descriptors]
-    argmax = np.argmax([len(m) for m in matchesx1])
-    return matchesx1[argmax], argmax
-
-
-def get_correspondences(matcher, active_features, lf0):
-    keypoints0, descriptors0 = lf0.get()
-
-    point_indices = []
-    keypoints0_matched = []
-    for lf1 in active_features:
-        descriptors1 = lf1.triangulated().descriptors
-        matches01 = matcher(descriptors0, descriptors1)
-        if len(matches01) == 0:
-            continue
-
-        p = lf1.triangulated_point_indices(matches01[:, 1])
-
-        point_indices.append(p)
-        keypoints0_matched.append(keypoints0[matches01[:, 0]])
-
-    if len(point_indices) == 0:
-        raise NotEnoughInliersException("No matches found")
-
-    point_indices = np.concatenate(point_indices)
-    keypoints0_matched = np.vstack(keypoints0_matched)
-    return point_indices, keypoints0_matched
-
-
-def estimate_pose(matcher, points, active_features, lf0):
-    point_indices, keypoints = get_correspondences(
-        matcher, active_features, lf0
-    )
-    points_ = points.get(point_indices)
-
-    try:
-        R, t = PE.estimate_pose(points_, keypoints)
-    except NotEnoughInliersException:
-        return None
-    return Pose(R, t)
+from vitamine.so3 import rodrigues
 
 
 def get_array_len_geq(min_length):
@@ -65,114 +22,125 @@ def get_array_len_geq(min_length):
 
 
 class VisualOdometry(object):
-    def __init__(self, camera_parameters, distortion_model, matcher=match,
+    def __init__(self, camera_parameters, distortion_model,
+                 matcher=Matcher(enable_ransac=True,
+                                 enable_homography_filter=True),
                  min_keypoints=8, min_active_keyframes=8, min_matches=8):
-        self.matcher = match
+        self.matcher = matcher
         self.min_active_keyframes = min_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
         self.keypoints_condition = get_array_len_geq(min_keypoints)
         self.inlier_condition = get_array_len_geq(min_matches)
         self.active_indices = KeyframeIndices()
         self.points = Points()
-        self.local_features = []
+        self.keypoint_descriptor_list = []
+        self.point_indices_list = []
         self.poses = []
 
     def export_points(self):
         return self.points.get()
 
     def export_poses(self):
-        return [(pose.R, pose.t) for pose in self.poses]
+        return [[pose.omega, pose.t] for pose in self.poses]
 
     def add(self, image):
-        keypoints, descriptors = extract_keypoints(image)
-        return self.try_add(keypoints, descriptors)
+        return self.try_add(extract_keypoints(image))
 
-    def init_first(self, local_features):
-        self.local_features.append(local_features)
+    def init_first(self, kd, point_indices):
+        self.keypoint_descriptor_list.append(kd)
+        self.point_indices_list.append(point_indices)
         self.poses.append(Pose.identity())
 
-    def try_init_second(self, lf1):
-        lf0 = self.local_features[0]
+    def try_init_second(self, kd1, point_indices1):
+        kd0 = self.keypoint_descriptor_list[0]
+        matches01 = self.matcher(kd0, kd1)
 
-        keypoints0, descriptors0 = lf0.get()
-        keypoints1, descriptors1 = lf1.get()
-
-        matches01 = self.matcher(descriptors0, descriptors1)
         if not self.inlier_condition(matches01):
             print_error("Not enough matches found")
             return False
 
         try:
             pose1, points, matches01 = pose_point_from_keypoints(
-                keypoints0, keypoints1, matches01
+                kd0.keypoints, kd1.keypoints, matches01
             )
         except InvalidDepthsException as e:
             print_error(str(e))
             return False
 
-        # if not pose_condition(pose0, pose1):
-        #     return False
-
-        self.local_features.append(lf1)
+        self.keypoint_descriptor_list.append(kd1)
         self.poses.append(pose1)
         point_indices = self.points.add(points)
-        associate_points(lf0, lf1, matches01, point_indices)
+        point_indices0 = self.point_indices_list[0]
+        point_indices0[matches01[:, 0]] = point_indices
+        point_indices1[matches01[:, 1]] = point_indices
+        self.point_indices_list.append(point_indices1)
         return True
 
-    @property
-    def active_local_features(self):
-        return [self.local_features[i] for i in self.active_indices]
+    def get_active(self, array):
+        return [array[i] for i in self.active_indices]
 
-    @property
-    def active_poses(self):
-        return [self.poses[i] for i in self.active_indices]
-
-    def try_add_more(self, lf1):
-        active_features = self.active_local_features
-
-        pose1 = estimate_pose(self.matcher, self.points, active_features, lf1)
-        if pose1 is None:  # pose could not be estimated
-            return None
+    def try_add_more(self, kd0, point_indices0):
+        active_kds = self.get_active(self.keypoint_descriptor_list)
+        matches = [self.matcher(kd0, kd1) for kd1 in active_kds]
+        active_point_indices = self.get_active(self.point_indices_list)
+        pose0 = estimate_pose(self.points, matches,
+                              active_point_indices, kd0.keypoints)
+        if pose0 is None:  # pose could not be estimated
+            return False
 
         # if not self.pose_condition(active_poses[-1], pose1):
         #     # if pose1 is too close from the latest active pose
         #     return None
 
-        triangulation(self.matcher, self.points,
-                      self.active_poses, active_features, pose1, lf1)
+        active_poses = self.get_active(self.poses)
 
-        # copy triangulated point indices back to lf1
-        copy_triangulated(self.matcher, active_features, lf1)
+        # copy existing point indices
+        copy_triangulated(matches, active_point_indices, point_indices0)
 
-        self.local_features.append(lf1)
-        self.poses.append(pose1)
+        active_keypoints = [kd.keypoints for kd in active_kds]
+
+        try:
+            triangulation(self.points, matches,
+                          active_poses, active_keypoints, active_point_indices,
+                          pose0, kd0.keypoints, point_indices0)
+        except InvalidDepthsException as e:
+            print_error(str(e))
+            return False
+
+        self.point_indices_list.append(point_indices0)
+        self.keypoint_descriptor_list.append(kd0)
+        self.poses.append(pose0)
         return True
 
     @property
     def n_active_keyframes(self):
         return len(self.active_indices)
 
-    def try_add(self, keypoints, descriptors):
+    def try_add(self, kd):
+        keypoints, descriptors = kd
+
         if not self.keypoints_condition(keypoints):
             return False
 
         keypoints = self.camera_model.undistort(keypoints)
-        return self.try_add_keyframe(LocalFeatures(keypoints, descriptors))
+        return self.try_add_keyframe(KD(keypoints, descriptors))
 
-    def try_add_keyframe(self, local_features):
+    def try_add_keyframe(self, kd):
+        point_indices = init_point_indices(len(kd.keypoints))
+
         if self.n_active_keyframes == 0:
-            self.init_first(local_features)
+            self.init_first(kd, point_indices)
             self.active_indices.add_new()
             return True
 
         if self.n_active_keyframes == 1:
-            success = self.try_init_second(local_features)
+            success = self.try_init_second(kd, point_indices)
             if not success:
                 return False
             self.active_indices.add_new()
             return True
 
-        success = self.try_add_more(local_features)
+        success = self.try_add_more(kd, point_indices)
         if not success:
             return False
         self.active_indices.add_new()

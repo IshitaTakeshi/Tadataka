@@ -16,4 +16,4 @@ dummy_points = np.array([
    [-5, 3, 3],   # 11
    [-1, 3, 2],   # 12
    [2, -3, -5]   # 13
-])
+], dtype=np.float64)

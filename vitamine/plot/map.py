@@ -1,17 +1,11 @@
-from vitamine.bundle_adjustment.mask import pose_mask, point_mask
-from vitamine.plot.visualizers import plot3d
-from vitamine.plot.cameras import cameras_poly3d
+from vitamine.plot.visualizers import plot3d, axis3d
+from vitamine.plot.cameras import plot_cameras
 from vitamine.so3 import rodrigues
 from matplotlib import pyplot as plt
 
 
 def plot_map(camera_omegas, camera_locations, points):
-    point_mask_ = point_mask(points)
-    pose_mask_ = pose_mask(camera_omegas, camera_locations)
-
-    ax = plot3d(points[point_mask_])
-    ax.add_collection3d(
-        cameras_poly3d(rodrigues(camera_omegas[pose_mask_]),
-                       camera_locations[pose_mask_])
-    )
+    ax = axis3d()
+    plot3d(ax, points)
+    plot_cameras(ax, rodrigues(camera_omegas), camera_locations)
     plt.show()

@@ -2,7 +2,9 @@ from autograd import numpy as np
 
 from vitamine.exceptions import InvalidDepthsException, print_error
 from vitamine import triangulation as TR
-from vitamine.visual_odometry.pose import Pose
+from vitamine.pose import Pose
+from vitamine.keypoints import filter_matches
+from vitamine.visual_odometry.keypoint import is_triangulated
 
 
 def depth_mask_condition(mask, min_positive_dpth_ratio=0.8):
@@ -31,39 +33,37 @@ def points_from_known_poses(keypoints0, keypoints1, pose0, pose1, matches01):
     )
 
     if not depth_mask_condition(valid_depth_mask):
+        np.set_printoptions(suppress=True)
         raise InvalidDepthsException(
-            "Most of points are behind cameras. Maybe wrong matches?"
+            (f"Most of points are behind cameras. Maybe wrong matches? "
+             f"valid_depth_mask = {valid_depth_mask}")
         )
 
     return points[valid_depth_mask], matches01[valid_depth_mask]
 
 
-def triangulation(matcher, points,
-                  pose_list, local_features_list, pose0, lf0):
-    assert(len(local_features_list) == len(pose_list))
+def triangulation(points, matches,
+                  pose_list, keypoints_list, point_indices_list,
+                  pose0, keypoints0, point_indices0):
+    assert(len(point_indices_list) == len(pose_list))
     # any keypoints don't have corresponding 3D points
-    assert(np.all(~lf0.is_triangulated))
 
-    # we focus on only untriangulated points
-    keypoints0, descriptors0 = lf0.get()
-
-    matches0x = []
+    P = []
     # triangulate untriangulated points
-    for lf1, pose1 in zip(local_features_list, pose_list):
-        keypoints1, descriptors1 = lf1.untriangulated()
-        if len(descriptors1) == 0:
+    Z = zip(matches, pose_list, keypoints_list, point_indices_list)
+    for matches01, pose1, keypoints1, point_indices1 in Z:
+        if len(matches01) == 0:
             continue
 
-        matches01 = matcher(descriptors0, descriptors1)
-        matches0x.append(matches01)
+        P.append((point_indices1, matches01))
 
-        # keep elements that are not triangulated yet
-        mask = ~lf0.is_triangulated[matches01[:, 0]]
-        if np.sum(mask) == 0:
-            # all matched keypoints are already triangulated
+        # use keypoints that are not triangulated yet
+        matches01 = filter_matches(matches01,
+                                   ~is_triangulated(point_indices0),
+                                   ~is_triangulated(point_indices1))
+
+        if len(matches01) == 0:
             continue
-
-        matches01 = matches01[mask]
 
         try:
             points_, matches01 = points_from_known_poses(
@@ -72,24 +72,37 @@ def triangulation(matcher, points,
             )
         except InvalidDepthsException as e:
             print_error(str(e))
-            continue
+            raise InvalidDepthsException("Failed to triangulate")
 
-        point_indices_ = points.add(points_)
-        lf0.point_indices[matches01[:, 0]] = point_indices_
+        point_indices = points.add(points_)
+        point_indices0[matches01[:, 0]] = point_indices
 
-    for lf1, matches01 in zip(local_features_list, matches0x):
+
+    for point_indices1, matches01 in P:
+        matches01 = filter_matches(matches01,
+                                   is_triangulated(point_indices0),
+                                   ~is_triangulated(point_indices1))
+
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        # copy point indices back to each lf1
-        lf1.associate_points(indices1, lf0.point_indices[indices0])
+        point_indices1[indices1] = point_indices0[indices0]
 
 
-def copy_triangulated(matcher, local_features_list, lf1):
-    for lf0 in local_features_list:
-        # copy point indices from lf0 to lf1
-        descriptors0 = lf0.triangulated().descriptors
-        descriptors1 = lf1.untriangulated().descriptors
-        if len(descriptors0) == 0 or len(descriptors1) == 0:
+def copy_triangulated(matches, point_indices_list, point_indices0):
+    # matched keypoints indicate the same 3D point
+    # so we copy 3D point indices in existing frames to the newly added frame
+    # so that the new frame can indicate the existing 3D points
+    for point_indices1, matches01 in zip(point_indices_list, matches):
+        if len(matches01) == 0:
             continue
-        matches01 = matcher(descriptors0, descriptors1)
-        point_indices = lf0.triangulated_point_indices(matches01[:, 0])
-        lf1.associate_points(matches01[:, 1], point_indices)
+        # copy from triangulated point_indices1
+        # to untriangulated point_indices0
+        matches01 = filter_matches(matches01,
+                                   ~is_triangulated(point_indices0),
+                                   is_triangulated(point_indices1))
+        if len(matches01) == 0:
+            continue
+
+        indices0, indices1 = matches01[:, 0], matches01[:, 1]
+        point_indices0[indices0] = point_indices1[indices1]
+
+    return point_indices0

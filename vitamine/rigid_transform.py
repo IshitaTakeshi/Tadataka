@@ -76,8 +76,10 @@ def rotate_each(rotations, points):
     return np.einsum('ijk,ik->ij', rotations, points)
 
 
-def transform(R, t, X):
-    return np.dot(R, X.T).T + t
+def transform(R, t, P):
+    assert(R.shape == (3, 3))
+    assert(t.shape == (3,))
+    return np.dot(R, P.T).T + t
 
 
 def inv_transform(R, t, P):

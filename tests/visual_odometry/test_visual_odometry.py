@@ -12,30 +12,30 @@ from vitamine.rigid_transform import transform
 from vitamine.visual_odometry import visual_odometry
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
-from vitamine.keypoints import match
+from vitamine.keypoints import KeypointDescriptor as KD
+from vitamine.keypoints import Matcher
 from vitamine.exceptions import NotEnoughInliersException
-from vitamine.visual_odometry.visual_odometry import (
-    VisualOdometry, find_best_match, estimate_pose,
-    get_correspondences)
-from vitamine.visual_odometry.pose import Pose
+from vitamine.visual_odometry.visual_odometry import VisualOdometry
+from vitamine.pose import Pose
 from vitamine.visual_odometry.point import Points
-from vitamine.visual_odometry.keypoint import LocalFeatures
+from vitamine.visual_odometry.keypoint import init_point_indices, is_triangulated
 from vitamine.rigid_transform import transform_all
 from vitamine.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 
+
+matcher = Matcher(enable_ransac=False, enable_homography_filter=False)
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
 
 omegas = np.array([
     [0, 0, 0],
-    [0, np.pi / 2, 0],
-    [np.pi / 2, 0, 0],
-    [0, np.pi / 4, 0],
-    [0, -np.pi / 4, 0],
-    [-np.pi / 4, np.pi / 4, 0],
-    [0, np.pi / 8, -np.pi / 4]
+    [0, 2 * np.pi / 8, 0],
+    [0, 4 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 0],
+    [2 * np.pi / 8, 1 * np.pi / 8, 0],
+    [1 * np.pi / 8, 1 * np.pi / 8, 1 * np.pi / 8],
 ])
 
 rotations = rodrigues(omegas)
@@ -49,30 +49,12 @@ keypoints_true, positive_depth_mask = generate_observations(
 descriptors = random_binary((len(points_true), 1024))
 
 
-def test_find_best_match():
-    descriptors_ = [
-        descriptors[0:3],  # 3 points can match
-        break_other_than(descriptors, [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]),
-        descriptors[4:8],  # 4 points can match
-        break_other_than(descriptors, [0, 1, 2, 3, 4])
-    ]
-
-    expected = np.vstack((
-        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13],
-        [0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
-    )).T
-    matches01, argmax = find_best_match(match, descriptors_, descriptors)
-    assert_array_equal(matches01, expected)
-    assert(argmax == 1)
-
-
 def test_init_first():
-    lf0 = LocalFeatures(keypoints_true[0], descriptors)
-    vo = VisualOdometry(camera_parameters, FOV(0.0))
-    vo.init_first(lf0)
-    assert(vo.local_features[0] is lf0)
+    kd0 = KD(keypoints_true[0], descriptors)
+    vo = VisualOdometry(camera_parameters, FOV(0.0), matcher=matcher)
+    vo.init_first(kd0, init_point_indices(len(keypoints_true[0])))
+    assert(vo.keypoint_descriptor_list[0] is kd0)
     assert(vo.poses[0] == Pose.identity())
-
 
 
 def test_try_init_second():
@@ -80,29 +62,31 @@ def test_try_init_second():
         keypoints_true0 = keypoints_true[0]
         keypoints_true1 = keypoints_true[1]
 
-        lf0 = LocalFeatures(keypoints_true0, descriptors)
-        lf1 = LocalFeatures(keypoints_true1, descriptors)
+        kd0 = KD(keypoints_true0, descriptors)
+        kd1 = KD(keypoints_true1, descriptors)
 
-        vo = VisualOdometry(camera_parameters, FOV(0.0))
-        assert(vo.try_add_keyframe(lf0))
-        assert(vo.try_add_keyframe(lf1))
+        vo = VisualOdometry(camera_parameters, FOV(0.0), matcher=matcher)
+        assert(vo.try_add_keyframe(kd0))
+        assert(vo.try_add_keyframe(kd1))
 
-        (R0, t0), (R1, t1) = vo.export_poses()
+        pose0, pose1 = vo.poses
         points_pred = vo.export_points()
 
-        keypoints_pred0 = projection.compute(transform(R0, t0, points_pred))
-        keypoints_pred1 = projection.compute(transform(R1, t1, points_pred))
+        P0 = transform(pose0.R, pose0.t, points_pred)
+        P1 = transform(pose1.R, pose1.t, points_pred)
+        keypoints_pred0 = projection.compute(P0)
+        keypoints_pred1 = projection.compute(P1)
 
         assert_array_almost_equal(keypoints_true0, keypoints_pred0)
         assert_array_almost_equal(keypoints_true1, keypoints_pred1)
 
-        assert(vo.local_features[1] is lf1)
-        assert(len(vo.local_features) == 2)
+        assert(vo.keypoint_descriptor_list[1] is kd1)
+        assert(len(vo.keypoint_descriptor_list) == 2)
         assert(len(vo.poses) == 2)
 
-        lf0, lf1 = vo.local_features
-        assert_array_equal(lf0.point_indices, np.arange(len(points_true)))
-        assert_array_equal(lf1.point_indices, np.arange(len(points_true)))
+        indices0, indices1 = vo.point_indices_list
+        assert_array_equal(indices0, np.arange(len(points_true)))
+        assert_array_equal(indices1, np.arange(len(points_true)))
 
     def case2():
         # descriptors[0:4] cannot match
@@ -123,31 +107,35 @@ def test_try_init_second():
         # point_indices   0  1  2  3   4   5   6   7
         # matches02.T = [[6, 7, 8, 9, 10, 11, 12, 13],
         #                [6, 7, 8, 9, 10, 11, 12, 13]]
-        lf0 = LocalFeatures(keypoints_true[0], descriptors0)
-        lf1 = LocalFeatures(keypoints_true[1], descriptors1)
-        lf2 = LocalFeatures(keypoints_true[2], descriptors2)
+        kd0 = KD(keypoints_true[0], descriptors0)
+        kd1 = KD(keypoints_true[1], descriptors1)
+        kd2 = KD(keypoints_true[2], descriptors2)
 
-        vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
-        assert(vo.try_add_keyframe(lf0))
+        vo = VisualOdometry(camera_parameters, FOV(0.0),
+                            matcher=matcher, min_matches=8)
+        assert(vo.try_add_keyframe(kd0))
         # number of matches = 7
         # not enough matches found between descriptors0 and descriptors1
-        assert(not vo.try_add_keyframe(lf1))
+        assert(not vo.try_add_keyframe(kd1))
         # number of matches = 8
         # enough matches can be found
-        assert(vo.try_add_keyframe(lf2))
+        assert(vo.try_add_keyframe(kd2))
 
-        assert(vo.local_features[0] is lf0)
-        assert(vo.local_features[1] is lf2)
+        assert(vo.keypoint_descriptor_list[0] is kd0)
+        assert(vo.keypoint_descriptor_list[1] is kd2)
 
-        assert_array_equal(lf0.point_indices,
+        point_indices0, point_indices2 = vo.point_indices_list
+        assert_array_equal(point_indices0,
                            [-1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7])
-        assert_array_equal(lf2.point_indices,
+        assert_array_equal(point_indices2,
                            [-1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7])
 
         points_pred = vo.export_points()
-        (R0, t0), (R2, t2) = vo.export_poses()
-        keypoints_pred0 = projection.compute(transform(R0, t0, points_pred))
-        keypoints_pred2 = projection.compute(transform(R2, t2, points_pred))
+        pose0, pose2 = vo.poses
+        P0 = transform(pose0.R, pose0.t, points_pred)
+        P2 = transform(pose2.R, pose2.t, points_pred)
+        keypoints_pred0 = projection.compute(P0)
+        keypoints_pred2 = projection.compute(P2)
 
         assert_array_almost_equal(keypoints_true[0, 6:14], keypoints_pred0)
         assert_array_almost_equal(keypoints_true[2, 6:14], keypoints_pred2)
@@ -155,144 +143,16 @@ def test_try_init_second():
     case2()
 
 
-def test_get_correspondences():
-    descriptors1 = break_other_than(descriptors,
-                                    [0, 1, 2, 3, 4, 8, 9, 10, 11, 12, 13])
-    descriptors2 = break_other_than(descriptors,
-                                    [0, 1, 4, 5, 6, 7, 9, 10, 11, 12, 13])
-    lf1 = LocalFeatures(keypoints_true[1], descriptors1)
-    lf2 = LocalFeatures(keypoints_true[2], descriptors2)
-    lf1.point_indices = np.array(
-        # 0   1  2  3  4   5   6   7   8  9  10  11 12 13
-        [-1, -1, 4, 5, 0, -1, -1, -1, -1, 1, -1, -1, 2, 3]
-    )
-    lf2.point_indices = np.array(
-        # 0   1   2   3  4  5  6  7   8  9  10  11 12 13
-        [-1, -1, -1, -1, 0, 6, 7, 8, -1, 1, -1, -1, 2, 3]
-    )
-
-    def case1():
-        descriptors0 = break_other_than(descriptors,
-                                        [2, 3, 4, 5, 6, 7, 9, 12, 13])
-        #                 4  5  0  1   2   3
-        # matches01.T = [[2, 3, 4, 9, 12, 13],
-        #                [2, 3, 4, 9, 12, 13]]
-        #                 0  6  7  8  1   2   3
-        # matches02.T = [[4, 5, 6, 7, 9, 12, 13],
-        #                [4, 5, 6, 7, 9, 12, 13]]
-
-        keypoints0 = keypoints_true[0]
-        lf0 = LocalFeatures(keypoints0, descriptors0)
-
-        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
-
-        assert_array_equal(point_indices,
-                           [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
-        expected = np.vstack([
-            keypoints0[2], keypoints0[3], keypoints0[4],
-            keypoints0[9], keypoints0[12], keypoints0[13],
-            keypoints0[4], keypoints0[5], keypoints0[6],
-            keypoints0[7], keypoints0[9], keypoints0[12], keypoints0[13]
-        ])
-        assert_array_equal(keypoints, expected)
-
-    def case2():
-        descriptors0 = break_other_than(descriptors[2:14],
-                                        [0, 1, 2, 3, 4, 5, 7, 10, 11])
-        #                 4  5  0  1   2   3
-        # matches01.T = [[0, 1, 2, 7, 10, 11],
-        #                [2, 3, 4, 9, 12, 13]]
-        #                 0  6  7  8  1   2   3
-        # matches02.T = [[2, 3, 4, 5, 7, 10, 11],
-        #                [4, 5, 6, 7, 9, 12, 13]]
-        keypoints0 = keypoints_true[0, 2:14]
-        lf0 = LocalFeatures(keypoints0, descriptors0)
-
-        point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
-
-        assert_array_equal(point_indices,
-                           [4, 5, 0, 1, 2, 3, 0, 6, 7, 8, 1, 2, 3])
-        expected = np.vstack([
-            keypoints0[0], keypoints0[1], keypoints0[2],
-            keypoints0[7], keypoints0[10], keypoints0[11],
-            keypoints0[2], keypoints0[3], keypoints0[4],
-            keypoints0[5], keypoints0[7], keypoints0[10], keypoints0[11]
-        ])
-        assert_array_equal(keypoints, expected)
-
-    def case3():
-        # none of them can match
-        descriptors0 = descriptors
-        descriptors1 = random_binary((10, descriptors.shape[1]))
-        descriptors2 = random_binary((12, descriptors.shape[1]))
-        lf0 = LocalFeatures(keypoints_true[0], descriptors0)
-        lf1 = LocalFeatures(keypoints_true[1, 0:10], descriptors1)
-        lf2 = LocalFeatures(keypoints_true[2, 0:12], descriptors2)
-        lf1.point_indices = np.array(
-            # 0   1  2  3  4   5   6   7   8  9
-            [-1, -1, 4, 5, 0, -1, -1, -1, -1, 1]
-        )
-        lf2.point_indices = np.array(
-            # 0   1   2   3  4  5  6  7   8  9  10  11
-            [-1, -1, -1, -1, 0, 6, 7, 8, -1, 1, -1, -1]
-        )
-
-        with pytest.raises(NotEnoughInliersException):
-            get_correspondences(match, [lf1, lf2], lf0)
-
-    case1()
-    case2()
-    case3()
-
-
-def test_estimate_pose():
-    points = Points()
-    points.add(points_true)
-    descriptors0 = break_other_than(descriptors,
-                                    [2, 3, 4, 5, 6, 7, 9, 12, 13])
-    descriptors1 = break_other_than(descriptors,
-                                    [0, 1, 2, 3, 4, 8, 9, 10, 11, 12, 13])
-    descriptors2 = break_other_than(descriptors,
-                                    [0, 1, 4, 5, 6, 7, 9, 10, 11, 12, 13])
-
-    lf0 = LocalFeatures(keypoints_true[0], descriptors0)
-    lf1 = LocalFeatures(keypoints_true[1], descriptors1)
-    lf2 = LocalFeatures(keypoints_true[2], descriptors2)
-
-    # matches01.T = [[2, 3, 4, 9, 12, 13],
-    #                [2, 3, 4, 9, 12, 13]]
-    # matches02.T = [[4, 5, 6, 7, 9, 12, 13],
-    #                [4, 5, 6, 7, 9, 12, 13]]
-    lf1.point_indices = np.array(
-        # 0   1  2  3  4   5   6   7   8  9  10  11  12  13
-        [-1, -1, 2, 3, 4, -1, -1, -1, -1, 9, -1, -1, 12, 13]
-    )
-    lf2.point_indices = np.array(
-        # 0   1   2   3  4  5  6  7   8  9  10  11  12  13
-        [-1, -1, -1, -1, 4, 5, 6, 7, -1, 9, -1, -1, 12, 13]
-    )
-
-    point_indices, keypoints = get_correspondences(match, [lf1, lf2], lf0)
-    point_indices = [2, 3, 4, 9, 12, 13, 4, 5, 6, 7, 9, 12, 13]
-    points_ = points.get(point_indices)
-    keypoints0 = keypoints_true[0]
-    keypoints = np.vstack([
-        keypoints0[2], keypoints0[3], keypoints0[4],
-        keypoints0[9], keypoints0[12], keypoints0[13],
-        keypoints0[4], keypoints0[5], keypoints0[6],
-        keypoints0[7], keypoints0[9], keypoints0[12], keypoints0[13]
-    ])
-
-    from vitamine import pose_estimation as PE
-    pose = estimate_pose(match, points, [lf1, lf2], lf0)
-    assert_array_almost_equal(pose.R, rotations[0])
-    assert_array_almost_equal(pose.t, translations[0])
-    assert(pose == Pose(rotations[0], translations[0]))
+def assert_projection_equal(points, point_indices, pose, keypoints):
+    mask = is_triangulated(point_indices)
+    P = transform(pose.R, pose.t, points.get(point_indices[mask]))
+    assert_array_almost_equal(projection.compute(P), keypoints[mask])
 
 
 def test_try_add_more():
     # TODO test with keypoints of different lengths
-    vo = VisualOdometry(camera_parameters, FOV(0.0), min_matches=8)
+    vo = VisualOdometry(camera_parameters, FOV(0.0),
+                        matcher=matcher, min_matches=8)
 
     descriptors0 = break_other_than(descriptors,
                                     [0, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13])
@@ -303,15 +163,15 @@ def test_try_add_more():
     descriptors3 = break_other_than(descriptors,
                                     [1, 3, 4, 5, 6, 8, 9])
 
-    lf0 = LocalFeatures(keypoints_true[0], descriptors0)
-    lf1 = LocalFeatures(keypoints_true[1], descriptors1)
-    lf2 = LocalFeatures(keypoints_true[2], descriptors2)
-    lf3 = LocalFeatures(keypoints_true[3], descriptors3)
+    keypoints0, keypoints1, keypoints2 = keypoints_true[0:3]
+    kd0 = KD(keypoints0, descriptors0)
+    kd1 = KD(keypoints1, descriptors1)
+    kd2 = KD(keypoints2, descriptors2)
 
-    assert(vo.try_add_keyframe(lf0))
+    assert(vo.try_add_keyframe(kd0))
     assert(vo.n_active_keyframes == 1)
 
-    assert(vo.try_add_keyframe(lf1))
+    assert(vo.try_add_keyframe(kd1))
     assert(vo.n_active_keyframes == 2)
 
     # first triangulation
@@ -319,12 +179,17 @@ def test_try_add_more():
     # matches01.T = [[0, 2, 4, 6, 7, 10, 11, 12, 13],
     #                [0, 2, 4, 6, 7, 10, 11, 12, 13]]
 
-    assert_array_equal(lf0.point_indices,
+    point_indices0, point_indices1 = vo.point_indices_list
+    assert_array_equal(point_indices0,
                        [0, -1, 1, -1, 2, -1, 3, 4, -1, -1, 5, 6, 7, 8])
-    assert_array_equal(lf1.point_indices,
+    assert_array_equal(point_indices1,
                        [0, -1, 1, -1, 2, -1, 3, 4, -1, -1, 5, 6, 7, 8])
 
-    # lf0 and lf1 are already observed and lf2 is added
+    pose0, pose1 = vo.poses
+    assert_projection_equal(vo.points, point_indices0, pose0, keypoints0)
+    assert_projection_equal(vo.points, point_indices1, pose1, keypoints1)
+
+    # kd0 and kd1 are already observed and kd2 is added
     # point_indices   2     3  4      5   6   7      existing
     # point_indices      9       10                  newly triangulated
     # matches02.T = [[4, 5, 6, 7, 9, 10, 11, 12],
@@ -334,54 +199,49 @@ def test_try_add_more():
     # point_indices  11          12                  newly triangulated
     # matches12.T = [[1, 4, 6, 7, 8, 10, 11, 12],
     #                [1, 4, 6, 7, 8, 10, 11, 12]]
-    assert(vo.try_add_keyframe(lf2))
+    np.set_printoptions(suppress=True)
+
+    assert(vo.try_add_keyframe(kd2))
     assert(vo.n_active_keyframes == 3)
 
-    lf0, lf1, lf2 = vo.active_local_features
     assert(len(vo.export_points()) == 13)
-    assert_array_equal(lf0.point_indices,
+
+    point_indices0, point_indices1, point_indices2 = vo.point_indices_list
+    assert_array_equal(point_indices0,
                        [0, -1, 1, -1, 2, 9, 3, 4, -1, 10, 5, 6, 7, 8])
-    assert_array_equal(lf1.point_indices,
+    assert_array_equal(point_indices1,
                        [0, 11, 1, -1, 2, -1, 3, 4, 12, -1, 5, 6, 7, 8])
     # [0, 2, 3, 8] cannot be found in matches01 and matches02
     # so they should not be triangulated
-    assert_array_equal(lf2.point_indices,
+    assert_array_equal(point_indices2,
                        [-1, 11, -1, -1, 2, 9, 3, 4, 12, 10, 5, 6, 7, -1])
 
-    pose0, pose1, pose2 = vo.active_poses
-    point_indices0 = lf0.point_indices[lf0.is_triangulated]
-    point_indices1 = lf1.point_indices[lf1.is_triangulated]
-    point_indices2 = lf2.point_indices[lf2.is_triangulated]
-    P0 = transform(pose0.R, pose0.t, vo.points.get(point_indices0))
-    P1 = transform(pose1.R, pose1.t, vo.points.get(point_indices1))
-    P2 = transform(pose2.R, pose2.t, vo.points.get(point_indices2))
-    assert_array_almost_equal(projection.compute(P0),
-                              keypoints_true[0, lf0.is_triangulated])
-    assert_array_almost_equal(projection.compute(P1),
-                              keypoints_true[1, lf1.is_triangulated])
-    assert_array_almost_equal(projection.compute(P2),
-                              keypoints_true[2, lf2.is_triangulated])
+    pose0, pose1, pose2 = vo.poses
+    assert_projection_equal(vo.points, point_indices0, pose0, keypoints0)
+    assert_projection_equal(vo.points, point_indices1, pose1, keypoints1)
+    assert_projection_equal(vo.points, point_indices2, pose2, keypoints2)
 
 
 def test_try_remove():
-    vo = VisualOdometry(camera_parameters, FOV(0.0), min_active_keyframes=4)
+    vo = VisualOdometry(camera_parameters, FOV(0.0),
+                        matcher=matcher, min_active_keyframes=4)
 
-    assert(vo.try_add(keypoints_true[0], descriptors))
+    assert(vo.try_add(KD(keypoints_true[0], descriptors)))
     assert(vo.n_active_keyframes == 1)
 
-    assert(vo.try_add(keypoints_true[1], descriptors))
+    assert(vo.try_add(KD(keypoints_true[1], descriptors)))
     assert(vo.n_active_keyframes == 2)
 
-    assert(vo.try_add(keypoints_true[2], descriptors))
+    assert(vo.try_add(KD(keypoints_true[2], descriptors)))
     assert(vo.n_active_keyframes == 3)
 
-    assert(vo.try_add(keypoints_true[3], descriptors))
+    assert(vo.try_add(KD(keypoints_true[3], descriptors)))
     assert(vo.n_active_keyframes == 4)
 
     assert(not vo.try_remove())
     assert(vo.n_active_keyframes == 4)
 
-    assert(vo.try_add(keypoints_true[4], descriptors))
+    assert(vo.try_add(KD(keypoints_true[4], descriptors)))
     assert(vo.n_active_keyframes == 5)
 
     assert(vo.try_remove())

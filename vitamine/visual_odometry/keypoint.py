@@ -1,11 +1,6 @@
-from collections import namedtuple
-
 from autograd import numpy as np
 
-
-# just to enable accessing by name
-# ex. localfeatures.triangulated.descriptors
-KD = namedtuple("KeypointDescriptor", ["keypoints", "descriptors"])
+from vitamine.keypoints import KeypointDescriptor as KD
 
 
 def init_point_indices(size):
@@ -55,13 +50,3 @@ class LocalFeatures(object):
         # select only untriangulated elements
         untriangulated = np.where(~self.is_triangulated)[0]
         self.point_indices[untriangulated[indices]] = point_indices
-
-
-def associate_points(lf0, lf1, matches01, point_indices):
-    lf0.associate_points(matches01[:, 0], point_indices)
-    lf1.associate_points(matches01[:, 1], point_indices)
-
-
-def copy_point_indices(local_features_src, local_features_dst, matches01):
-    point_indices = local_features_src.point_indices[matches01[:, 0]]
-    local_features_dst.associate_points(matches01[:, 1], point_indices)

@@ -2,6 +2,11 @@ from numpy.testing import assert_array_almost_equal
 from autograd import numpy as np
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import Normalizer, FOV, calc_factors
+from vitamine.projection import PerspectiveProjection
+from vitamine.rigid_transform import transform
+from vitamine.pose import solve_pnp
+from vitamine.so3 import exp_so3
+from tests.data import dummy_points as points
 
 
 def test_normalizer():
@@ -9,20 +14,46 @@ def test_normalizer():
         focal_length=[2., 3.],
         offset=[-1., 4.]
     )
-    keypoints = np.array([
-        [4, 3],
-        [2, 1],
-        [1, 9]
-    ])
-    expected = np.array([
-        [5 / 2, -1 / 3],
-        [3 / 2, -3 / 3],
-        [2 / 2, 5 / 3]
-    ])
-    assert_array_almost_equal(
-        Normalizer(camera_parameters).normalize(keypoints),
-        expected
-    )
+    projection = PerspectiveProjection(camera_parameters)
+
+    normalizer = Normalizer(camera_parameters)
+
+    def case1():
+        keypoints = np.array([
+            [4, 3],
+            [2, 1],
+            [1, 9]
+        ])
+        expected = np.array([
+            [5 / 2, -1 / 3],
+            [3 / 2, -3 / 3],
+            [2 / 2, 5 / 3]
+        ])
+        assert_array_almost_equal(
+            normalizer.normalize(keypoints),
+            expected
+        )
+
+    def case2():
+        omega_true = np.array([-1.0, 0.2, 3.1])
+        t_true = np.array([-0.8, 1.0, 8.3])
+
+        P = transform(exp_so3(omega_true), t_true, points)
+        keypoints_true = projection.compute(P)
+
+        # poses should be able to be estimated without a camera matrix
+        keypoints_ = normalizer.normalize(keypoints_true)
+        pose = solve_pnp(points, keypoints_)
+
+        P = transform(exp_so3(pose.omega), pose.t, points)
+        keypoints_pred = projection.compute(P)
+
+        assert_array_almost_equal(t_true, pose.t)
+        assert_array_almost_equal(keypoints_true, keypoints_pred)
+
+
+    case1()
+    case2()
 
 
 def test_fov_undistort():
