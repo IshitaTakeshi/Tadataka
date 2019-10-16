@@ -79,8 +79,6 @@ def test_inv_rodrigues():
         [3 * np.pi / 5, 0, -4 * np.pi / 5],
     ])
     assert_array_almost_equal(rodrigues(omegas), RS)
-    print(omegas)
-    print(inv_rodrigues(RS))
     assert_array_almost_equal(omegas, inv_rodrigues(RS))
 
 
@@ -110,7 +108,7 @@ def test_rodrigues():
         [0, -np.pi / 2, 0],
         [0, 0, np.pi],
         [-np.pi, 0, 0]
-    ])
+    ], dtype=np.float64)
 
     expected = np.array([
         [[1, 0, 0],
@@ -128,6 +126,6 @@ def test_rodrigues():
         [[1, 0, 0],
          [0, -1, 0],
          [0, 0, -1]]
-    ])
+    ], dtype=np.float64)
 
     assert_array_almost_equal(rodrigues(V), expected)
