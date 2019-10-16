@@ -16,7 +16,10 @@ class PointIndices(object):
     def subscribe(self, indices, point_indices):
         self.point_indices[indices] = point_indices
 
+    @property
+    def n_triangulated(self):
+        return np.sum(self.is_triangulated)
+
     def get(self, indices):
         assert(self.is_triangulated[indices].all())
         return self.point_indices[indices]
-
