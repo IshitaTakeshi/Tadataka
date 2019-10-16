@@ -49,16 +49,6 @@ def calc_error(x_true, x_pred):
     return np.power(x_true - x_pred, 2).sum()
 
 
-def check_params(poses, points, keypoints):
-    n_poses, n_pose_params = poses.shape
-    n_points, n_point_params = points.shape
-
-    n_visible_keypoints = keypoints.shape[0]
-    n_rows = 2 * n_visible_keypoints
-    n_cols = n_poses * n_pose_params + n_points * n_point_params
-    assert(n_rows >= n_cols)
-
-
 class LocalBundleAdjustment(object):
     def __init__(self, viewpoint_indices, point_indices, keypoints_true):
         """
@@ -75,7 +65,6 @@ class LocalBundleAdjustment(object):
 
     def calc_update(self, poses, points, keypoint_pred):
         assert(keypoint_pred.shape == self.keypoints_true.shape)
-        check_params(poses, points, keypoint_pred)
 
         A, B = self.projection.jacobians(poses, points)
         dposes, dpoints = self.sba.update(self.keypoints_true,

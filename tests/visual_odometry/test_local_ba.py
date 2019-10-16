@@ -82,12 +82,16 @@ def test_local_bundle_adjustment():
         assert(E2 < E1)
 
 
-    n_viewpoints = 4
-    n_points = 5
+    mask = np.array([
+        [0, 1, 1, 1, 1, 0],  #      x_01 x_02 x_03 x_04 x_05
+        [1, 1, 1, 1, 0, 1],  # x_10      x_12           x_15
+        [1, 0, 1, 1, 1, 1],  #           x_22      x_24 x_25
+        [1, 1, 1, 1, 1, 1],  #      x_31 x_32 x_33 x_34 x_35
+        [1, 1, 1, 1, 1, 1]   #           x_42 x_43
+    ], dtype=np.bool)
 
-    mask = np.ones((n_viewpoints, n_points))
-
-    viewpoint_indices, point_indices = np.where(mask)
+    n_points, n_viewpoints = mask.shape
+    point_indices, viewpoint_indices = np.where(mask)
 
     projection = Projection(viewpoint_indices, point_indices)
 
