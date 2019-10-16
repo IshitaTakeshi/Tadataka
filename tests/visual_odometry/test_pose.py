@@ -5,7 +5,6 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 from vitamine.camera import CameraParameters
 from vitamine.projection import PerspectiveProjection
 from vitamine.point_index import PointIndices
-from vitamine.points import Points
 from vitamine.visual_odometry.pose import get_correspondences, estimate_pose
 from vitamine.utils import random_binary
 from vitamine.rigid_transform import transform
@@ -77,9 +76,6 @@ def test_get_correspondences():
 def test_estimate_pose():
     camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
     projection = PerspectiveProjection(camera_parameters)
-
-    points = Points()
-    points.add(points_true)
 
     matches01 = np.array([[2, 3, 4, 9, 12, 13],
                           [2, 3, 4, 8, 12, 11]]).T

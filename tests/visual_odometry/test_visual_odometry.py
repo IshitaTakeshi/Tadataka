@@ -16,7 +16,6 @@ from vitamine.keypoints import Matcher
 from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import VisualOdometry
 from vitamine.pose import Pose
-from vitamine.points import Points
 from vitamine.point_index import PointIndices
 from vitamine.rigid_transform import transform_all
 from vitamine.utils import random_binary, break_other_than
