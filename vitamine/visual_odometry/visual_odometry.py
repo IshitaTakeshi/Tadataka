@@ -54,22 +54,25 @@ class VisualOdometry(object):
     def try_init_second(self, kd1, point_indices1):
         kd0 = self.keypoint_descriptor_list[0]
         matches01 = self.matcher(kd0, kd1)
+        point_indices0 = self.point_indices_list[0]
 
         if not self.inlier_condition(matches01):
             print_error("Not enough matches found")
             return False
 
         try:
-            pose1, points, matches01 = pose_point_from_keypoints(
-                kd0.keypoints, kd1.keypoints, matches01
+            pose1, self.points = two_view_triangulation(
+                self.points, matches01,
+                kd0.keypoints, kd1.keypoints,
+                point_indices0, point_indices1
             )
         except InvalidDepthsException as e:
             print_error(str(e))
             return False
 
         self.keypoint_descriptor_list.append(kd1)
-        self.poses.append(pose1)
         self.point_indices_list.append(point_indices1)
+        self.poses.append(pose1)
         return True
 
     def get_active(self, array):
@@ -77,6 +80,8 @@ class VisualOdometry(object):
 
     def try_add_more(self, kd0, point_indices0):
         active_kds = self.get_active(self.keypoint_descriptor_list)
+
+
         matches = [self.matcher(kd0, kd1) for kd1 in active_kds]
         active_point_indices = self.get_active(self.point_indices_list)
         pose0 = estimate_pose(self.points, matches,

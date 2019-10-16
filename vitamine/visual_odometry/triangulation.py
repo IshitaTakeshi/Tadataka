@@ -42,6 +42,23 @@ def points_from_known_poses(keypoints0, keypoints1, pose0, pose1, matches01):
     return points[valid_depth_mask], matches01[valid_depth_mask]
 
 
+def two_view_triangulation(points, matches01,
+                           keypoints0, keypoints1,
+                           point_indices0, point_indices1):
+    try:
+        pose1, new_points, matches01 = pose_point_from_keypoints(
+            keypoints0, keypoints1, matches01
+        )
+    except InvalidDepthsException as e:
+        print_error(str(e))
+        raise InvalidDepthsException("Failed to triangulate")
+
+    points, point_indices = concat_points(points, new_points)
+    point_indices0.set_triangulated(matches01[:, 0], point_indices)
+    point_indices1.set_triangulated(matches01[:, 1], point_indices)
+    return pose1, points
+
+
 def triangulation(points, matches,
                   pose_list, keypoints_list, point_indices_list,
                   pose0, keypoints0, point_indices0):
