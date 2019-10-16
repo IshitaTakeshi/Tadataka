@@ -13,7 +13,13 @@ class PointIndices(object):
     def triangulated(self):
         return self.point_indices[self.is_triangulated]
 
-    def subscribe(self, indices, point_indices):
+    def set_triangulated(self, indices, point_indices):
+        if not np.all(self.point_indices[indices] == -1):
+            raise ValueError(
+                "You are trying to overwrite existing point indices"
+            )
+        if not np.all(point_indices >= 0):
+            raise ValueError("Point indices cannot be negative")
         self.point_indices[indices] = point_indices
 
     @property

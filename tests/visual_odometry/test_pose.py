@@ -18,8 +18,14 @@ def test_get_correspondences():
 
     point_indices1 = PointIndices(14)
     point_indices2 = PointIndices(14)
-    point_indices1.subscribe([2, 3, 4, 9, 12, 13], [4, 5, 0, 1, 2, 3])
-    point_indices2.subscribe([4, 5, 6, 7, 9, 12, 13], [0, 6, 7, 8, 1, 2, 3])
+    point_indices1.set_triangulated(
+        np.array([2, 3, 4, 9, 12, 13]),
+        np.array([4, 5, 0, 1, 2, 3])
+    )
+    point_indices2.set_triangulated(
+        np.array([4, 5, 6, 7, 9, 12, 13]),
+        np.array([0, 6, 7, 8, 1, 2, 3])
+    )
 
     def case1():
         #                      4  5  0  1   2   3
@@ -83,10 +89,14 @@ def test_estimate_pose():
     point_indices1 = PointIndices(14)
     point_indices2 = PointIndices(14)
 
-    point_indices1.subscribe([2, 3, 4, 8, 11, 12, 13],
-                             [2, 3, 4, 9, 13, 12, -1])
-    point_indices2.subscribe([4, 5, 6, 8, 9, 10, 13],
-                             [4, 5, 6, 7, 9, 12, 13])
+    point_indices1.set_triangulated(
+        np.array([2, 3, 4, 8, 11, 12]),
+        np.array([2, 3, 4, 9, 13, 12])
+    )
+    point_indices2.set_triangulated(
+        np.array([4, 5, 6, 8, 9, 10, 13]),
+        np.array([4, 5, 6, 7, 9, 12, 13])
+    )
     omega = np.array([0, -np.pi / 8, np.pi / 2])
     t = np.array([-5, 3, 8])
 

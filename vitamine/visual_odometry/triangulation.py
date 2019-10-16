@@ -75,6 +75,7 @@ def triangulation(points, matches,
         point_indices = points.add(points_)
         point_indices0.subscribe(matches01[:, 0], point_indices)
 
+        point_indices0.set_triangulated(matches01[:, 0], point_indices)
 
     for point_indices1, matches01 in P:
         matches01 = filter_matches(matches01,
@@ -82,7 +83,7 @@ def triangulation(points, matches,
                                    ~point_indices1.is_triangulated)
 
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        point_indices1.subscribe(indices1, point_indices0.get(indices0))
+        point_indices1.set_triangulated(indices1, point_indices0.get(indices0))
 
 
 def copy_triangulated(matches, point_indices_list, point_indices0):
@@ -101,6 +102,6 @@ def copy_triangulated(matches, point_indices_list, point_indices0):
             continue
 
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
-        point_indices0.subscribe(indices0, point_indices1.get(indices1))
+        point_indices0.set_triangulated(indices0, point_indices1.get(indices1))
 
     return point_indices0
