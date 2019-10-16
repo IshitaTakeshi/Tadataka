@@ -4,12 +4,11 @@ from skimage.io import imread
 from skimage.color import rgb2gray
 from pathlib import Path
 from vitamine.keypoints import extract_keypoints
+from vitamine.keypoints import KeypointDescriptor as KD
 from matplotlib import pyplot as plt
 from vitamine.coordinates import xy_to_yx
 from vitamine.dataset.tum_rgbd import TUMDataset
-from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.visual_odometry.visual_odometry import VisualOdometry
-from vitamine.visual_odometry.keypoint import is_triangulated
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
 from vitamine.coordinates import camera_to_world
@@ -66,19 +65,16 @@ def add_keyframe(image):
 
 def plot_matches_(image1, image2, keypoints1, keypoints2,
                   point_indices1, point_indices2):
-    mask1 = is_triangulated(point_indices1)
-    mask2 = is_triangulated(point_indices2)
-
     matches12 = match_point_indices(
-        point_indices1[mask1],
-        point_indices2[mask2]
+        point_indices1.triangulated,
+        point_indices2.triangulated
     )
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plot_matches(ax, image1, image2,
-                 xy_to_yx(keypoints1[mask1]),
-                 xy_to_yx(keypoints2[mask2]),
+                 xy_to_yx(keypoints1[point_indices1.is_triangulated]),
+                 xy_to_yx(keypoints2[point_indices2.is_triangulated]),
                  matches12)
     plt.show()
 
