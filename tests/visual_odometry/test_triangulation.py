@@ -12,7 +12,7 @@ from vitamine.pose import Pose
 from vitamine.rigid_transform import transform
 from vitamine.so3 import rodrigues
 from vitamine.utils import random_binary, break_other_than
-from vitamine.points import Points
+from vitamine.points import init_empty_points
 from vitamine.point_index import PointIndices
 from tests.data import dummy_points as points_true
 
@@ -154,8 +154,8 @@ def test_triangulation():
         point_indices3 = PointIndices(14)
         point_indices4 = PointIndices(14)
 
-        points = Points()
         triangulation(
+        points = init_empty_points()
             points,
             [matches01, matches02, matches03, matches04],
             [pose1, pose2, pose3, pose4],
@@ -189,11 +189,11 @@ def test_triangulation():
         #                   0  1  4  7  9 10 13
                            [0, 1, 2, 3, 4, 9, 6])
 
-        P0 = points.get(point_indices0.triangulated)
-        P1 = points.get(point_indices1.triangulated)
-        P2 = points.get(point_indices2.triangulated)
-        P3 = points.get(point_indices3.triangulated)
-        P4 = points.get(point_indices4.triangulated)
+        P0 = points[point_indices0.triangulated]
+        P1 = points[point_indices1.triangulated]
+        P2 = points[point_indices2.triangulated]
+        P3 = points[point_indices3.triangulated]
+        P4 = points[point_indices4.triangulated]
         pred0 = projection.compute(transform(pose0.R, pose0.t, P0))
         pred1 = projection.compute(transform(pose1.R, pose1.t, P1))
         pred2 = projection.compute(transform(pose2.R, pose2.t, P2))
@@ -222,7 +222,7 @@ def test_triangulation():
         keypoints0 = keypoints_true[0, 0:10]
         keypoints1 = keypoints_true[1, 0:14]
         keypoints2 = keypoints_true[2, 0:12]
-        points = Points()
+        points = init_empty_points()
 
         point_indices0 = PointIndices(10)
         point_indices1 = PointIndices(14)
@@ -247,9 +247,9 @@ def test_triangulation():
         assert_array_equal(point_indices2.triangulated,
                            [0, 1, 2, 5, 3, 4])
 
-        P0 = points.get(point_indices0.triangulated)
-        P1 = points.get(point_indices1.triangulated)
-        P2 = points.get(point_indices2.triangulated)
+        P0 = points[point_indices0.triangulated]
+        P1 = points[point_indices1.triangulated]
+        P2 = points[point_indices2.triangulated]
         pred0 = projection.compute(transform(pose0.R, pose0.t, P0))
         pred1 = projection.compute(transform(pose1.R, pose1.t, P1))
         pred2 = projection.compute(transform(pose2.R, pose2.t, P2))

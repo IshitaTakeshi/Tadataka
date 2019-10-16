@@ -3,6 +3,7 @@ from autograd import numpy as np
 from vitamine.exceptions import InvalidDepthsException, print_error
 from vitamine import triangulation as TR
 from vitamine.pose import Pose
+from vitamine.points import concat_points
 from vitamine.keypoints import filter_matches
 
 
@@ -72,8 +73,7 @@ def triangulation(points, matches,
             print_error(str(e))
             raise InvalidDepthsException("Failed to triangulate")
 
-        point_indices = points.add(points_)
-        point_indices0.subscribe(matches01[:, 0], point_indices)
+        points, point_indices = concat_points(points, new_points)
 
         point_indices0.set_triangulated(matches01[:, 0], point_indices)
 

@@ -27,7 +27,7 @@ def estimate_pose(points, matches, point_indices_list, keypoints0):
     point_indices, keypoint_indices = get_correspondences(
         matches, point_indices_list
     )
-    points_ = points.get(point_indices)
+    points_ = points[point_indices]
     keypoints_ = keypoints0[keypoint_indices]
 
     try:

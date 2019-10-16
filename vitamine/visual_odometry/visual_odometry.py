@@ -32,7 +32,7 @@ class VisualOdometry(object):
         self.keypoints_condition = get_array_len_geq(min_keypoints)
         self.inlier_condition = get_array_len_geq(min_matches)
         self.active_indices = KeyframeIndices()
-        self.points = Points()
+        self.points = init_empty_points()
         self.keypoint_descriptor_list = []
         self.point_indices_list = []
         self.poses = []
@@ -69,10 +69,6 @@ class VisualOdometry(object):
 
         self.keypoint_descriptor_list.append(kd1)
         self.poses.append(pose1)
-        point_indices = self.points.add(points)
-        point_indices0 = self.point_indices_list[0]
-        point_indices0.subscribe(matches01[:, 0], point_indices)
-        point_indices1.subscribe(matches01[:, 1], point_indices)
         self.point_indices_list.append(point_indices1)
         return True
 
