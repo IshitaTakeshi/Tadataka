@@ -82,7 +82,7 @@ def triangulation(points, matches,
             continue
 
         try:
-            points_, matches01 = points_from_known_poses(
+            new_points, matches01 = points_from_known_poses(
                 keypoints0, keypoints1,
                 pose0, pose1, matches01
             )
@@ -101,6 +101,8 @@ def triangulation(points, matches,
 
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
         point_indices1.set_triangulated(indices1, point_indices0.get(indices0))
+
+    return points
 
 
 def copy_triangulated(matches, point_indices_list, point_indices0):

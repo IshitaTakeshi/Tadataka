@@ -154,8 +154,8 @@ def test_triangulation():
         point_indices3 = PointIndices(14)
         point_indices4 = PointIndices(14)
 
-        triangulation(
         points = init_empty_points()
+        points = triangulation(
             points,
             [matches01, matches02, matches03, matches04],
             [pose1, pose2, pose3, pose4],
@@ -228,7 +228,7 @@ def test_triangulation():
         point_indices1 = PointIndices(14)
         point_indices2 = PointIndices(12)
 
-        triangulation(
+        points = triangulation(
             points,
             [matches01, matches02], [pose1, pose2],
             [keypoints1, keypoints2], [point_indices1, point_indices2],
