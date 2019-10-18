@@ -2,8 +2,8 @@ from collections import defaultdict
 
 from autograd import numpy as np
 
-from vitamine.exceptions import InvalidDepthException
 from vitamine.triangulation import linear_triangulation, pose_point_from_keypoints
+from vitamine.exceptions import InvalidDepthException, print_error
 
 
 def init_empty():
@@ -32,7 +32,7 @@ class Triangulation(object):
         try:
             return linear_triangulation(self.pose0, self.pose1,
                                         keypoint0, keypoint1)
-        except InvalidDepthException:
+        except InvalidDepthException as e:
             print_error(e)
             return None
 

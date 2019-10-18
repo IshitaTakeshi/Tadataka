@@ -1,7 +1,7 @@
 import sys
 
 
-class InvalidDepthsException(Exception):
+class InvalidDepthException(Exception):
     pass
 
 
