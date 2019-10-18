@@ -7,9 +7,6 @@ from vitamine.exceptions import NotEnoughInliersException
 from vitamine.so3 import exp_so3, log_so3
 
 
-min_correspondences = 6
-
-
 class Pose(object):
     def __init__(self, R_or_omega, t):
         if np.ndim(R_or_omega) == 1:
@@ -34,6 +31,9 @@ class Pose(object):
     def __eq__(self, other):
         return (np.isclose(self.omega, other.omega).all() and
                 np.isclose(self.t, other.t).all())
+
+
+min_correspondences = 6
 
 
 def solve_pnp(points, keypoints):
