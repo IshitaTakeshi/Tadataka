@@ -1,24 +1,34 @@
-from collections import deque
-
 from autograd import numpy as np
 
-from vitamine.exceptions import (
-    InvalidDepthsException, NotEnoughInliersException, print_error)
+from vitamine.exceptions import NotEnoughInliersException, print_error
 from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
-from vitamine.pose import Pose
-from vitamine.points import Points
-from vitamine.visual_odometry.pose import estimate_pose
-from vitamine.point_index import PointIndices
-from vitamine.visual_odometry.triangulation import (
-    triangulation, copy_triangulated, pose_point_from_keypoints)
-from vitamine.visual_odometry.keyframe_index import KeyframeIndices
+from vitamine.points import PointManager
+from vitamine.pose import Pose, solve_pnp
+from vitamine.keyframe_index import KeyframeIndices
 from vitamine.so3 import rodrigues
 
 
 def get_array_len_geq(min_length):
     return lambda array: len(array) >= min_length
+
+
+def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
+    points = []
+    keypoints_ = []
+    for matches01, viewpoint in zip(matches, viewpoints):
+        for index0, index1 in matches01:
+            try:
+                point = point_manager.get_(viewpoint, index0)
+            except KeyError as e:
+                print_error(e)
+                continue
+            keypoint = keypoints[index1]
+
+            points.append(point)
+            keypoints_.append(keypoint)
+    return np.array(points), np.array(keypoints_)
 
 
 class VisualOdometry(object):
