@@ -10,6 +10,7 @@ from vitamine.dataset.observations import generate_translations
 from vitamine.so3 import rodrigues
 from vitamine.points import PointManager
 from vitamine.rigid_transform import transform
+from tests.assertion import assert_projection_equal
 from tests.data import dummy_points as points_true
 
 
@@ -28,14 +29,6 @@ translations = generate_translations(rotations, points_true)
 
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
-
-
-def assert_projection_equal(R, t, points, keypoints_pred):
-    assert_array_almost_equal(
-        projection.compute(transform(R, t, points)),
-        keypoints_pred
-    )
-
 
 def test_point_manager():
     point_manager = PointManager()
@@ -61,8 +54,8 @@ def test_point_manager():
     P1, mask1 = point_manager.get(1, matches01[:, 1])
     assert(np.all(mask0))
     assert(np.all(mask1))
-    assert_projection_equal(pose0.R, pose0.t, P0, keypoints0[matches01[:, 0]])
-    assert_projection_equal(pose1.R, pose1.t, P1, keypoints1[matches01[:, 1]])
+    assert_projection_equal(projection, pose0, P0, keypoints0[matches01[:, 0]])
+    assert_projection_equal(projection, pose1, P1, keypoints1[matches01[:, 1]])
     assert_array_equal(P0, P1)
 
     # add the 2nd view
@@ -88,8 +81,8 @@ def test_point_manager():
     assert(np.all(mask0))
     assert(np.all(mask2))
 
-    assert_projection_equal(pose0.R, pose0.t, P0, keypoints0[matches02[:, 0]])
-    assert_projection_equal(pose2.R, pose2.t, P2, keypoints2[matches02[:, 1]])
+    assert_projection_equal(projection, pose0, P0, keypoints0[matches02[:, 0]])
+    assert_projection_equal(projection, pose2, P2, keypoints2[matches02[:, 1]])
 
     # triangulate with the 1st view
 
@@ -111,8 +104,8 @@ def test_point_manager():
     P1, mask1 = point_manager.get(1, matches12[:, 0])
     P2, mask2 = point_manager.get(2, matches12[:, 1])
 
-    assert_projection_equal(pose1.R, pose1.t, P1, keypoints1[matches12[:, 0]])
-    assert_projection_equal(pose2.R, pose2.t, P2, keypoints2[matches12[:, 1]])
+    assert_projection_equal(projection, pose1, P1, keypoints1[matches12[:, 0]])
+    assert_projection_equal(projection, pose2, P2, keypoints2[matches12[:, 1]])
 
     # wrong match
     matches12 = np.array([[0, 1]])
