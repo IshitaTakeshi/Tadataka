@@ -59,8 +59,7 @@ def add_keyframe(image):
     keypoints, descriptors = extract_keypoints(image)
     keypoints_ = vo.camera_model.undistort(keypoints)
     assert(vo.try_add_keyframe(KD(keypoints_, descriptors)))
-    point_indices = vo.point_indices_list[-1]
-    return keypoints, point_indices
+    return keypoints
 
 
 def plot_matches_(image1, image2, keypoints1, keypoints2,
@@ -96,22 +95,22 @@ def plot_map_(poses, points):
 
 
 filenames = sorted(Path("./datasets/ball/").glob("*.jpg"))
-images = [rgb2gray(imread(filename)) for filename in filenames[:4]]
+images = [rgb2gray(imread(filename)) for filename in filenames[:5]]
 
-keypoints0, point_indices0 = add_keyframe(images[0])
-keypoints1, point_indices1 = add_keyframe(images[1])
+keypoints0 = add_keyframe(images[0])
+keypoints1 = add_keyframe(images[1])
 # plot_matches_(images[0], images[1], keypoints0, keypoints1,
 #               point_indices0, point_indices1)
 plot_map_(vo.export_poses(), vo.export_points())
 
-keypoints2, point_indices2 = add_keyframe(images[2])
+keypoints2 = add_keyframe(images[2])
 # plot_matches_(images[0], images[2], keypoints0, keypoints2,
 #               point_indices0, point_indices2)
 # plot_matches_(images[1], images[2], keypoints1, keypoints2,
 #               point_indices1, point_indices2)
 plot_map_(vo.export_poses(), vo.export_points())
 
-keypoints3, point_indices3 = add_keyframe(images[3])
+keypoints3 = add_keyframe(images[3])
 # plot_matches_(images[0], images[3], keypoints0, keypoints3,
 #               point_indices0, point_indices3)
 # plot_matches_(images[1], images[3], keypoints1, keypoints3,
@@ -120,5 +119,5 @@ keypoints3, point_indices3 = add_keyframe(images[3])
 #               point_indices2, point_indices3)
 plot_map_(vo.export_poses(), vo.export_points())
 
-keypoints3, point_indices3 = add_keyframe(images[4])
+keypoints3 = add_keyframe(images[4])
 plot_map_(vo.export_poses(), vo.export_points())
