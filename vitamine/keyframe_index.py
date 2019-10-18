@@ -1,7 +1,6 @@
 
 class KeyframeIndices(object):
     def __init__(self):
-        self.latest_index = -1
         self.indices = []
 
     def __str__(self):
@@ -16,6 +15,14 @@ class KeyframeIndices(object):
     def __iter__(self):
         return iter(self.indices)
 
-    def add_new(self):
-        self.latest_index += 1
-        self.indices.append(self.latest_index)
+    def __getitem__(self, i):
+        return self.indices[i]
+
+    def get_next(self):
+        if len(self.indices) == 0:
+            return 0
+        return self.indices[-1] + 1
+
+    def add_new(self, index):
+        assert(index not in self.indices)
+        self.indices.append(index)
