@@ -134,6 +134,9 @@ def rodrigues(omegas):
 
     # Add EPSILON to avoid division by zero
     theta = np.linalg.norm(omegas + EPSILON, axis=1)
+    # ZeroDivision occurs when calculating jacobian using autograd
+    # if we add EPSILON to the denominator of this line
+    # instead of the previous line
     K = tangent_so3(omegas / theta[:, np.newaxis])
 
     I = np.zeros((N, 3, 3))
