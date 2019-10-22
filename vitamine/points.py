@@ -45,6 +45,9 @@ class PointManager(object):
         self.index_map = defaultdict(dict)
         self.points = init_empty()
 
+    def overwrite(self, point_index, point):
+        self.points[point_index] = point
+
     def add_point_(self, point):
         assert(point.shape == (3,))  # add only one point at a time
         point_index = len(self.points)
