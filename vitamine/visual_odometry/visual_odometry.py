@@ -8,6 +8,7 @@ from vitamine.points import PointManager
 from vitamine.pose import Pose, solve_pnp
 from vitamine.keyframe_index import KeyframeIndices
 from vitamine.so3 import rodrigues
+from vitamine.local_ba import try_run_ba
 
 
 def get_array_len_geq(min_length):
@@ -20,7 +21,7 @@ def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
     for matches01, viewpoint in zip(matches, viewpoints):
         for index0, index1 in matches01:
             try:
-                point = point_manager.get_(viewpoint, index0)
+                point = point_manager.get(viewpoint, index0)
             except KeyError as e:
                 print_error(e)
                 continue

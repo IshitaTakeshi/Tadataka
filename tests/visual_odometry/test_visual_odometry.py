@@ -154,8 +154,8 @@ def test_try_add_more():
     print(omegas[2])
     indices0, indices1 = matches01[:, 0], matches01[:, 1]
     pose0, pose1 = vo.poses
-    points0, _ = vo.point_manager.get(0, indices0)
-    points1, _ = vo.point_manager.get(1, indices1)
+    points0 = np.array([vo.point_manager.get(0, i) for i in indices0])
+    points1 = np.array([vo.point_manager.get(1, i) for i in indices1])
     assert_projection_equal(projection, pose0, points0, keypoints0[indices0])
     assert_projection_equal(projection, pose1, points1, keypoints1[indices1])
 
@@ -178,14 +178,14 @@ def test_try_add_more():
     pose0, pose1, pose2 = vo.poses
 
     indices0, indices2 = matches02[:, 0], matches02[:, 1]
-    points0, _ = vo.point_manager.get(0, indices0)
-    points2, _ = vo.point_manager.get(2, indices2)
+    points0 = np.array([vo.point_manager.get(0, i) for i in indices0])
+    points2 = np.array([vo.point_manager.get(2, i) for i in indices2])
     assert_projection_equal(projection, pose0, points0, keypoints0[indices0])
     assert_projection_equal(projection, pose2, points2, keypoints2[indices2])
 
     indices1, indices2 = matches12[:, 0], matches12[:, 1]
-    points1, _ = vo.point_manager.get(1, indices1)
-    points2, _ = vo.point_manager.get(2, indices2)
+    points1 = np.array([vo.point_manager.get(1, i) for i in indices1])
+    points2 = np.array([vo.point_manager.get(2, i) for i in indices2])
     assert_projection_equal(projection, pose1, points1, keypoints1[indices1])
     assert_projection_equal(projection, pose2, points2, keypoints2[indices2])
 
