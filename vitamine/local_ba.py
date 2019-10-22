@@ -1,10 +1,11 @@
 from autograd import numpy as np
 from autograd import jacobian
-from sba import SBA
+
+from sba import SBA, can_run_ba
 
 from vitamine.rigid_transform import transform
 from vitamine.so3 import exp_so3
-
+from vitamine.pose import Pose
 
 EPSILON = 1e-16
 
@@ -52,10 +53,11 @@ def calc_error(x_true, x_pred):
 class LocalBundleAdjustment(object):
     def __init__(self, viewpoint_indices, point_indices, keypoints_true):
         """
-        I = zip(viewpoint_indices, pointpoint_indices)
-        keypoints_true = [projection(poses[j], points[i]) for j, i in I]
+        Z = zip(viewpoint_indices, pointpoint_indices)
+        keypoints_true = [projection(poses[j], points[i]) for j, i in Z]
         """
-        assert(len(viewpoint_indices) == len(point_indices) == keypoints_true.shape[0])
+        assert(len(viewpoint_indices) == keypoints_true.shape[0])
+        assert(len(point_indices) == keypoints_true.shape[0])
 
         self.projection = Projection(viewpoint_indices, point_indices)
 
@@ -64,14 +66,8 @@ class LocalBundleAdjustment(object):
         self.sba = SBA(viewpoint_indices, point_indices)
 
     def calc_update(self, poses, points, keypoint_pred):
-        assert(keypoint_pred.shape == self.keypoints_true.shape)
-
         A, B = self.projection.jacobians(poses, points)
-        dposes, dpoints = self.sba.update(self.keypoints_true,
-                                          keypoint_pred, A, B)
-        assert(not np.isnan(dposes).all())
-        assert(not np.isnan(dpoints).all())
-        return dposes, dpoints
+        return self.sba.compute(self.keypoints_true, keypoint_pred, A, B)
 
     def compute(self, initial_omegas, initial_translations, initial_points,
                 n_max_iter=200, absolute_threshold=1e-2):
@@ -80,9 +76,10 @@ class LocalBundleAdjustment(object):
         points = initial_points
 
         keypoint_pred = self.projection.compute(poses, points)
+
         current_error = calc_error(self.keypoints_true, keypoint_pred)
 
-        for iter_ in range(n_max_iter):
+        for _ in range(n_max_iter):
             dposes, dpoints = self.calc_update(poses, points, keypoint_pred)
 
             new_poses = poses + dposes
