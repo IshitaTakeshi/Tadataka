@@ -60,6 +60,9 @@ class PointManager(object):
         self.index_map[viewpoint0][keypoint_index0] = point_index
         self.index_map[viewpoint1][keypoint_index1] = point_index
 
+    def keyerror_if_viewpoint_not_exist(self, viewpoint):
+        # we need this function because index_map is 'defaultdict'
+        if viewpoint not in self.index_map.keys():
             raise KeyError(f"viewpoint {viewpoint}")
 
     def get(self, viewpoint, keypoint_index):
