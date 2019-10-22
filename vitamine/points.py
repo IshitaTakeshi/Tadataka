@@ -1,9 +1,11 @@
 from collections import defaultdict
+import warnings
 
 from autograd import numpy as np
 
-from vitamine.triangulation import linear_triangulation, pose_point_from_keypoints
 from vitamine.exceptions import InvalidDepthException, print_error
+from vitamine.triangulation import (linear_triangulation,
+                                    pose_point_from_keypoints)
 
 
 def init_empty():
@@ -39,8 +41,8 @@ class Triangulation(object):
 
 class PointManager(object):
     def __init__(self):
-        # {keyframe index: {keypoint index: point index}}
-        self.point_indices = defaultdict(dict)
+        # {viewpoint index: {keypoint index: point index}}
+        self.index_map = defaultdict(dict)
         self.points = init_empty()
 
     def add_point_(self, point):
@@ -52,13 +54,8 @@ class PointManager(object):
     def add_point(self, point, viewpoint0, viewpoint1,
                   keypoint_index0, keypoint_index1):
         point_index = self.add_point_(point)
-        self.point_indices[viewpoint0][keypoint_index0] = point_index
-        self.point_indices[viewpoint1][keypoint_index1] = point_index
-
-    def associate_existing(self, src_viewpoint, dst_viewpoint,
-                           src_keypoint_index, dst_keypoint_index):
-        point_index = self.point_indices[src_viewpoint][src_keypoint_index]
-        self.point_indices[dst_viewpoint][dst_keypoint_index] = point_index
+        self.index_map[viewpoint0][keypoint_index0] = point_index
+        self.index_map[viewpoint1][keypoint_index1] = point_index
 
             raise KeyError(f"viewpoint {viewpoint}")
 
@@ -70,7 +67,7 @@ class PointManager(object):
     def initialize(self, keypoints0, keypoints1, matches01,
                    viewpoint0, viewpoint1):
         # no viewpoints added so far
-        assert(len(self.point_indices.keys()) == 0)
+        assert(len(self.index_map.keys()) == 0)
 
         pose0, pose1, points, valid_matches01 = pose_point_from_keypoints(
             keypoints0, keypoints1, matches01
@@ -82,6 +79,18 @@ class PointManager(object):
 
         return pose0, pose1
 
+    def associate_existing(self, src_viewpoint, dst_viewpoint,
+                           src_keypoint_index, dst_keypoint_index):
+        point_index = self.index_map[src_viewpoint][src_keypoint_index]
+        # we prevent the case that one view has two keypoints that is
+        # corresponding to one 3D point
+        # e.g. index_map[1][4] == index_map[1][3] == 2 should not happen
+        # because this means both of 4th keypoint and 3rd keypoint are
+        # the projections of the 2nd 3D point in the 1st view
+        if point_index in self.index_map[dst_viewpoint].values():
+            return
+        self.index_map[dst_viewpoint][dst_keypoint_index] = point_index
+
     def both_observed(self, triangulation,
                       viewpoint0, viewpoint1, indices0, indices1):
         # Triangulate in the assumption that
@@ -89,8 +98,8 @@ class PointManager(object):
         # There's a constraint that one 3D point have
         # only one corresponding keypoint in a frame
 
-        keypoint_indices0 = self.point_indices[viewpoint0].keys()
-        keypoint_indices1 = self.point_indices[viewpoint1].keys()
+        keypoint_indices0 = self.index_map[viewpoint0].keys()
+        keypoint_indices1 = self.index_map[viewpoint1].keys()
 
         for index0, index1 in zip(indices0, indices1):
             is_trinagulated0 = index0 in keypoint_indices0
@@ -101,8 +110,8 @@ class PointManager(object):
                 # In this case, index0 and index1 should indicate
                 # the same 3D point otherwise it is a wrong match
                 warn_if_incorrect_match(
-                    self.point_indices[viewpoint0][index0],
-                    self.point_indices[viewpoint1][index1]
+                    self.index_map[viewpoint0][index0],
+                    self.index_map[viewpoint1][index1]
                 )
                 continue
 
@@ -131,7 +140,7 @@ class PointManager(object):
                             src_viewpoint, dst_viewpoint, src_indices, dst_indices):
         # assume src_viewpoint have already been observed
 
-        src_keypoint_indices = self.point_indices[src_viewpoint].keys()
+        src_keypoint_indices = self.index_map[src_viewpoint].keys()
         for src_index, dst_index in zip(src_indices, dst_indices):
             if src_index in src_keypoint_indices:
                 # keypoint corresponding to src_index has
@@ -156,7 +165,7 @@ class PointManager(object):
                     viewpoint0, viewpoint1):
         triangulation = Triangulation(pose0, pose1, keypoints0, keypoints1)
 
-        viewpoints = self.point_indices.keys()
+        viewpoints = self.index_map.keys()
         has_observed0 = viewpoint0 in viewpoints
         has_observed1 = viewpoint1 in viewpoints
 
