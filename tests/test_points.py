@@ -30,6 +30,7 @@ translations = generate_translations(rotations, points_true)
 camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
 projection = PerspectiveProjection(camera_parameters)
 
+
 def test_point_manager():
     point_manager = PointManager()
 
@@ -50,39 +51,45 @@ def test_point_manager():
     assert_array_almost_equal(pose0.omega, np.zeros(3))
     assert_array_almost_equal(pose1.omega, omegas[1])
 
-    P0, mask0 = point_manager.get(0, matches01[:, 0])
-    P1, mask1 = point_manager.get(1, matches01[:, 1])
-    assert(np.all(mask0))
-    assert(np.all(mask1))
-    assert_projection_equal(projection, pose0, P0, keypoints0[matches01[:, 0]])
-    assert_projection_equal(projection, pose1, P1, keypoints1[matches01[:, 1]])
-    assert_array_equal(P0, P1)
+    for index0, index1 in matches01:
+        p0 = point_manager.get(0, index0)
+        p1 = point_manager.get(1, index1)
+        assert_projection_equal(projection, pose0, np.atleast_2d(p0),
+                                np.atleast_2d(keypoints0[index0]))
+        assert_projection_equal(projection, pose1, np.atleast_2d(p1),
+                                np.atleast_2d(keypoints1[index1]))
+        assert_array_equal(p0, p1)
 
     # add the 2nd view
 
     # triangulate with the 0th view
 
     # [0, 1, 2, 3, 8, 9] are already triangulated
+    P0 = np.array([point_manager.get(0, i) for i in [0, 1, 2, 3, 8, 9]])
+
     # [5, 7] are not triangulated yet
-    matches02 = np.array([[0, 1, 2, 3, 5, 7, 8, 9],
-                          [0, 1, 2, 3, 5, 7, 8, 9]]).T
-    P0, mask0 = point_manager.get(0, matches02[:, 0])
-    assert_array_equal(mask0, [1, 1, 1, 1, 0, 0, 1, 1])
+    for index0 in [5, 7]:
+        with pytest.raises(KeyError):
+            point_manager.get(0, index0)
 
     # esitmate the pose by pnp to align the scale
-    pose2 = solve_pnp(P0, keypoints2[matches02[mask0, 1]])
+    pose2 = solve_pnp(P0, keypoints2[[0, 1, 2, 3, 8, 9]])
+
+    matches02 = np.array([[0, 1, 2, 3, 5, 7, 8, 9],
+                          [0, 1, 2, 3, 5, 7, 8, 9]]).T
 
     point_manager.triangulate(pose0, pose2, keypoints0, keypoints2, matches02,
                               viewpoint0=0, viewpoint1=2)
-    P0, mask0 = point_manager.get(0, matches02[:, 0])
-    P2, mask2 = point_manager.get(2, matches02[:, 1])
 
-    # all masks shuld be true because all matched points are triangulated
-    assert(np.all(mask0))
-    assert(np.all(mask2))
-
-    assert_projection_equal(projection, pose0, P0, keypoints0[matches02[:, 0]])
-    assert_projection_equal(projection, pose2, P2, keypoints2[matches02[:, 1]])
+    # all matched points are triangulated
+    for index0, index2 in matches02:
+        p0 = point_manager.get(0, index0)
+        p2 = point_manager.get(2, index2)
+        assert_projection_equal(projection, pose0, np.atleast_2d(p0),
+                                np.atleast_2d(keypoints0[index0]))
+        assert_projection_equal(projection, pose2, np.atleast_2d(p2),
+                                np.atleast_2d(keypoints2[index2]))
+        assert_array_equal(p0, p2)
 
     # triangulate with the 1st view
 
@@ -92,20 +99,23 @@ def test_point_manager():
     # [10, 11, 12] are not triangulated yet in any viewpoints
     matches12 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                           [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]).T
-    P1, mask1 = point_manager.get(1, matches12[:, 0])
-    # keypoint index           0  1  2  3  4  5  6  7  8  9 10 11 12
-    assert_array_equal(mask1, [1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0])
 
+    P1 = np.array([point_manager.get(1, i) for i in [0, 1, 2, 3, 4, 6, 8, 9]])
     # esitmate the pose using matches to the 1st view
-    pose2 = solve_pnp(P1, keypoints2[matches12[mask1, 1]])
+    pose2 = solve_pnp(P1, keypoints2[[0, 1, 2, 3, 4, 6, 8, 9]])
 
     point_manager.triangulate(pose1, pose2, keypoints1, keypoints2, matches12,
                               viewpoint0=1, viewpoint1=2)
-    P1, mask1 = point_manager.get(1, matches12[:, 0])
-    P2, mask2 = point_manager.get(2, matches12[:, 1])
 
-    assert_projection_equal(projection, pose1, P1, keypoints1[matches12[:, 0]])
-    assert_projection_equal(projection, pose2, P2, keypoints2[matches12[:, 1]])
+    # all matched points are triangulated
+    for index1, index2 in matches12:
+        p1 = point_manager.get(1, index1)
+        p2 = point_manager.get(2, index2)
+        assert_projection_equal(projection, pose1, np.atleast_2d(p1),
+                                np.atleast_2d(keypoints1[index1]))
+        assert_projection_equal(projection, pose2, np.atleast_2d(p2),
+                                np.atleast_2d(keypoints2[index2]))
+        assert_array_equal(p1, p2)
 
     # wrong match
     matches12 = np.array([[0, 1]])

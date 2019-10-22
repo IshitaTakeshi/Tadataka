@@ -60,24 +60,12 @@ class PointManager(object):
         point_index = self.point_indices[src_viewpoint][src_keypoint_index]
         self.point_indices[dst_viewpoint][dst_keypoint_index] = point_index
 
-    def get(self, viewpoint, keypoint_indices):
-        if viewpoint not in self.point_indices.keys():
             raise KeyError(f"viewpoint {viewpoint}")
 
-        d = self.point_indices[viewpoint]
-
-        point_indices = []
-        mask = []
-        for i in keypoint_indices:
-            try:
-                point_index = d[i]
-            except KeyError as e:
-                mask.append(False)
-                continue
-            point_indices.append(point_index)
-            mask.append(True)
-
-        return self.points[point_indices], mask
+    def get(self, viewpoint, keypoint_index):
+        self.keyerror_if_viewpoint_not_exist(viewpoint)
+        point_index = self.index_map[viewpoint][keypoint_index]
+        return self.points[point_index]
 
     def initialize(self, keypoints0, keypoints1, matches01,
                    viewpoint0, viewpoint1):
