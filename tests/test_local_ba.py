@@ -19,7 +19,7 @@ def test_jacobian():
     poses = to_poses(omegas, translations)
 
     dpoints = 0.01 * unit_uniform(points.shape)
-    domegas = 0.01 * np.pi * unit_uniform(omegas.shape)
+    domegas = 0.001 * unit_uniform(omegas.shape)
     dtranslations = 0.01 * unit_uniform(translations.shape)
     dposes = to_poses(domegas, dtranslations)
 
