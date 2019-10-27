@@ -2,6 +2,9 @@ from pathlib import Path
 
 from skimage.color import rgb2gray
 
+from matplotlib import pyplot as plt
+
+from vitamine.plot.visualizers import plot3d
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
 from vitamine.dataset.tum_rgbd import TUMDataset
@@ -17,12 +20,14 @@ dataset = TUMDataset(Path("datasets", "TUM", "rgbd_dataset_freiburg1_xyz"))
 
 vo = VisualOdometry(camera_parameters, FOV(0.0))
 
-from matplotlib import pyplot as plt
 
 for i, frame in enumerate(dataset):
     image = rgb2gray(frame.image)
-    plt.imshow(image, cmap="gray")
-    plt.show()
+    # plt.imshow(image, cmap="gray")
     vo.add(image)
     vo.try_remove()
-    print(f"frame index = {i}")
+
+    if vo.n_active_keyframes > 1:
+        points = vo.export_points()
+        plot3d(points)
+        plt.show()
