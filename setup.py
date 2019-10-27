@@ -19,5 +19,8 @@ setup(
         'opencv-python',
         'opencv-contrib-python',
         'sba'
+    ],
+    dependency_links=[
+        'git+https://github.com/IshitaTakeshi/SBA.git@develop#egg=sba'
     ]
 )
