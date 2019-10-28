@@ -107,6 +107,7 @@ class VisualOdometry(object):
                 pose0, pose1, kd0.keypoints, kd1.keypoints, matches01,
                 viewpoint0, viewpoint1
             )
+
         return pose1
 
     @property
@@ -145,17 +146,39 @@ class VisualOdometry(object):
             self.active_viewpoints.add_new(new_viewpoint)
             return True
 
-        viewpoints = self.active_viewpoints
-        active_kds = [self.kds[v] for v in viewpoints]
-        active_poses = [self.poses[v] for v in viewpoints]
+        active_kds = [self.kds[v] for v in self.active_viewpoints]
+        active_poses = [self.poses[v] for v in self.active_viewpoints]
         try:
             pose1 = self.try_add_more(new_kd, new_viewpoint,
-                                      active_kds, active_poses, viewpoints)
+                                      active_kds, active_poses,
+                                      self.active_viewpoints)
         except NotEnoughInliersException:
             return False
+
         self.poses.append(pose1)
         self.kds[new_viewpoint] = new_kd
         self.active_viewpoints.add_new(new_viewpoint)
+
+        active_poses = [self.poses[v] for v in self.active_viewpoints]
+        active_kds = [self.kds[v] for v in self.active_viewpoints]
+        try:
+            poses, points, point_indices = try_run_ba(
+                self.point_manager.index_map,
+                self.point_manager.points,
+                active_poses,
+                [kd.keypoints for kd in active_kds],
+                self.active_viewpoints
+            )
+
+            for j, pose in zip(self.active_viewpoints, poses):
+                self.poses[j] = pose
+
+            assert(len(point_indices) == len(points))
+            for i, point in zip(point_indices, points):
+                self.point_manager.overwrite(i, point)
+
+        except ValueError as e:
+            print_error(e)
         return True
 
     def try_remove(self):
