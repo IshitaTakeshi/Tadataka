@@ -1,7 +1,9 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from autograd import numpy as np
 
-from vitamine.local_ba import LocalBundleAdjustment, Projection, IndexConverter
+from vitamine.local_ba import (
+    LocalBundleAdjustment, Projection, IndexConverter,
+    calc_error, calc_errors)
 from tests.utils import unit_uniform
 
 
@@ -111,44 +113,53 @@ def add_noise(array, scale):
     return array + scale * unit_uniform(array.shape)
 
 
+def test_calc_errors():
+    x_true = np.array([
+        [2, 4],
+        [3, 1],
+        [-1, 1]
+    ])
+    x_pred = np.array([
+        [3, 4],
+        [3, 2],
+        [2, 0]
+    ])
+    assert_array_equal(calc_errors(x_true, x_pred), [1, 1, 10])
+    assert(calc_error(x_true, x_pred) == 12 / 3)
+
+
 def test_local_bundle_adjustment():
-    def error(keypoints1, keypoints2):
-        return np.power(keypoints1 - keypoints2, 2).sum()
 
     def run(omegas1, translations1, points1):
         keypoints1 = projection.compute(
             to_poses(omegas1, translations1), points1
         )
+        E1 = calc_error(keypoints1, keypoints_true)
 
         # refine parameters
         omegas2, translations2, points2 = local_ba.compute(
-            omegas1, translations1, points1)
+            omegas1, translations1, points1,
+            absolute_error_threshold=1e-6
+        )
 
         keypoints2 = projection.compute(
             to_poses(omegas2, translations2), points2
         )
+        E2 = calc_error(keypoints2, keypoints_true)
 
         # error shoud be decreased after bundle adjustment
-        E1 = error(keypoints1, keypoints_true)
-        E2 = error(keypoints2, keypoints_true)
-
-        if np.isclose(E1, E2):
-            # nothing updated
-            assert_array_equal(omegas1, omegas2)
-            assert_array_equal(translations1, translations2)
-            assert_array_equal(points1, points2)
-            return
-
         assert(E2 < E1)
-
+        assert(E2 < 1e-6)
 
     mask = np.array([
-        [0, 1, 1, 1, 1, 0],  #      x_01 x_02 x_03 x_04 x_05
-        [1, 1, 1, 1, 0, 1],  # x_10      x_12           x_15
-        [1, 0, 1, 1, 1, 1],  #           x_22      x_24 x_25
-        [1, 1, 1, 1, 1, 1],  #      x_31 x_32 x_33 x_34 x_35
-        [1, 1, 1, 1, 1, 1]   #           x_42 x_43
+        [0, 1, 1, 1, 1, 0],  #      x_01 x_02 x_03 x_04
+        [1, 1, 1, 1, 0, 1],  # x_10 x_11 x_12 x_13      x_15
+        [1, 0, 1, 1, 1, 1],  # x_20      x_22 x_23 x_24 x_25
+        [1, 1, 1, 1, 1, 1],  # x_30 x_31 x_32 x_33 x_34 x_35
+        [1, 1, 1, 1, 1, 1]   # x_40 x_41 x_42 x_43 x_44 x_45
     ], dtype=np.bool)
+
+    mask = np.ones((5, 4), dtype=np.bool)
 
     n_points, n_viewpoints = mask.shape
     point_indices, viewpoint_indices = np.where(mask)
@@ -166,7 +177,7 @@ def test_local_bundle_adjustment():
     local_ba = LocalBundleAdjustment(viewpoint_indices, point_indices,
                                      keypoints_true)
 
-    omegas_noisy = add_noise(omegas_true, 0.01 * np.pi)
+    omegas_noisy = add_noise(omegas_true, 0.001)
     translations_noisy = add_noise(translations_true, 0.01)
     points_noisy = add_noise(points_true, 0.01)
 

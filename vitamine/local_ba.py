@@ -7,6 +7,7 @@ from vitamine.rigid_transform import transform
 from vitamine.so3 import exp_so3
 from vitamine.pose import Pose
 
+
 EPSILON = 1e-16
 
 
@@ -14,6 +15,26 @@ def projection(pose, point):
     omega, t = pose[0:3], pose[3:6]
     p = transform(exp_so3(omega), t, point)
     return p[0:2] / (p[2] + EPSILON)
+
+
+def create_jacobian():
+    index = 0
+    for i, j in itertools.product(range(n_points), range(n_viewpoints)):
+        if not mask[i, j]:
+            continue
+
+        viewpoint_indices[index] = j
+        point_indices[index] = i
+
+        row = index * 2
+
+        col = j * n_pose_params
+        JA[row:row+2, col:col+n_pose_params] = A[index]
+
+        col = i * n_point_params
+        JB[row:row+2, col:col+n_point_params] = B[index]
+
+        index += 1
 
 
 class Projection(object):
@@ -40,64 +61,95 @@ class Projection(object):
         A = np.zeros((self.n_visible, 2, 6))
         B = np.zeros((self.n_visible, 2, 3))
         I = zip(self.viewpoint_indices, self.point_indices)
+
         for index, (j, i) in enumerate(I):
             A[index] = self.pose_jacobian(poses[j], points[i])
             B[index] = self.point_jacobian(poses[j], points[i])
         return A, B
 
 
+def calc_errors(x_true, x_pred):
+    return np.sum(np.power(x_true - x_pred, 2), axis=1)
+
+
 def calc_error(x_true, x_pred):
-    return np.power(x_true - x_pred, 2).sum()
+    return np.mean(calc_errors(x_true, x_pred))
+
+
+def update_weights(robustifier, x_true, x_pred, weights):
+    E = calc_errors(x_true, x_pred, weights)
+    I = np.identity(2)
+    return np.array([I * w for w in robustifier.weights(E)])
 
 
 class LocalBundleAdjustment(object):
-    def __init__(self, viewpoint_indices, point_indices, keypoints_true):
+    def __init__(self, viewpoint_indices, point_indices, x_true):
         """
         Z = zip(viewpoint_indices, pointpoint_indices)
-        keypoints_true = [projection(poses[j], points[i]) for j, i in Z]
+        x_true = [projection(poses[j], points[i]) for j, i in Z]
         """
-        assert(len(viewpoint_indices) == keypoints_true.shape[0])
-        assert(len(point_indices) == keypoints_true.shape[0])
+        assert(len(viewpoint_indices) == x_true.shape[0])
+        assert(len(point_indices) == x_true.shape[0])
 
         self.projection = Projection(viewpoint_indices, point_indices)
-
-        self.keypoints_true = keypoints_true
+        self.x_true = x_true
 
         self.sba = SBA(viewpoint_indices, point_indices)
 
-    def calc_update(self, poses, points, keypoint_pred):
+    def calc_update(self, poses, points, mu):
+        x_pred = self.projection.compute(poses, points)
         A, B = self.projection.jacobians(poses, points)
-        return self.sba.compute(self.keypoints_true, keypoint_pred, A, B)
+        return self.sba.compute(self.x_true, x_pred, A, B, weights=None, mu=mu)
+
+    def calc_error(self, poses, points):
+        x_pred = self.projection.compute(poses, points)
+        return calc_error(self.x_true, x_pred)
+
+    def calc_new_error(self, poses, points, mu):
+        dposes, dpoints = self.calc_update(poses, points, mu)
+        error = self.calc_error(poses + dposes, points + dpoints)
+        return dposes, dpoints, error
+
+    def lm_update(self, poses, points, mu, nu):
+
+        error0 = self.calc_error(poses, points)
+
+        new_mu = mu / nu
+        dposes, dpoints, error = self.calc_new_error(poses, points, new_mu)
+        if error < error0:
+            return poses + dposes, points + dpoints, new_mu, error
+
+        new_mu = mu
+        dposes, dpoints, error = self.calc_new_error(poses, points, new_mu)
+        if error < error0:
+            return poses + dposes, points + dpoints, new_mu, error
+
+        error = np.inf
+        new_mu = mu
+        while error > error0:
+            new_mu = new_mu * nu
+            dposes, dpoints, error = self.calc_new_error(poses, points, new_mu)
+        return poses + dposes, points + dpoints, new_mu, error
 
     def compute(self, initial_omegas, initial_translations, initial_points,
-                n_max_iter=200, absolute_threshold=1e-2):
+                n_max_iter=200, absolute_error_threshold=1e-8,
+                initial_mu=1.0, nu=20.0):
 
         poses = np.hstack((initial_omegas, initial_translations))
         points = initial_points
 
-        keypoint_pred = self.projection.compute(poses, points)
-
-        current_error = calc_error(self.keypoints_true, keypoint_pred)
-
-        for _ in range(n_max_iter):
-            dposes, dpoints = self.calc_update(poses, points, keypoint_pred)
-
-            new_poses = poses + dposes
-            new_points = points + dpoints
-
-            keypoint_pred = self.projection.compute(new_poses, new_points)
-            new_error = calc_error(self.keypoints_true, keypoint_pred)
+        mu = initial_mu
+        current_error = self.calc_error(poses, points)
+        for iter_ in range(n_max_iter):
+            poses, points, mu, new_error = self.lm_update(poses, points, mu, nu)
 
             # converged or started to diverge
-            if new_error > current_error:
-                break
-
-            poses = new_poses
-            points = new_points
+            # if new_error > current_error:
+            #     break
 
             # new_error is goood enough
             # return new_poses and new_points
-            if new_error < absolute_threshold:
+            if new_error < absolute_error_threshold:
                 break
 
             current_error = new_error
@@ -120,6 +172,7 @@ class IndexConverter(object):
         self.viewpoint_map = dict()
         self.point_index = 0
         self.viewpoint_index = 0
+        self.point_ids = []
 
     def add(self, viewpoint_id, point_id, pose, point, keypoint):
         if viewpoint_id not in self.viewpoint_map.keys():
@@ -130,6 +183,7 @@ class IndexConverter(object):
         if point_id not in self.point_map.keys():
             self.point_map[point_id] = self.point_index
             self.point_index += 1
+            self.point_ids.append(point_id)
             self.points.append(point)
 
         self.viewpoint_indices.append(self.viewpoint_map[viewpoint_id])
@@ -195,6 +249,9 @@ def try_run_ba(index_map, points, poses, keypoints_list, viewpoints):
                       n_points=len(local_points),
                       n_visible=len(keypoints_true),
                       n_pose_params=6, n_point_params=3):
-        return local_poses, local_points
-    return try_run_ba_(viewpoint_indices, point_indices,
-                       local_poses, local_points, keypoints_true)
+        raise ValueError("Arguments not satisfying condition to run BA")
+
+    poses, points = try_run_ba_(viewpoint_indices, point_indices,
+                                local_poses, local_points, keypoints_true)
+
+    return poses, points, converter.point_ids
