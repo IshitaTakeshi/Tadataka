@@ -63,17 +63,19 @@ def add_keyframe(image):
 
 
 def plot_matches_(image1, image2, keypoints1, keypoints2,
-                  point_indices1, point_indices2):
-    matches12 = match_point_indices(
-        point_indices1.triangulated,
-        point_indices2.triangulated
-    )
+                  keypoint_point_map1, keypoint_point_map2):
+    keypoint_indices1, point_indices1 = zip(*keypoint_point_map1.items())
+    keypoint_indices2, point_indices2 = zip(*keypoint_point_map2.items())
+    keypoint_indices1 = list(keypoint_indices1)
+    keypoint_indices2 = list(keypoint_indices2)
+
+    matches12 = match_point_indices(point_indices1, point_indices2)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plot_matches(ax, image1, image2,
-                 xy_to_yx(keypoints1[point_indices1.is_triangulated]),
-                 xy_to_yx(keypoints2[point_indices2.is_triangulated]),
+                 xy_to_yx(keypoints1[keypoint_indices1]),
+                 xy_to_yx(keypoints2[keypoint_indices2]),
                  matches12)
     plt.show()
 
