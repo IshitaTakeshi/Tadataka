@@ -77,6 +77,11 @@ def rotate_each(rotations, points):
 
 
 def transform(R, t, P):
+    """
+    R: rotation matrix
+    t: translation vector
+    P: either a point of shape (3,), or set of points of shape (n_points, 3)
+    """
     assert(R.shape == (3, 3))
     assert(t.shape == (3,))
     return np.dot(R, P.T).T + t
