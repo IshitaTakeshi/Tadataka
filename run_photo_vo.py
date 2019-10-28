@@ -27,7 +27,7 @@ vo = VisualOdometry(
     CameraParameters(focal_length=[3104.3, 3113.34],
                      offset=[1640, 1232]),
     FOV(-0.01),
-    min_active_keyframes=2
+    min_active_keyframes=5
 )
 
 
