@@ -12,12 +12,16 @@ def init_empty():
     return np.empty((0, 3), dtype=np.float64)
 
 
-def warn_if_incorrect_match(point_index0, point_index1):
+def warn_if_incorrect_match(index_map, viewpoint0, viewpoint1,
+                            keypoint_index0, keypoint_index1):
+    point_index0 = index_map[viewpoint0][keypoint_index0]
+    point_index1 = index_map[viewpoint1][keypoint_index1]
+
     if point_index0 != point_index1:
         warnings.warn(
             f"Wrong match! "
-            f"Keypoint index {index0} in {viewpoint0} and "
-            f"keypoint index {index1} in {viewpoint1} have matched, "
+            f"Keypoint index {keypoint_index0} in {viewpoint0} and "
+            f"keypoint index {keypoint_index1} in {viewpoint1} have matched, "
             f"but indicate different 3D points!"
         )
 
@@ -94,6 +98,10 @@ class PointManager(object):
         # because this means both of 4th keypoint and 3rd keypoint are
         # the projections of the 2nd 3D point in the 1st view
         if point_index in self.index_map[dst_viewpoint].values():
+            warnings.warn(
+                f"point index {point_index} already exists "
+                f"in viwepoint {dst_viewpoint}"
+            )
             return
         self.index_map[dst_viewpoint][dst_keypoint_index] = point_index
 
@@ -115,10 +123,8 @@ class PointManager(object):
                 # Both matched keypoints have already triangulated.
                 # In this case, index0 and index1 should indicate
                 # the same 3D point otherwise it is a wrong match
-                warn_if_incorrect_match(
-                    self.index_map[viewpoint0][index0],
-                    self.index_map[viewpoint1][index1]
-                )
+                warn_if_incorrect_match(self.index_map, viewpoint0, viewpoint1,
+                                        index0, index1)
                 continue
 
             if is_trinagulated0:  # is_trinagulated1 == False
