@@ -17,9 +17,7 @@ setup(
         'numpy',
         # TODO make independent from opencv
         'opencv-python',
-        'opencv-contrib-python'
-    ],
-    dependency_links=[
-        'git+https://github.com/IshitaTakeshi/SBA.git@develop#egg=sba'
+        'opencv-contrib-python',
+        'sba @ git+https://github.com/IshitaTakeshi/SBA.git@develop#egg=sba'
     ]
 )
