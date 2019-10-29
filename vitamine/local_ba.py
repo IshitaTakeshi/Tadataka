@@ -146,15 +146,18 @@ class LocalBundleAdjustment(object):
         current_error = self.calc_error(poses, points)
         for iter_ in range(max_iter):
             poses, points, mu, new_error = self.lm_update(poses, points, mu, nu)
-            if new_error < absolute_error_threshold:
-                break
 
             relative_error = calc_relative_error(current_error, new_error)
-            if relative_error < relative_error_threshold:
-                break
 
             print(f"absolute_error[{iter_}] = {new_error}")
             print(f"relative_error[{iter_}] = {relative_error}")
+
+            if new_error < absolute_error_threshold:
+                break
+
+            if relative_error < relative_error_threshold:
+                break
+
             current_error = new_error
 
         omegas, translations = poses[:, 0:3], poses[:, 3:6]
