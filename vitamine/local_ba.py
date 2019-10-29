@@ -68,6 +68,10 @@ class Projection(object):
         return A, B
 
 
+def calc_relative_error(current_error, new_error):
+    return np.abs((current_error - new_error) / new_error)
+
+
 def calc_errors(x_true, x_pred):
     return np.sum(np.power(x_true - x_pred, 2), axis=1)
 
@@ -132,8 +136,8 @@ class LocalBundleAdjustment(object):
         return poses + dposes, points + dpoints, new_mu, error
 
     def compute(self, initial_omegas, initial_translations, initial_points,
-                n_max_iter=200, absolute_error_threshold=1e-8,
-                initial_mu=1.0, nu=20.0):
+                n_max_iter=200, initial_mu=1.0, nu=20.0,
+                absolute_error_threshold=1e-8, relative_error_threshold=1e-6):
 
         poses = np.hstack((initial_omegas, initial_translations))
         points = initial_points
@@ -142,16 +146,15 @@ class LocalBundleAdjustment(object):
         current_error = self.calc_error(poses, points)
         for iter_ in range(n_max_iter):
             poses, points, mu, new_error = self.lm_update(poses, points, mu, nu)
-
-            # converged or started to diverge
-            # if new_error > current_error:
-            #     break
-
-            # new_error is goood enough
-            # return new_poses and new_points
             if new_error < absolute_error_threshold:
                 break
 
+            relative_error = calc_relative_error(current_error, new_error)
+            if relative_error < relative_error_threshold:
+                break
+
+            print(f"absolute_error[{iter_}] = {new_error}")
+            print(f"relative_error[{iter_}] = {relative_error}")
             current_error = new_error
 
         omegas, translations = poses[:, 0:3], poses[:, 3:6]
@@ -222,7 +225,9 @@ def try_run_ba_(viewpoint_indices, point_indices,
     omegas = np.array([p.omega for p in poses])
     ts = np.array([p.t for p in poses])
 
-    omegas, ts, points = ba.compute(omegas, ts, points)
+    omegas, ts, points = ba.compute(omegas, ts, points,
+                                    absolute_error_threshold=1e-8,
+                                    relative_error_threshold=0.10)
 
     poses = [Pose(omega, t) for omega, t in zip(omegas, ts)]
     return poses, points
