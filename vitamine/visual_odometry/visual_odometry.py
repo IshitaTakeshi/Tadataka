@@ -32,6 +32,20 @@ def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
     return np.array(points), np.array(keypoints_)
 
 
+def match(matcher, viewpoints, kds, kd1):
+    matches = []
+    viewpoints_ = []
+    for kd0, viewpoint in zip(kds, viewpoints):
+        matches01 = matcher(kd0, kd1)
+
+        if len(matches01) == 0:
+            continue
+
+        matches.append(matches01)
+        viewpoints_.append(viewpoint)
+    return matches, viewpoints_
+
+
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model,
                  matcher=Matcher(enable_ransac=True,
@@ -68,22 +82,10 @@ class VisualOdometry(object):
         )
         return pose0, pose1
 
-    def match(self, viewpoints, kds, kd1):
-        matches = []
-        viewpoints_ = []
-        for kd0, viewpoint in zip(kds, viewpoints):
-            matches01 = self.matcher(kd0, kd1)
-
-            if len(matches01) == 0:
-                continue
-
-            matches.append(matches01)
-            viewpoints_.append(viewpoint)
-        return matches, viewpoints_
-
     def try_add_more(self, kd1, viewpoint1,
                      active_kds, active_poses, active_viewpoints):
-        matches, viewpoints = self.match(active_viewpoints, active_kds, kd1)
+        matches, viewpoints = match(self.matcher, active_viewpoints,
+                                    active_kds, kd1)
         if len(matches) == 0:
             raise NotEnoughInliersException("No matches found")
 
