@@ -136,7 +136,7 @@ class LocalBundleAdjustment(object):
         return poses + dposes, points + dpoints, new_mu, error
 
     def compute(self, initial_omegas, initial_translations, initial_points,
-                n_max_iter=200, initial_mu=1.0, nu=20.0,
+                max_iter=200, initial_mu=1.0, nu=100.0,
                 absolute_error_threshold=1e-8, relative_error_threshold=1e-6):
 
         poses = np.hstack((initial_omegas, initial_translations))
@@ -144,7 +144,7 @@ class LocalBundleAdjustment(object):
 
         mu = initial_mu
         current_error = self.calc_error(poses, points)
-        for iter_ in range(n_max_iter):
+        for iter_ in range(max_iter):
             poses, points, mu, new_error = self.lm_update(poses, points, mu, nu)
             if new_error < absolute_error_threshold:
                 break
