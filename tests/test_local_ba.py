@@ -3,7 +3,7 @@ from autograd import numpy as np
 
 from vitamine.local_ba import (
     LocalBundleAdjustment, Projection, IndexConverter,
-    calc_error, calc_errors)
+    calc_error, calc_errors, calc_relative_error)
 from tests.utils import unit_uniform
 
 
@@ -113,6 +113,11 @@ def add_noise(array, scale):
     return array + scale * unit_uniform(array.shape)
 
 
+def test_calc_relative_error():
+    assert(calc_relative_error(12.0, 10.0) == 2.0 / 10.0)
+    assert(calc_relative_error(10.0, 12.0) == 2.0 / 12.0)
+
+
 def test_calc_errors():
     x_true = np.array([
         [2, 4],
@@ -139,7 +144,8 @@ def test_local_bundle_adjustment():
         # refine parameters
         omegas2, translations2, points2 = local_ba.compute(
             omegas1, translations1, points1,
-            absolute_error_threshold=1e-6
+            absolute_error_threshold=1e-6,
+            relative_error_threshold=1e-3
         )
 
         keypoints2 = projection.compute(
