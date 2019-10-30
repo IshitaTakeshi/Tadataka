@@ -47,20 +47,24 @@ class PointManager(object):
     def __init__(self):
         # {viewpoint index: {keypoint index: point index}}
         self.index_map = defaultdict(dict)
-        self.points = init_empty()
+        self.points = dict()
+
+    def export_points(self):
+        return np.array(list(self.points.values()))
 
     def overwrite(self, point_index, point):
         self.points[point_index] = point
 
-    def add_point_(self, point):
-        assert(point.shape == (3,))  # add only one point at a time
-        point_index = len(self.points)
-        self.points = np.vstack((self.points, point))
-        return point_index
+    def new_point_index(self):
+        point_indices = self.points.keys()
+        if len(point_indices) == 0:
+            return 0
+        return max(point_indices) + 1
 
     def add_point(self, point, viewpoint0, viewpoint1,
                   keypoint_index0, keypoint_index1):
-        point_index = self.add_point_(point)
+        point_index = self.new_point_index()
+        self.points[point_index] = point
         self.index_map[viewpoint0][keypoint_index0] = point_index
         self.index_map[viewpoint1][keypoint_index1] = point_index
 

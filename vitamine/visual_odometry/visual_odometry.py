@@ -62,7 +62,7 @@ class VisualOdometry(object):
         self.poses = []
 
     def export_points(self):
-        return np.copy(self.point_manager.points)
+        return self.point_manager.export_points()
 
     def export_poses(self):
         return [[pose.omega, pose.t] for pose in self.poses]
