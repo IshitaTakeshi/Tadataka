@@ -10,7 +10,7 @@ from skimage import transform as tf
 from skimage.measure import ransac
 
 from vitamine.coordinates import yx_to_xy, xy_to_yx
-from vitamine.cost import transfer_outlier_detector
+from vitamine.cost import symmetric_transfer_filter
 
 
 KeypointDescriptor = namedtuple("KeypointDescriptor",
@@ -118,8 +118,9 @@ class Matcher(object):
             matches12 = matches12[mask]
 
         if self.enable_homography_filter:
-            mask = transfer_outlier_detector(keypoints1[matches12[:, 0]],
-                                             keypoints2[matches12[:, 1]])
+            mask = symmetric_transfer_filter(keypoints1[matches12[:, 0]],
+                                             keypoints2[matches12[:, 1]],
+                                             p=0.80)
             matches12 = matches12[mask]
 
         return matches12
