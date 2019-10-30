@@ -125,6 +125,27 @@ class VisualOdometry(object):
         keypoints = self.camera_model.undistort(keypoints)
         return self.try_add_keyframe(KD(keypoints, descriptors))
 
+    def try_run_ba(self, viewpoints):
+        poses = [self.poses[v] for v in viewpoints]
+        keypoints = [self.kds[v].keypoints for v in viewpoints]
+
+        try:
+            poses, points, point_indices = try_run_ba(
+                self.point_manager.index_map,
+                self.point_manager.points,
+                poses, keypoints, viewpoints
+            )
+        except ValueError as e:
+            print_error(e)
+
+        assert(len(point_indices) == len(points))
+
+        for j, pose in zip(viewpoints, poses):
+            self.poses[j] = pose
+
+        for i, point in zip(point_indices, points):
+            self.point_manager.overwrite(i, point)
+
     def try_add_keyframe(self, new_kd):
         new_viewpoint = self.active_viewpoints.get_next()
 
@@ -161,26 +182,12 @@ class VisualOdometry(object):
         self.kds[new_viewpoint] = new_kd
         self.active_viewpoints.add_new(new_viewpoint)
 
-        active_poses = [self.poses[v] for v in self.active_viewpoints]
-        active_kds = [self.kds[v] for v in self.active_viewpoints]
-        try:
-            poses, points, point_indices = try_run_ba(
-                self.point_manager.index_map,
-                self.point_manager.points,
-                active_poses,
-                [kd.keypoints for kd in active_kds],
-                self.active_viewpoints
-            )
 
-            for j, pose in zip(self.active_viewpoints, poses):
-                self.poses[j] = pose
 
-            assert(len(point_indices) == len(points))
-            for i, point in zip(point_indices, points):
-                self.point_manager.overwrite(i, point)
 
-        except ValueError as e:
-            print_error(e)
+        self.try_run_ba(self.active_viewpoints)
+
+
         return True
 
     def try_remove(self):
