@@ -144,6 +144,7 @@ def test_local_bundle_adjustment():
         # refine parameters
         omegas2, translations2, points2 = local_ba.compute(
             omegas1, translations1, points1,
+            max_iter=20,
             absolute_error_threshold=1e-6,
             relative_error_threshold=1e-3
         )
