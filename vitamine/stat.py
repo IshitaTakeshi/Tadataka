@@ -25,6 +25,10 @@ class ChiSquaredTest(object):
         self.threshold = chi2.ppf(p, dof)
 
     def test(self, X):
+        """
+        X (np.ndarray), shape (n_samples, n_features):
+            Residuals between target values and predictions
+        """
         Y = zca_whitening(normalize_mean(X))
         # Y follows the standard normal distribution
         E = np.sum(np.power(Y, 2), axis=1)
