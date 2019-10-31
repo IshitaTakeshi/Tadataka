@@ -78,12 +78,6 @@ def plot2d(P: np.ndarray, do_annotate=False, color=None):
     return ax
 
 
-def axis3d():
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    return ax
-
-
 def plot3d(ax, P: np.ndarray, do_annotate=False, color=None, elev=45, azim=0):
     """
     Plot 3D points

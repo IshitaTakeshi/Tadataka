@@ -1,4 +1,5 @@
-from vitamine.plot.visualizers import plot3d, axis3d
+from vitamine.plot.common import axis3d
+from vitamine.plot.visualizers import plot3d
 from vitamine.plot.cameras import plot_cameras
 from vitamine.so3 import rodrigues
 from matplotlib import pyplot as plt
