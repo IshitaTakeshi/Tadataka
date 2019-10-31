@@ -12,11 +12,7 @@ class BaseRobustifier(object):
     def weights(self, x):
         mask = (x != 0)
 
-        # process only nonzero members to avoid division by zero
-        # for members where x == 0, we set 0 to corresponding y
-        # because usually x = norm(residual), so x == 0 means that
-        # residual is zero and weighting is not required
-
+        # process only nonzero members of x to avoid division by zero
         y = np.zeros(x.shape)
         y[mask] = self.grad(x[mask]) / x[mask]
         return y

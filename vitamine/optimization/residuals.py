@@ -13,7 +13,7 @@ class BaseResidual(Function):
     def compute(self, theta):
         """
         Returns:
-            residuals
+            calc residual r = y - f(theta)
         """
 
         return self.y - self.transformer.compute(theta)
