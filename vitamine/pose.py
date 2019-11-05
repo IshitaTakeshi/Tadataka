@@ -46,7 +46,9 @@ def solve_pnp(points, keypoints):
         points.astype(np.float64),
         keypoints.astype(np.float64),
         np.identity(3), np.zeros(4),
-        flags=cv2.SOLVEPNP_UPNP
+        reprojectionError=2.0,
+        confidence=0.80,
+        flags=cv2.SOLVEPNP_EPNP
     )
 
     if len(inliers.flatten()) == 0:
