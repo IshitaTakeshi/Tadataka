@@ -13,33 +13,74 @@ class Normalizer(object):
         self.offset = camera_parameters.offset
 
     def normalize(self, keypoints):
+        """
+        Transform keypoints to the normalized plane
+        (x - cx) / fx = X / Z
+        (y - cy) / fy = Y / Z
+        """
         return (keypoints - self.offset) / self.focal_length
 
+    def inverse(self, normalized_keypoints):
+        """
+        Inverse transformation from the normalized plane
+        x = fx * X / Z + cx
+        y = fy * Y / Z + cy
+        """
+        return normalized_keypoints * self.focal_length + self.offset
 
-def calc_factors(X, omega):
-    f = lambda r: np.tan(r * omega) / (2 * r * np.tan(omega / 2))
+
+def distort_factors(X, omega):
+    def f(r):
+        return np.arctan(2 * r * np.tan(omega / 2)) / omega
+
     r = np.linalg.norm(X, axis=1)
-    mask = np.isclose(r, 0)
+
+    iszero = np.isclose(r, 0)
+
     factors = np.empty(r.shape)
-    factors[mask] = omega / (2 * np.tan(omega / 2))
-    factors[~mask] = f(r[~mask])
+    factors[iszero] = 2 * np.tan(omega / 2) / omega  # linear approx of f
+    factors[~iszero] = f(r[~iszero])
+    return factors
+
+
+def undistort_factors(X, omega):
+    def f(r):
+        return np.tan(r * omega) / (2 * r * np.tan(omega / 2))
+
+    r = np.linalg.norm(X, axis=1)
+
+    iszero = np.isclose(r, 0)
+
+    factors = np.empty(r.shape)
+    factors[iszero] = omega / (2 * np.tan(omega / 2))  # linear approx of f
+    factors[~iszero] = f(r[~iszero])
     return factors
 
 
 class FOV(object):
+    """
+    Devernay, Frederic, and Olivier D. Faugeras.
+    "Automatic calibration and removal of distortion from
+     scenes of structured environments."
+    Investigative and Trial Image Processing. Vol. 2567.
+    International Society for Optics and Photonics, 1995.
+    """
     def __init__(self, omega):
         self.omega = omega
 
-    def distort(self):
-        # TODO
-        pass
-
-    def undistort(self, normalized_keypoints):
+    def distort(self, undistorted_keypoints):
         if np.isclose(self.omega, 0):
-            return normalized_keypoints  # all factors = 1
+            return undistorted_keypoints
 
-        factors = calc_factors(normalized_keypoints, self.omega)
-        return factors.reshape(-1, 1) * normalized_keypoints
+        factors = distort_factors(undistorted_keypoints, self.omega)
+        return factors.reshape(-1, 1) * undistorted_keypoints
+
+    def undistort(self, distorted_keypoints):
+        if np.isclose(self.omega, 0):
+            return distorted_keypoints  # all factors = 1
+
+        factors = undistort_factors(distorted_keypoints, self.omega)
+        return factors.reshape(-1, 1) * distorted_keypoints
 
 
 class CameraModel(object):
@@ -48,5 +89,11 @@ class CameraModel(object):
         self.distortion_model = distortion_model
 
     def undistort(self, keypoints):
-        normalized = self.normalizer.normalize(keypoints)
-        return self.distortion_model.undistort(normalized)
+        return self.distortion_model.undistort(
+            self.normalizer.normalize(keypoints)
+        )
+
+    def distort(self, normalized_keypoints):
+        return self.normalizer.inverse(
+            self.distortion_model.undistort(normalized_keypoints)
+        )
