@@ -86,14 +86,10 @@ class Matcher(object):
 
     def _ransac(self, keypoints1, keypoints2):
         assert(len(keypoints1) == len(keypoints2))
-
-        if len(keypoints1) < 8:
-            _, inliers_mask = ransac_affine(keypoints1, keypoints2)
-            return inliers_mask
         _, inliers_mask = ransac_fundamental(keypoints1, keypoints2)
         return inliers_mask
 
-    def __call__(self, kd1, kd2):
+    def __call__(self, kd1, kd2, min_inliers=12):
         def empty_match():
             return np.empty((0, 2), dtype=np.int64)
 
@@ -109,12 +105,12 @@ class Matcher(object):
         if len(matches12) == 0:
             return empty_match()
 
-        if len(matches12) < 2:
+        if len(matches12) < min_inliers:
             return matches12
 
         if self.enable_ransac:
-            mask = self._ransac(keypoints1[matches12[:, 0]],
-                                keypoints2[matches12[:, 1]])
+            _, mask = ransac_fundamental(keypoints1[matches12[:, 0]],
+                                         keypoints2[matches12[:, 1]])
             matches12 = matches12[mask]
 
         if self.enable_homography_filter:
