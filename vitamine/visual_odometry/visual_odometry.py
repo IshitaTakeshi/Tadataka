@@ -32,98 +32,126 @@ def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
     return np.array(points), np.array(keypoints_)
 
 
-def match(matcher, viewpoints, kds, kd1):
+def match(matcher, viewpoints, kds, kd1, min_matches=60):
     matches = []
     viewpoints_ = []
-    for kd0, viewpoint in zip(kds, viewpoints):
+    for viewpoint0 in viewpoints:
+        kd0 = kds[viewpoint0]
         matches01 = matcher(kd0, kd1)
 
-        if len(matches01) == 0:
+        if len(matches01) < min_matches:
             continue
 
         matches.append(matches01)
-        viewpoints_.append(viewpoint)
+        viewpoints_.append(viewpoint0)
     return matches, viewpoints_
+
+
+def try_init_first_two(point_manager, matcher, kd0, kd1,
+                       viewpoint0, viewpoint1, min_matches=8):
+    matches01 = matcher(kd0, kd1)
+
+    if len(matches01) < min_matches:
+        raise NotEnoughInliersException("Not enough matches found")
+
+    pose0, pose1 = point_manager.initialize(
+        kd0.keypoints, kd1.keypoints, matches01,
+        viewpoint0, viewpoint1
+    )
+    return point_manager, pose0, pose1
+
+
+def try_add_more(point_manager, matcher,
+                 poses, kds, viewpoints,
+                 kd1, viewpoint1):
+    matches, viewpoints = match(matcher, viewpoints, kds, kd1)
+    assert(len(matches) == len(viewpoints))
+
+    if len(matches) == 0:
+        raise NotEnoughInliersException("No matches found")
+
+    points, keypoints = accumulate_correspondences(
+        point_manager, kd1.keypoints,
+        matches, viewpoints
+    )
+
+    pose1 = solve_pnp(points, keypoints)
+
+    # if not self.pose_condition(poses[-1], pose1):
+    #     # if pose1 is too close from the latest active pose
+    #     return None
+
+    for viewpoint0, matches01 in zip(viewpoints, matches):
+        kd0 = kds[viewpoint0]
+        pose0 = poses[viewpoint0]
+        point_manager.triangulate(
+            pose0, pose1, kd0.keypoints, kd1.keypoints, matches01,
+            viewpoint0, viewpoint1
+        )
+
+    return point_manager, pose1
 
 
 class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model,
                  matcher=Matcher(enable_ransac=True,
                                  enable_homography_filter=True),
-                 min_keypoints=8, min_active_keyframes=8, min_matches=8):
+                 max_active_keyframes=8):
         self.matcher = matcher
-        self.min_active_keyframes = min_active_keyframes
+        self.max_active_keyframes = max_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
-        self.keypoints_condition = get_array_len_geq(min_keypoints)
-        self.inlier_condition = get_array_len_geq(min_matches)
         self.active_viewpoints = KeyframeIndices()
         self.point_manager = PointManager()
         self.kds = dict()
-        self.poses = []
+        self.poses = dict()
+        self.images = dict()
+
+        self.kds_ = dict()
 
     def export_points(self):
         return self.point_manager.export_points()
 
     def export_poses(self):
-        return [[pose.omega, pose.t] for pose in self.poses]
-
-    def add(self, image):
-        return self.try_add(extract_keypoints(image))
-
-    def try_init_first_two(self, kd0, kd1, viewpoint0, viewpoint1):
-        matches01 = self.matcher(kd0, kd1)
-
-        if not self.inlier_condition(matches01):
-            raise NotEnoughInliersException("Not enough matches found")
-
-        pose0, pose1 = self.point_manager.initialize(
-            kd0.keypoints, kd1.keypoints, matches01,
-            viewpoint0, viewpoint1
-        )
-        return pose0, pose1
-
-    def try_add_more(self, kd1, viewpoint1,
-                     active_kds, active_poses, active_viewpoints):
-        matches, viewpoints = match(self.matcher, active_viewpoints,
-                                    active_kds, kd1)
-        if len(matches) == 0:
-            raise NotEnoughInliersException("No matches found")
-
-        points, keypoints = accumulate_correspondences(
-            self.point_manager, kd1.keypoints,
-            matches, viewpoints
-        )
-
-        try:
-            pose1 = solve_pnp(points, keypoints)
-        except NotEnoughInliersException as e:
-            raise e
-
-        # if not self.pose_condition(active_poses[-1], pose1):
-        #     # if pose1 is too close from the latest active pose
-        #     return None
-
-        Z = zip(viewpoints, active_kds, active_poses, matches)
-        for viewpoint0, kd0, pose0, matches01 in Z:
-            self.point_manager.triangulate(
-                pose0, pose1, kd0.keypoints, kd1.keypoints, matches01,
-                viewpoint0, viewpoint1
-            )
-
-        return pose1
+        poses = [self.poses[v] for v in sorted(self.poses.keys())]
+        return [[pose.omega, pose.t] for pose in poses]
 
     @property
     def n_active_keyframes(self):
         return len(self.active_viewpoints)
 
-    def try_add(self, kd):
-        keypoints, descriptors = kd
+    def add(self, image, min_keypoints=8):
+        keypoints, descriptors = extract_keypoints(image)
 
-        if not self.keypoints_condition(keypoints):
-            return False
+        if len(keypoints) <= min_keypoints:
+            print_error("Keypoints not sufficient")
+            return -1
 
-        keypoints = self.camera_model.undistort(keypoints)
-        return self.try_add_keyframe(KD(keypoints, descriptors))
+        viewpoint = self.active_viewpoints.get_next()
+        kd = KD(self.camera_model.undistort(keypoints), descriptors)
+
+        from vitamine.plot.debug import plot_matches
+        from matplotlib import pyplot as plt
+        for v in self.active_viewpoints:
+            kdv = self.kds_[v]
+            imagev = self.images[v]
+            matches = self.matcher(kd, kdv)
+            print("n_matches =", len(matches))
+            plot_matches(image, imagev,
+                         keypoints, kdv.keypoints,
+                         matches)
+        self.kds_[viewpoint] = KD(keypoints, descriptors)
+        plt.show()
+
+        pose = self.try_add_keyframe(viewpoint, kd, image)
+        if pose is None:
+            print_error("Pose estimation failed")
+            return -1
+
+        self.active_viewpoints.add_new(viewpoint)
+        self.kds[viewpoint] = kd
+        self.poses[viewpoint] = pose
+        self.images[viewpoint] = image
+        return viewpoint
 
     def try_run_ba(self, viewpoints):
         poses = [self.poses[v] for v in viewpoints]
@@ -146,52 +174,43 @@ class VisualOdometry(object):
         for i, point in zip(point_indices, points):
             self.point_manager.overwrite(i, point)
 
-    def try_add_keyframe(self, new_kd):
-        new_viewpoint = self.active_viewpoints.get_next()
-
+    def try_add_keyframe(self, new_viewpoint, new_kd, new_image):
         if self.n_active_keyframes == 0:
-            self.kds[new_viewpoint] = new_kd
-            self.active_viewpoints.add_new(new_viewpoint)
-            return True
+            return Pose.identity()
 
         if self.n_active_keyframes == 1:
             viewpoint0 = self.active_viewpoints[-1]
             try:
-                pose0, pose1 = self.try_init_first_two(
+                self.point_manager, _, pose1 = try_init_first_two(
+                    point_manager=self.point_manager, matcher=self.matcher,
                     kd0=self.kds[0], kd1=new_kd,
                     viewpoint0=viewpoint0, viewpoint1=new_viewpoint
                 )
-            except NotEnoughInliersException:
-                return False
+            except NotEnoughInliersException as e:
+                print_error(e)
+                return None
 
-            self.poses = [pose0, pose1]
-            self.kds[new_viewpoint] = new_kd
-            self.active_viewpoints.add_new(new_viewpoint)
-            return True
+            return pose1
 
-        active_kds = [self.kds[v] for v in self.active_viewpoints]
-        active_poses = [self.poses[v] for v in self.active_viewpoints]
+        active_viewpoints = self.active_viewpoints
+        active_kds = {v: self.kds[v] for v in active_viewpoints}
+        active_poses = {v: self.poses[v] for v in active_viewpoints}
         try:
-            pose1 = self.try_add_more(new_kd, new_viewpoint,
-                                      active_kds, active_poses,
-                                      self.active_viewpoints)
-        except NotEnoughInliersException:
-            return False
+            self.point_manager, pose1 = try_add_more(
+                self.point_manager, self.matcher,
+                active_poses, active_kds, active_viewpoints,
+                new_kd, new_viewpoint,
+            )
+        except NotEnoughInliersException as e:
+            print_error(e)
+            return None
 
-        self.poses.append(pose1)
-        self.kds[new_viewpoint] = new_kd
-        self.active_viewpoints.add_new(new_viewpoint)
+        # self.try_run_ba(self.active_viewpoints)
 
-
-
-
-        self.try_run_ba(self.active_viewpoints)
-
-
-        return True
+        return pose1
 
     def try_remove(self):
-        if self.n_active_keyframes <= self.min_active_keyframes:
+        if self.n_active_keyframes <= self.max_active_keyframes:
             return False
 
         self.active_viewpoints.remove(0)
