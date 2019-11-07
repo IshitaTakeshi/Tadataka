@@ -7,7 +7,9 @@ class KeyframeIndices(object):
         return str(self.indices)
 
     def remove(self, i):
+        frame_index = self.indices[i]
         del self.indices[i]
+        return frame_index
 
     def __len__(self):
         return len(self.indices)

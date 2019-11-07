@@ -214,5 +214,6 @@ class VisualOdometry(object):
         if self.n_active_keyframes <= self.max_active_keyframes:
             return False
 
-        self.active_viewpoints.remove(0)
+        viewpoint = self.active_viewpoints.remove(0)
+        print("viewpoint {} has been removed".format(viewpoint))
         return True
