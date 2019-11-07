@@ -26,7 +26,7 @@ from vitamine.plot.map import plot_map
 vo = VisualOdometry(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
     FOV(0.01),
-    max_active_keyframes=3
+    max_active_keyframes=4
 )
 
 # ball
@@ -99,59 +99,21 @@ filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
 filenames = [filenames[0]] + filenames[4:]
 # import cv2
 # images = [cv2.imread(str(filename)) for filename in filenames[0:14]]
-images = [rgb2gray(imread(filename)) for filename in filenames]
 
 
-for i, image in enumerate(images):
+for i, filename in enumerate(filenames):
+    image = rgb2gray(imread(filename))
     print("Adding {}-th frame".format(i))
+    print("filename = {}".format(filename))
+
     viewpoint = vo.add(image)
 
     if viewpoint < 0:
         continue
 
     vo.try_remove()
-    print("Frame Added")
+    print("{}-th Frame Added".format(i))
 
     if i == 0:
         continue
-    plot_map_(vo.export_poses(), vo.export_points())
-
-
-exit(0)
-
-def add_keyframe(image):
-    viewpoint = vo.add(image)
-    assert(viewpoint >= 0)
-    vo.try_remove()
-    return vo.kds[viewpoint].keypoints
-
-
-keypoints0 = add_keyframe(images[0])
-keypoints1 = add_keyframe(images[1])
-plot_map_(vo.export_poses(), vo.export_points())
-
-keypoints2 = add_keyframe(images[2])
-plot_map_(vo.export_poses(), vo.export_points())
-# plot_matches_(images[0], images[2], keypoints0, keypoints2,
-#               vo.point_manager.index_map[0],
-#               vo.point_manager.index_map[2])
-# plot_matches_(images[1], images[2], keypoints1, keypoints2,
-#               vo.point_manager.index_map[1],
-#               vo.point_manager.index_map[2])
-
-keypoints3 = add_keyframe(images[3])
-plot_map_(vo.export_poses(), vo.export_points())
-# plot_matches_(images[0], images[3], keypoints0, keypoints3,
-#               vo.point_manager.index_map[0],
-#               vo.point_manager.index_map[3])
-# plot_matches_(images[1], images[3], keypoints1, keypoints3,
-#               vo.point_manager.index_map[1],
-#               vo.point_manager.index_map[3])
-# plot_matches_(images[2], images[3], keypoints2, keypoints3,
-#               vo.point_manager.index_map[2],
-#               vo.point_manager.index_map[3])
-
-for image in images[4:]:
-    keypoints = add_keyframe(image)
-    plot_keypoints(image, keypoints)
     plot_map_(vo.export_poses(), vo.export_points())
