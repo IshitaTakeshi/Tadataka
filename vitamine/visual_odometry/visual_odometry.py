@@ -205,7 +205,7 @@ class VisualOdometry(object):
             print_error(e)
             return None
 
-        # self.try_run_ba(self.active_viewpoints)
+        self.try_run_ba(self.active_viewpoints)
 
         return pose1
 
