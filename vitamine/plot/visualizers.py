@@ -93,7 +93,7 @@ def plot3d(ax, P: np.ndarray, do_annotate=False, color=None, elev=45, azim=0):
     if color is None:
         color = object_color(P)
 
-    ax.scatter(P[:, 0], P[:, 1], P[:, 2], c=color)
+    ax.scatter(P[:, 0], P[:, 1], P[:, 2], c=color, s=0.1)
 
     if do_annotate:
         annotate(ax, P)
