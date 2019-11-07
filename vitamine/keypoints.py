@@ -17,7 +17,7 @@ KeypointDescriptor = namedtuple("KeypointDescriptor",
                                 ["keypoints", "descriptors"])
 
 
-star_detector = cv2.xfeatures2d.StarDetector_create()
+keypoint_detector = cv2.FastFeatureDetector_create(threshold=40)
 
 brief = BRIEF(
     descriptor_size=512,
@@ -30,7 +30,9 @@ orb = ORB(n_keypoints=100)
 
 
 def extract_keypoints_(image):
-    keypoints = star_detector.detect(img_as_ubyte(image), None)
+    keypoints = keypoint_detector.detect(img_as_ubyte(image), None)
+    if len(keypoints) == 0:
+        return np.empty((0, 2), dtype=np.float64)
     return np.array([list(p.pt) for p in keypoints])
 
 
