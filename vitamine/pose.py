@@ -47,7 +47,7 @@ def solve_pnp(points, keypoints):
         keypoints.astype(np.float64),
         np.identity(3), np.zeros(4),
         reprojectionError=2.0,
-        confidence=0.80,
+        confidence=0.99,
         flags=cv2.SOLVEPNP_EPNP
     )
 
