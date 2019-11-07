@@ -257,7 +257,7 @@ def try_run_ba(index_map, points, poses, keypoints_list, viewpoints):
                       n_points=len(local_points),
                       n_visible=len(keypoints_true),
                       n_pose_params=6, n_point_params=3):
-        raise ValueError("Arguments not satisfying condition to run BA")
+        raise ValueError("Arguments are not satisfying condition to run BA")
 
     poses, points = try_run_ba_(viewpoint_indices, point_indices,
                                 local_poses, local_points, keypoints_true)
