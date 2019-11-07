@@ -96,7 +96,7 @@ def plot_map_(poses, points):
 
 
 filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
-filenames = [filenames[0]] + filenames[4:20]
+filenames = [filenames[0]] + filenames[4:]
 # import cv2
 # images = [cv2.imread(str(filename)) for filename in filenames[0:14]]
 images = [rgb2gray(imread(filename)) for filename in filenames]
