@@ -166,6 +166,7 @@ class VisualOdometry(object):
             )
         except ValueError as e:
             print_error(e)
+            return
 
         assert(len(point_indices) == len(points))
 
