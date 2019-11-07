@@ -23,8 +23,9 @@ def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
             try:
                 point = point_manager.get(viewpoint, index0)
             except KeyError as e:
-                print_error(e)
+                # print_error(e)
                 continue
+
             keypoint = keypoints[index1]
 
             points.append(point)
