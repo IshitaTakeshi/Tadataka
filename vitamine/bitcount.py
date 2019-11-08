@@ -28,8 +28,9 @@ def popcount(x):
     return (z + (z >> 4)) & m4
 
 
-@njit
+@njit(parallel=True)
 def bitdistances(A, B):
+    # compute hamming distances between packed bit arrays
     N = A.shape[0]
     M = B.shape[0]
 
@@ -42,6 +43,7 @@ def bitdistances(A, B):
 
 
 def distances(A, B):
+    # compute hamming distances between bool arrays
     A = np.packbits(A, axis=1)
     B = np.packbits(B, axis=1)
     return bitdistances(A, B)
