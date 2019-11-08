@@ -4,11 +4,11 @@ from autograd import numpy as np
 import cv2
 from skimage import img_as_ubyte
 
-from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
-                             BRIEF, ORB)
+from skimage.feature import corner_peaks, corner_harris, BRIEF, ORB
 from skimage import transform as tf
 from skimage.measure import ransac
 
+from vitamine.match import match_binary_descriptors
 from vitamine.coordinates import yx_to_xy, xy_to_yx
 from vitamine.cost import symmetric_transfer_filter
 
@@ -58,9 +58,8 @@ extract_keypoints = extract_brief
 
 
 def match(descriptors0, descriptors1):
-    return match_descriptors(descriptors0, descriptors1,
-                             metric="hamming", cross_check=True,
-                             max_ratio=0.8)
+    return match_binary_descriptors(descriptors0, descriptors1,
+                                    cross_check=True, max_ratio=0.8)
 
 
 def ransac_affine(keypoints1, keypoints2):
