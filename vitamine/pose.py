@@ -37,9 +37,11 @@ min_correspondences = 6
 
 
 def calc_reprojection_threshold(keypoints, k=2.0):
-    mean = np.mean(keypoints, axis=0, keepdims=True)
-    squared_distances = np.sum(np.power(keypoints - mean, 2), axis=1)
-    return k * np.sqrt(np.mean(squared_distances)) / keypoints.shape[0]
+    center = np.mean(keypoints, axis=0, keepdims=True)
+    squared_distances = np.sum(np.power(keypoints - center, 2), axis=1)
+    # rms of distances from center to keypoints
+    rms = np.sqrt(np.mean(squared_distances))
+    return k * rms / keypoints.shape[0]
 
 
 def solve_pnp(points, keypoints):
