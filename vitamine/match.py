@@ -38,7 +38,7 @@ def match_binary_descriptors(descriptors1, descriptors2,
         raise ValueError("Descriptor length must equal.")
 
     # this line gets slower if metric='hamming' is specified
-    distances = pairwise_distances(descriptors1, descriptors2)
+    distances = pairwise_distances(descriptors1, descriptors2, n_jobs=-1)
 
     indices1 = np.arange(descriptors1.shape[0])
     indices2 = np.argmin(distances, axis=1)
