@@ -51,7 +51,7 @@ def solve_pnp(points, keypoints):
         raise NotEnoughInliersException("No sufficient correspondences")
 
     print("keypoints.shape", keypoints.shape)
-    t = calc_reprojection_threshold(keypoints)
+    t = calc_reprojection_threshold(keypoints, k=3.0)
     print("reprojectionError", t)
     retval, omega, t, inliers = cv2.solvePnPRansac(
         points.astype(np.float64),
