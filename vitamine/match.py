@@ -28,7 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import numpy as np
-from scipy.spatial.distance import cdist
+from sklearn.metrics import pairwise_distances
+# from scipy.spatial.distance import cdist
 
 
 def match_binary_descriptors(descriptors1, descriptors2,
@@ -36,10 +37,8 @@ def match_binary_descriptors(descriptors1, descriptors2,
     if descriptors1.shape[1] != descriptors2.shape[1]:
         raise ValueError("Descriptor length must equal.")
 
-    assert(np.issubdtype(descriptors1.dtype, np.bool_))
-    assert(np.issubdtype(descriptors2.dtype, np.bool_))
-
-    distances = cdist(descriptors1, descriptors2, metric="hamming")
+    # this line gets slower if metric='hamming' is specified
+    distances = pairwise_distances(descriptors1, descriptors2)
 
     indices1 = np.arange(descriptors1.shape[0])
     indices2 = np.argmin(distances, axis=1)
