@@ -1,31 +1,12 @@
 import numpy as np
 from numba import njit
 
-m1  = 0x55  # binary: 01010101
-m2  = 0x33  # binary: 00110011
-m4  = 0x0f  # binary: 00001111
-
-# @njit
-def popcount8a(x):
-    x = (x & m1) + ((x >> 1) & m1)
-    x = (x & m2) + ((x >> 2) & m2)
-    x = (x & m4) + ((x >> 4) & m4)
-    return x
-
-
-@njit
-def popcount8b(x):
-    x -= (x >> 1) & m1
-    x = (x & m2) + ((x >> 2) & m2)
-    x = (x + (x >> 4)) & m4
-    return x
-
 
 @njit
 def popcount(x):
-    y = (x & m1) + ((x >> 1) & m1)
-    z = (y & m2) + ((y >> 2) & m2)
-    return (z + (z >> 4)) & m4
+    y = (x & 0x55) + ((x >> 1) & 0x55)
+    z = (y & 0x33) + ((y >> 2) & 0x33)
+    return (z + (z >> 4)) & 0x0f
 
 
 @njit(parallel=True)
@@ -38,6 +19,8 @@ def bitdistances(A, B):
     for i in range(N):
         for j in range(M):
             x = np.bitwise_xor(A[i], B[j])
+            # x is an uint8 array
+            # count 1 bits in each element of x and merge
             D[i, j] = np.sum(popcount(x))
     return D
 

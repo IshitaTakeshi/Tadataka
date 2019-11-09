@@ -36,20 +36,30 @@ class Pose(object):
 min_correspondences = 6
 
 
+def calc_reprojection_threshold(keypoints):
+    mean = np.mean(keypoints, axis=0, keepdims=True)
+    return np.mean(np.sum(np.power(keypoints - mean, 2), axis=1))
+
+
 def solve_pnp(points, keypoints):
     assert(points.shape[0] == keypoints.shape[0])
 
     if keypoints.shape[0] < min_correspondences:
         raise NotEnoughInliersException("No sufficient correspondences")
 
+    print("keypoints.shape", keypoints.shape)
+    t = calc_reprojection_threshold(keypoints)
+    print("reprojectionError", t)
     retval, omega, t, inliers = cv2.solvePnPRansac(
         points.astype(np.float64),
         keypoints.astype(np.float64),
         np.identity(3), np.zeros(4),
-        reprojectionError=2.0,
-        confidence=0.99,
+        reprojectionError=t,
         flags=cv2.SOLVEPNP_EPNP
     )
+    print("retval: {}".format(retval))
+    print("inlier ratio")
+    print(len(inliers.flatten()) / points.shape[0])
 
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")

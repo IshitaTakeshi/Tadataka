@@ -58,8 +58,9 @@ extract_keypoints = extract_brief
 
 
 def match(descriptors0, descriptors1):
-    return match_binary_descriptors(descriptors0, descriptors1,
-                                    cross_check=True, max_ratio=0.8)
+    return match_descriptors(descriptors0, descriptors1,
+                             metric="hamming", cross_check=True,
+                             max_ratio=0.8)
 
 
 def ransac_affine(keypoints1, keypoints2):

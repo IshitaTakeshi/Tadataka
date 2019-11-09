@@ -229,7 +229,7 @@ def try_run_ba_(viewpoint_indices, point_indices,
     ts = np.array([p.t for p in poses])
 
     omegas, ts, points = ba.compute(omegas, ts, points,
-                                    absolute_error_threshold=1e-8,
+                                    absolute_error_threshold=1e-9,
                                     relative_error_threshold=0.10)
 
     poses = [Pose(omega, t) for omega, t in zip(omegas, ts)]
@@ -252,6 +252,9 @@ def try_run_ba(index_map, points, poses, keypoints_list, viewpoints):
     local_poses, local_points = converter.export_pose_points()
 
     test_unique(viewpoint_indices, point_indices)
+    print("n_viewpoints =", len(local_poses))
+    print("n_points =", len(local_points))
+    print("n_visible =", len(keypoints_true))
 
     if not can_run_ba(n_viewpoints=len(local_poses),
                       n_points=len(local_points),

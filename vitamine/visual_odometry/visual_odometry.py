@@ -7,6 +7,7 @@ from vitamine.camera_distortion import CameraModel
 from vitamine.points import PointManager
 from vitamine.pose import Pose, solve_pnp
 from vitamine.keyframe_index import KeyframeIndices
+from skimage.color import rgb2gray
 from vitamine.so3 import rodrigues
 from vitamine.local_ba import try_run_ba
 
@@ -121,7 +122,7 @@ class VisualOdometry(object):
         return len(self.active_viewpoints)
 
     def add(self, image, min_keypoints=8):
-        keypoints, descriptors = extract_keypoints(image)
+        keypoints, descriptors = extract_keypoints(rgb2gray(image))
 
         if len(keypoints) <= min_keypoints:
             print_error("Keypoints not sufficient")
@@ -130,18 +131,18 @@ class VisualOdometry(object):
         viewpoint = self.active_viewpoints.get_next()
         kd = KD(self.camera_model.undistort(keypoints), descriptors)
 
-        from vitamine.plot.debug import plot_matches
-        from matplotlib import pyplot as plt
-        for v in self.active_viewpoints:
-            kdv = self.kds_[v]
-            imagev = self.images[v]
-            matches = self.matcher(kd, kdv)
-            print("n_matches =", len(matches))
-            plot_matches(image, imagev,
-                         keypoints, kdv.keypoints,
-                         matches)
-        self.kds_[viewpoint] = KD(keypoints, descriptors)
-        plt.show()
+        # from vitamine.plot.debug import plot_matches
+        # from matplotlib import pyplot as plt
+        # for v in self.active_viewpoints:
+        #     kdv = self.kds_[v]
+        #     imagev = self.images[v]
+        #     matches = self.matcher(kd, kdv)
+        #     print("n_matches =", len(matches))
+        #     plot_matches(image, imagev,
+        #                  keypoints, kdv.keypoints,
+        #                  matches)
+        # self.kds_[viewpoint] = KD(keypoints, descriptors)
+        # plt.show()
 
         pose = self.try_add_keyframe(viewpoint, kd, image)
         if pose is None:

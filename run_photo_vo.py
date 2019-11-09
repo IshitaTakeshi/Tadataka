@@ -1,7 +1,6 @@
 from autograd import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
-from skimage.color import rgb2gray
 from pathlib import Path
 from vitamine.keypoints import extract_keypoints
 from vitamine.keypoints import KeypointDescriptor as KD
@@ -26,7 +25,7 @@ from vitamine.plot.map import plot_map
 vo = VisualOdometry(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
     FOV(0.01),
-    max_active_keyframes=4
+    max_active_keyframes=6
 )
 
 # ball
@@ -96,13 +95,12 @@ def plot_map_(poses, points):
 
 
 filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
+filenames = filenames[10:]
 filenames = [filenames[0]] + filenames[4:]
-# import cv2
-# images = [cv2.imread(str(filename)) for filename in filenames[0:14]]
 
 
 for i, filename in enumerate(filenames):
-    image = rgb2gray(imread(filename))
+    image = imread(filename)
     print("Adding {}-th frame".format(i))
     print("filename = {}".format(filename))
 
@@ -116,4 +114,6 @@ for i, filename in enumerate(filenames):
 
     if i == 0:
         continue
-    plot_map_(vo.export_poses(), vo.export_points())
+
+    if i % 5 == 0:
+        plot_map_(vo.export_poses(), vo.export_points())

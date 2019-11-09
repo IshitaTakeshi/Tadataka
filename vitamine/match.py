@@ -29,9 +29,6 @@
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from numba import jit
-
-from vitamine import bitcount
 
 
 def match_binary_descriptors(descriptors1, descriptors2,
@@ -42,7 +39,7 @@ def match_binary_descriptors(descriptors1, descriptors2,
     assert(np.issubdtype(descriptors1.dtype, np.bool_))
     assert(np.issubdtype(descriptors2.dtype, np.bool_))
 
-    distances = bitcount.distances(descriptors1, descriptors2)
+    distances = cdist(descriptors1, descriptors2, metric="hamming")
 
     indices1 = np.arange(descriptors1.shape[0])
     indices2 = np.argmin(distances, axis=1)
