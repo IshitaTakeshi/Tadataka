@@ -11,6 +11,7 @@ from skimage.measure import ransac
 
 from vitamine.coordinates import yx_to_xy, xy_to_yx
 from vitamine.cost import symmetric_transfer_filter
+from sklearn.neighbors import BallTree
 
 
 KeypointDescriptor = namedtuple("KeypointDescriptor",
@@ -54,13 +55,32 @@ def extract_orb(image):
     return KeypointDescriptor(keypoints, descriptors)
 
 
-extract_keypoints = extract_brief
+def extract_keypoints(image):
+    keypoints, descriptors = extract_brief(image)
+    tree = BallTree(descriptors, metric='hamming')
+    return KeypointDescriptor(keypoints, (descriptors, tree))
 
 
-def match(descriptors0, descriptors1):
-    return match_descriptors(descriptors0, descriptors1,
-                             metric="hamming", cross_check=True,
-                             max_ratio=0.8)
+empty_match = np.empty((0, 2), dtype=np.int64)
+
+
+def match(descriptors0, descriptors1, k=0.7):
+    _, tree0 = descriptors0
+    descriptors1_, _ = descriptors1
+
+    distances, neighbors = tree0.query(descriptors1_, k=2)
+    # regard it as a good match
+    # if nearset_distance < k * second_nearest_distance.
+    # note that 'n1' is an index of descriptors0 and
+    # 'query' is an index of descriptors1
+    matches = []
+    for query, ((n1, _), (d1, d2)) in enumerate(zip(neighbors, distances)):
+        if d1 < k * d2:
+            matches.append([n1, query])
+
+    if len(matches) == 0:
+        return empty_match
+    return np.array(matches)
 
 
 def ransac_affine(keypoints1, keypoints2):
@@ -92,20 +112,17 @@ class Matcher(object):
         return inliers_mask
 
     def __call__(self, kd1, kd2, min_inliers=12):
-        def empty_match():
-            return np.empty((0, 2), dtype=np.int64)
-
         # kd1, kd2 are instances of KeypointDescriptor
         keypoints1, descriptors1 = kd1
         keypoints2, descriptors2 = kd2
 
         if len(keypoints1) == 0 or len(keypoints2) == 0:
-            return empty_match()
+            return empty_match
 
         matches12 = match(descriptors1, descriptors2)
 
         if len(matches12) == 0:
-            return empty_match()
+            return empty_match
 
         if len(matches12) < min_inliers:
             return matches12
