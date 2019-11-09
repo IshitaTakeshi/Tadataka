@@ -36,9 +36,10 @@ class Pose(object):
 min_correspondences = 6
 
 
-def calc_reprojection_threshold(keypoints):
+def calc_reprojection_threshold(keypoints, k=2.0):
     mean = np.mean(keypoints, axis=0, keepdims=True)
-    return np.mean(np.sum(np.power(keypoints - mean, 2), axis=1))
+    squared_distances = np.sum(np.power(keypoints - mean, 2), axis=1)
+    return k * np.sqrt(np.mean(squared_distances)) / keypoints.shape[0]
 
 
 def solve_pnp(points, keypoints):
