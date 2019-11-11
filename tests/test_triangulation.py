@@ -1,5 +1,6 @@
 import itertools
 
+import pytest
 from autograd import numpy as np
 from numpy.testing import (assert_array_equal, assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
@@ -10,10 +11,10 @@ from vitamine.camera import CameraParameters
 from vitamine.so3 import tangent_so3, rodrigues
 from vitamine.rigid_transform import transform, transform_all
 from vitamine._triangulation import (
-    estimate_fundamental, estimate_camera_pose_change,
+    estimate_fundamental, estimate_pose_change,
     fundamental_to_essential, extract_poses,
     linear_triangulation, n_triangulated, triangulation_indices,
-    points_from_known_poses
+    triangulation
 )
 
 # TODO add the case such that x[3] = 0
@@ -167,7 +168,7 @@ def test_extract_poses():
         test(R, t)
 
 
-def test_points_from_known_poses():
+def test_triangulation():
     projection = PerspectiveProjection(
         CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
@@ -190,18 +191,11 @@ def test_points_from_known_poses():
         depth_mask_true = np.logical_and(P1[:, 2] > 0, P2[:, 2] > 0)
         keypoints1 = projection.compute(P1)
         keypoints2 = projection.compute(P2)
+        X_pred, depth_mask = triangulation(R1, R2, t1, t2,
+                                           keypoints1, keypoints2)
 
-        X_pred, valid_depth_mask = points_from_known_poses(
-            R1, R2, t1, t2,
-            keypoints1, keypoints2
-        )
-
-        P1 = transform(R1, t1, X_pred)
-        P2 = transform(R2, t2, X_pred)
-        assert_array_equal(valid_depth_mask, depth_mask_true)
-        assert_array_almost_equal(projection.compute(P1), keypoints1)
-        assert_array_almost_equal(projection.compute(P2), keypoints2)
-
+        assert_array_almost_equal(X_true, X_pred)
+        assert_array_equal(depth_mask, depth_mask_true)
 
     R1 = np.array([[-1, 0, 0],
                    [0, 0, 1],
@@ -210,8 +204,9 @@ def test_points_from_known_poses():
                    [0, 0, -1],
                    [0, 1, 0]])
     t1 = np.array([0, 0, 3])
-    t2 = np.array([0, 1, 0])
-    run(R1, R2, t1, t2)
+    t2 = np.array([0, 1, 10])
+
+    run(R1, R2, t1, t2)  # 2 points are behind the cameras
 
     R1 = np.array([[-1, 0, 0],
                    [0, -1, 0],
@@ -220,8 +215,11 @@ def test_points_from_known_poses():
                    [1, 0, 0],
                    [0, 0, -1]])
     t1 = np.array([3, 0, 2])
-    t2 = np.array([1, 1, -3])
-    run(R1, R2, t1, t2)
+    t2 = np.array([1, 1, 6.5])
+
+    message = "Most of points are behind cameras. Maybe wrong matches?"
+    with pytest.warns(RuntimeWarning, match=message):
+        run(R1, R2, t1, t2)  # 3 points are behind the cameras
 
     R1 = np.array([[1 / np.sqrt(2), -1 / np.sqrt(2), 0],
                    [1 / np.sqrt(2), 1 / np.sqrt(2), 0],
@@ -229,12 +227,13 @@ def test_points_from_known_poses():
     R2 = np.array([[-7 / 25, 0, -24 / 25],
                    [0, -1, 0],
                    [-24 / 25, 0, 7 / 25]])
-    t1 = np.array([-3.0, 3.0, 4.0])
-    t2 = np.array([-1.0, 1.0, 1.5])
-    run(R1, R2, t1, t2)
+    t1 = np.array([-3.0, 3.0, 10.0])
+    t2 = np.array([-1.0, 1.0, 12.5])
+
+    run(R1, R2, t1, t2)  # all points are in front of both cameras
 
 
-def test_estimate_camera_pose_change():
+def test_estimate_pose_change():
     projection = PerspectiveProjection(
         CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
@@ -257,20 +256,34 @@ def test_estimate_camera_pose_change():
         [0, 0, 1],
         [0, 1, 0],
     ])
-    t_true = np.array([0, 0, 5])
 
-    P0 = X_true
-    P1 = transform(R_true, t_true, X_true)
-    depth_mask_true = np.logical_and(P0[:, 2] > 0, P1[:, 2] > 0)
-    keypoints0 = projection.compute(P0)
-    keypoints1 = projection.compute(P1)
+    def case1():
+        t_true = np.array([0, 0, 5])
+        P0 = X_true
+        P1 = transform(R_true, t_true, X_true)
+        keypoints0 = projection.compute(P0)
+        keypoints1 = projection.compute(P1)
+        R, t = estimate_pose_change(keypoints0, keypoints1)
 
-    R, t = estimate_camera_pose_change(keypoints0, keypoints1)
+        assert_array_almost_equal(R, R_true)
+        # test if t and t_true are parallel
+        # because we cannot know the scale
+        assert_array_almost_equal(np.cross(t, t_true), np.zeros(3))
 
-    assert_array_almost_equal(R, R_true)
-    # test if t and t_true are parallel
-    # because we cannot know the scale
-    assert_array_almost_equal(np.cross(t, t_true), np.zeros(3))
+    def case2():
+        # 5 points are behind cameras
+        t_true = np.array([0, 0, 0])
+        P0 = X_true
+        P1 = transform(R_true, t_true, X_true)
+        keypoints0 = projection.compute(P0)
+        keypoints1 = projection.compute(P1)
+
+        message = "Most of points are behind cameras. Maybe wrong matches?"
+        with pytest.warns(RuntimeWarning, match=message):
+            estimate_pose_change(keypoints0, keypoints1)
+
+    case1()
+    case2()
 
 
 def test_n_triangulated():

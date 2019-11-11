@@ -1,3 +1,5 @@
+import warnings
+
 import itertools
 
 from autograd import numpy as np
@@ -5,6 +7,17 @@ from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
 
 from vitamine.matrix import solve_linear, motion_matrix
 from vitamine.so3 import rodrigues
+
+
+def warn_points_behind_cameras():
+    message = "Most of points are behind cameras. Maybe wrong matches?"
+    warnings.warn(message, RuntimeWarning)
+
+
+def depth_mask_condition(depth_mask, positive_depth_ratio=0.8):
+    # number of positive depths / total number of keypoints
+    # (or corresponding points)
+    return np.sum(depth_mask) / len(depth_mask) >= positive_depth_ratio
 
 
 # Equation numbers are the ones in Multiple View Geometry
@@ -88,18 +101,11 @@ def depths_are_valid(depth0, depth1, min_depth):
     return depth0 > min_depth and depth1 > min_depth
 
 
-def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1,
-                            min_depth=0.0):
+def triangulation_(R0, R1, t0, t1, keypoints0, keypoints1, min_depth=0.0):
     """
     Reconstruct 3D points from 2 camera poses.
     The first camera pose is assumed to be R = identity, t = zeros.
     """
-
-    assert(R0.shape == (3, 3))
-    assert(R1.shape == (3, 3))
-    assert(t0.shape == (3,))
-    assert(t1.shape == (3,))
-    assert(keypoints0.shape == keypoints1.shape)
 
     n_points = keypoints0.shape[0]
 
@@ -111,6 +117,19 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1,
         points[i], depth0, depth1 = linear_triangulation(
             R0, R1, t0, t1, keypoints0[i], keypoints1[i])
         depth_mask[i] = depths_are_valid(depth0, depth1, min_depth)
+    return points, depth_mask
+
+
+def triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
+    assert(R0.shape == (3, 3))
+    assert(R1.shape == (3, 3))
+    assert(t0.shape == (3,))
+    assert(t1.shape == (3,))
+    assert(keypoints0.shape == keypoints1.shape)
+
+    points, depth_mask = triangulation_(R0, R1, t0, t1, keypoints0, keypoints1)
+    if not depth_mask_condition(depth_mask):
+        warn_points_behind_cameras()
     return points, depth_mask
 
 
@@ -141,12 +160,8 @@ def triangulation_indices(n_keypoints):
     return indices[:N]
 
 
-def estimate_camera_pose_change(keypoints0, keypoints1):
-    """
-    Reconstruct 3D points from non nan keypoints obtained from 2 views
-    keypoints[01].shape == (n_points, 2)
-    keypoints0 and keypoints1 are undistorted and normalized keypoints
-    """
+def estimate_pose_change(keypoints0, keypoints1):
+    """Estimate camera pose change between two viewpoints"""
 
     assert(keypoints0.shape == keypoints1.shape)
 
@@ -159,18 +174,23 @@ def estimate_camera_pose_change(keypoints0, keypoints1):
     # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
     R1, R2, t1, t2 = extract_poses(E)
     n_max_valid_depth = -1
-    argmax_R, argmax_t = None, None
+    argmax_R, argmax_t, argmax_depth_mask = None, None, None
 
     # not necessary to triangulate all points to validate depths
     indices = triangulation_indices(len(keypoints0))
     for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        _, depth_mask = points_from_known_poses(
-            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices])
+        _, depth_mask = triangulation_(
+            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices]
+        )
         n_valid_depth = np.sum(depth_mask)
 
         # only 1 pair (R, t) among the candidates has to be
         # the correct pair
         if n_valid_depth > n_max_valid_depth:
             n_max_valid_depth = n_valid_depth
-            argmax_R, argmax_t = R_, t_
+            argmax_R, argmax_t, argmax_depth_mask = R_, t_, depth_mask
+
+    if not depth_mask_condition(argmax_depth_mask):
+        warn_points_behind_cameras()
+
     return argmax_R, argmax_t
