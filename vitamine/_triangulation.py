@@ -1,23 +1,8 @@
-import warnings
-
-import itertools
-
 from autograd import numpy as np
 
+from vitamine.depth import depth_condition, warn_points_behind_cameras
 from vitamine.matrix import solve_linear, motion_matrix
 from vitamine.so3 import rodrigues
-
-
-def warn_points_behind_cameras():
-    message = "Most of points are behind cameras. Maybe wrong matches?"
-    warnings.warn(message, RuntimeWarning)
-
-
-def depth_mask_condition(depth_mask, positive_depth_ratio=0.8):
-    # number of positive depths / total number of keypoints
-    # (or corresponding points)
-    return np.sum(depth_mask) / len(depth_mask) >= positive_depth_ratio
-
 
 # Equation numbers are the ones in Multiple View Geometry
 
@@ -84,6 +69,6 @@ def triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
     assert(keypoints0.shape == keypoints1.shape)
 
     points, depth_mask = triangulation_(R0, R1, t0, t1, keypoints0, keypoints1)
-    if not depth_mask_condition(depth_mask):
+    if not depth_condition(depth_mask):
         warn_points_behind_cameras()
     return points, depth_mask
