@@ -105,13 +105,13 @@ def points_from_known_poses(R0, R1, t0, t1, keypoints0, keypoints1,
 
     points = np.empty((n_points, 3))
 
-    valid_depth_mask = np.zeros(n_points, dtype=np.bool)
+    depth_mask = np.zeros(n_points, dtype=np.bool)
 
     for i in range(n_points):
         points[i], depth0, depth1 = linear_triangulation(
             R0, R1, t0, t1, keypoints0[i], keypoints1[i])
-        valid_depth_mask[i] = depths_are_valid(depth0, depth1, min_depth)
-    return points, valid_depth_mask
+        depth_mask[i] = depths_are_valid(depth0, depth1, min_depth)
+    return points, depth_mask
 
 
 def estimate_homography(keypoints1, keypoints2):
@@ -126,7 +126,22 @@ def estimate_fundamental(keypoints1, keypoints2):
     return tform.params
 
 
-def pose_point_from_keypoints(keypoints0, keypoints1):
+def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):
+    n = int(n_keypoints * triangulation_ratio)
+    # at least use 'n_min_triangulation' points
+    k = max(n, n_min_triangulation)
+    # make the return value not exceed the number of keypoints
+    return min(n_keypoints, k)
+
+
+def triangulation_indices(n_keypoints):
+    N = n_triangulated(n_keypoints)
+    indices = np.arange(0, n_keypoints)
+    np.random.shuffle(indices)
+    return indices[:N]
+
+
+def estimate_camera_pose_change(keypoints0, keypoints1):
     """
     Reconstruct 3D points from non nan keypoints obtained from 2 views
     keypoints[01].shape == (n_points, 2)
@@ -143,20 +158,19 @@ def pose_point_from_keypoints(keypoints0, keypoints1):
     # R <- {R1, R2}, t <- {t1, t2} satisfy
     # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
     R1, R2, t1, t2 = extract_poses(E)
-
     n_max_valid_depth = -1
-    argmax_R, argmax_t, argmax_points = None, None, None
-    argmax_mask = None
+    argmax_R, argmax_t = None, None
 
+    # not necessary to triangulate all points to validate depths
+    indices = triangulation_indices(len(keypoints0))
     for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        points, valid_depth_mask = points_from_known_poses(
-            R0, R_, t0, t_, keypoints0, keypoints1)
-        n_valid_depth = np.sum(valid_depth_mask)
+        _, depth_mask = points_from_known_poses(
+            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices])
+        n_valid_depth = np.sum(depth_mask)
 
         # only 1 pair (R, t) among the candidates has to be
         # the correct pair
         if n_valid_depth > n_max_valid_depth:
             n_max_valid_depth = n_valid_depth
-            argmax_mask = valid_depth_mask
-            argmax_R, argmax_t, argmax_points = R_, t_, points
-    return argmax_R, argmax_t, argmax_points, argmax_mask
+            argmax_R, argmax_t = R_, t_
+    return argmax_R, argmax_t

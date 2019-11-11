@@ -10,8 +10,11 @@ from vitamine.camera import CameraParameters
 from vitamine.so3 import tangent_so3, rodrigues
 from vitamine.rigid_transform import transform, transform_all
 from vitamine._triangulation import (
-    estimate_fundamental, fundamental_to_essential, extract_poses,
-    linear_triangulation, points_from_known_poses, pose_point_from_keypoints)
+    estimate_fundamental, estimate_camera_pose_change,
+    fundamental_to_essential, extract_poses,
+    linear_triangulation, n_triangulated, triangulation_indices,
+    points_from_known_poses
+)
 
 # TODO add the case such that x[3] = 0
 
@@ -231,7 +234,7 @@ def test_points_from_known_poses():
     run(R1, R2, t1, t2)
 
 
-def test_pose_point_from_keypoints():
+def test_estimate_camera_pose_change():
     projection = PerspectiveProjection(
         CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
@@ -254,21 +257,28 @@ def test_pose_point_from_keypoints():
         [0, 0, 1],
         [0, 1, 0],
     ])
-    t = np.array([0, 0, 5])
+    t_true = np.array([0, 0, 5])
 
     P0 = X_true
-    P1 = transform(R_true, t, X_true)
+    P1 = transform(R_true, t_true, X_true)
     depth_mask_true = np.logical_and(P0[:, 2] > 0, P1[:, 2] > 0)
     keypoints0 = projection.compute(P0)
     keypoints1 = projection.compute(P1)
 
-    R, t, X, depth_mask = pose_point_from_keypoints(keypoints0, keypoints1)
+    R, t = estimate_camera_pose_change(keypoints0, keypoints1)
 
-    assert_array_equal(depth_mask, depth_mask_true)
+    assert_array_almost_equal(R, R_true)
+    # test if t and t_true are parallel
+    # because we cannot know the scale
+    assert_array_almost_equal(np.cross(t, t_true), np.zeros(3))
 
-    # we regard that the 0th pose as an origin
-    assert_array_almost_equal(projection.compute(X),
-                              keypoints0)
-    # 1st pose is the relative pose from the 0th pose
-    assert_array_almost_equal(projection.compute(transform(R, t, X)),
-                              keypoints1)
+
+def test_n_triangulated():
+    assert(n_triangulated(1000, 0.2, 40) == 200)   # 1000 * 0.2
+    assert(n_triangulated(100, 0.2, 40) == 40)    # max(100 * 0.2, 40)
+    assert(n_triangulated(100, 0.2, 800) == 100)  # min(100, 800)
+
+
+def test_triangulation_indices():
+    indices = triangulation_indices(100)
+    np.unique(indices) == len(indices)  # non overlapping

@@ -10,19 +10,18 @@ def depth_mask_condition(mask, min_positive_dpth_ratio=0.8):
     return np.sum(mask) / len(mask) >= min_positive_dpth_ratio
 
 
-def pose_point_from_keypoints(keypoints0, keypoints1, matches01):
-    R, t, points, valid_depth_mask = TR.pose_point_from_keypoints(
+def estimate_pose_change(keypoints0, keypoints1, matches01):
+    R, t, points, depth_is_positive = TR.pose_point_from_keypoints(
         keypoints0[matches01[:, 0]],
         keypoints1[matches01[:, 1]]
     )
 
-    if not depth_mask_condition(valid_depth_mask):
+    if not depth_mask_condition(depth_is_positive):
         warnings.warn(
             "Most of points are behind cameras. Maybe wrong matches?"
         )
 
-    return (Pose.identity(), Pose(R, t),
-            points[valid_depth_mask], matches01[valid_depth_mask])
+    return Pose(R, t)
 
 
 def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
