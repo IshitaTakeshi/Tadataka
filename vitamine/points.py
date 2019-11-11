@@ -75,7 +75,7 @@ class PointManager(object):
             return
         self.index_map[dst_viewpoint][dst_keypoint_index] = point_index
 
-    def both_observed(self, triangulation,
+    def both_observed(self, triangulator,
                       viewpoint0, viewpoint1, indices0, indices1):
         # Triangulate in the assumption that
         # both viewpoints have already subscribed
@@ -112,13 +112,13 @@ class PointManager(object):
                 continue
 
             # neither index0 nor index1 has been triangulated
-            point = triangulation.triangulate(index0, index1)
+            point = triangulator.triangulate(index0, index1)
             if point is None:
                 continue
 
             self.add_point(point, viewpoint0, viewpoint1, index0, index1)
 
-    def either_one_observed(self, triangulation,
+    def either_one_observed(self, triangulator,
                             src_viewpoint, dst_viewpoint, src_indices, dst_indices):
         # assume src_viewpoint have already been observed
 
@@ -135,18 +135,14 @@ class PointManager(object):
             # have not been observed
             # create it by triangulation
 
-            point = triangulation.triangulate(src_index, dst_index)
+            point = triangulator.triangulate(src_index, dst_index)
             if point is None:
                 continue
 
             self.add_point(point, src_viewpoint, dst_viewpoint,
                            src_index, dst_index)
 
-    def triangulate(self, pose0, pose1,
-                    keypoints0, keypoints1, matches01,
-                    viewpoint0, viewpoint1):
-        triangulation = Triangulation(pose0, pose1, keypoints0, keypoints1)
-
+    def triangulate(self, triangulator, matches01, viewpoint0, viewpoint1):
         viewpoints = self.index_map.keys()
         has_observed0 = viewpoint0 in viewpoints
         has_observed1 = viewpoint1 in viewpoints
@@ -154,17 +150,17 @@ class PointManager(object):
         indices0, indices1 = matches01[:, 0], matches01[:, 1]
 
         if has_observed0 and has_observed1:
-            self.both_observed(triangulation, viewpoint0, viewpoint1,
+            self.both_observed(triangulator, viewpoint0, viewpoint1,
                                indices0, indices1)
             return
 
         if has_observed0:
-            self.either_one_observed(triangulation, viewpoint0, viewpoint1,
+            self.either_one_observed(triangulator, viewpoint0, viewpoint1,
                                      indices0, indices1)
             return
 
         if has_observed1:
-            self.either_one_observed(triangulation, viewpoint1, viewpoint0,
+            self.either_one_observed(triangulator, viewpoint1, viewpoint0,
                                      indices1, indices0)
             return
 
