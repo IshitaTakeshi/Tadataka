@@ -3,7 +3,6 @@ import warnings
 import itertools
 
 from autograd import numpy as np
-from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
 
 from vitamine.matrix import solve_linear, motion_matrix
 from vitamine.so3 import rodrigues
@@ -21,25 +20,6 @@ def depth_mask_condition(depth_mask, positive_depth_ratio=0.8):
 
 
 # Equation numbers are the ones in Multiple View Geometry
-
-Z = np.array([
-    [0, 1, 0],
-    [-1, 0, 0],
-    [0, 0, 0]
-])
-
-
-W = np.array([
-    [0, -1, 0],
-    [1, 0, 0],
-    [0, 0, 1]
-])
-
-
-def fundamental_to_essential(F, K0, K1=None):
-    if K1 is None:
-        K1 = K0
-    return K1.T.dot(F).dot(K0)
 
 
 def calc_depth(P, x):
@@ -71,30 +51,6 @@ def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
     x = x / x[3]
     # calculate depths for utilities
     return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
-
-
-def extract_poses(E):
-    """
-    Get rotation and translation from the essential matrix.
-    There are 2 solutions and this functions returns both of them.
-    """
-
-    # Eq. 9.14
-    U, _, VH = np.linalg.svd(E)
-
-    if np.linalg.det(U) < 0:
-        U = -U
-
-    if np.linalg.det(VH) < 0:
-        VH = -VH
-
-    R1 = U.dot(W).dot(VH)
-    R2 = U.dot(W.T).dot(VH)
-
-    S = -U.dot(W).dot(np.diag([1, 1, 0])).dot(U.T)
-    t1 = np.array([S[2, 1], S[0, 2], S[1, 0]])
-    t2 = -t1
-    return R1, R2, t1, t2
 
 
 def depths_are_valid(depth0, depth1, min_depth):
@@ -131,18 +87,6 @@ def triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
     if not depth_mask_condition(depth_mask):
         warn_points_behind_cameras()
     return points, depth_mask
-
-
-def estimate_homography(keypoints1, keypoints2):
-    tform = ProjectiveTransform()
-    tform.estimate(keypoints1, keypoints2)
-    return tform.params
-
-
-def estimate_fundamental(keypoints1, keypoints2):
-    tform = FundamentalMatrixTransform()
-    tform.estimate(keypoints1, keypoints2)
-    return tform.params
 
 
 def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):

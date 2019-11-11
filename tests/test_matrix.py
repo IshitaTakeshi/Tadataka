@@ -1,10 +1,20 @@
 from autograd import numpy as np
+from autograd.numpy.linalg import inv
+
 from numpy.testing import (
-    assert_array_almost_equal, assert_array_equal, assert_equal)
+    assert_array_almost_equal, assert_almost_equal, assert_array_equal,
+    assert_equal)
+
+from vitamine.camera import CameraParameters
 from vitamine.matrix import (
-    solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation)
+    solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
+    estimate_fundamental, fundamental_to_essential)
+from vitamine.projection import PerspectiveProjection
+from vitamine.rigid_transform import transform
+from vitamine.so3 import tangent_so3
 
 from tests.utils import random_rotation_matrix
+from tests.data import dummy_points as points_true
 
 
 def test_solve_linear():
@@ -37,7 +47,7 @@ def test_inv_motion_matirx():
     R = random_rotation_matrix(3)
     t = np.random.uniform(-1, 1, 3)
     T = motion_matrix(R, t)
-    assert_array_almost_equal(inv_motion_matrix(T), np.linalg.inv(T))
+    assert_array_almost_equal(inv_motion_matrix(T), inv(T))
 
 
 def test_motion_matrix():
@@ -55,3 +65,56 @@ def test_get_rotation_translation():
     R_, t_ = get_rotation_translation(motion_matrix(R, t))
     assert_array_equal(R, R_)
     assert_array_equal(t, t_)
+
+
+def test_estimate_fundamental():
+    camera_parameters = CameraParameters(
+        focal_length=[0.8, 1.2],
+        offset=[0.8, 0.2]
+    )
+    projection = PerspectiveProjection(camera_parameters)
+
+    R = random_rotation_matrix(3)
+    t = np.random.uniform(-1, 1, 3)
+
+    keypoints0 = projection.compute(points_true)
+    keypoints1 = projection.compute(transform(R, t, points_true))
+
+    K = camera_parameters.matrix
+    K_inv = inv(K)
+
+    F = estimate_fundamental(keypoints0, keypoints1)
+    E = fundamental_to_essential(F, K)
+
+    for i in range(points_true.shape[0]):
+        x0 = np.append(keypoints0[i], 1)
+        x1 = np.append(keypoints1[i], 1)
+        assert_almost_equal(x1.dot(F).dot(x0), 0)
+
+        y0 = np.dot(K_inv, x0)
+        y1 = np.dot(K_inv, x1)
+        assert_almost_equal(y1.dot(E).dot(y0), 0)
+
+        # properties of the essential matrix
+        assert_almost_equal(np.linalg.det(E), 0)
+        assert_array_almost_equal(
+            2 * np.dot(E, np.dot(E.T, E)) - np.trace(np.dot(E, E.T)) * E,
+            np.zeros((3, 3))
+        )
+
+
+def to_essential(R, t):
+    S = tangent_so3(t.reshape(1, 3))[0]
+    return np.dot(S, R)
+
+
+def test_fundamental_to_essential():
+    R = random_rotation_matrix(3)
+    t = np.random.uniform(-10, 10, 3)
+    K0 = CameraParameters(focal_length=[0.8, 1.2], offset=[0.8, -0.2]).matrix
+    K1 = CameraParameters(focal_length=[0.7, 0.9], offset=[-1.0, 0.1]).matrix
+
+    E_true = to_essential(R, t)
+    F = inv(K1).T.dot(E_true).dot(inv(K0))
+    E_pred = fundamental_to_essential(F, K0, K1)
+    assert_array_almost_equal(E_true, E_pred)

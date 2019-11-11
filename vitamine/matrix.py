@@ -1,5 +1,7 @@
 from autograd import numpy as np
 
+from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
+
 
 def inv_motion_matrix(T):
     R, t = get_rotation_translation(T)
@@ -90,3 +92,51 @@ def solve_linear(A):
     # x is a vector in the kernel space of A
     U, S, VH = np.linalg.svd(A)
     return VH[-1]
+
+
+def estimate_homography(keypoints1, keypoints2):
+    tform = ProjectiveTransform()
+    tform.estimate(keypoints1, keypoints2)
+    return tform.params
+
+
+def estimate_fundamental(keypoints1, keypoints2):
+    tform = FundamentalMatrixTransform()
+    tform.estimate(keypoints1, keypoints2)
+    return tform.params
+
+
+def fundamental_to_essential(F, K0, K1=None):
+    if K1 is None:
+        K1 = K0
+    return K1.T.dot(F).dot(K0)
+
+
+def decompose_essential(E):
+    """
+    Get rotation and translation from the essential matrix.
+    There are 2 solutions and this functions returns both of them.
+    """
+
+    W = np.array([
+        [0, -1, 0],
+        [1, 0, 0],
+        [0, 0, 1]
+    ])
+
+    # Eq. 9.14
+    U, _, VH = np.linalg.svd(E)
+
+    if np.linalg.det(U) < 0:
+        U = -U
+
+    if np.linalg.det(VH) < 0:
+        VH = -VH
+
+    R1 = U.dot(W).dot(VH)
+    R2 = U.dot(W.T).dot(VH)
+
+    S = -U.dot(W).dot(np.diag([1, 1, 0])).dot(U.T)
+    t1 = np.array([S[2, 1], S[0, 2], S[1, 0]])
+    t2 = -t1
+    return R1, R2, t1, t2
