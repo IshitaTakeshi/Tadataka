@@ -4,8 +4,6 @@ import warnings
 from autograd import numpy as np
 
 from vitamine.exceptions import InvalidDepthException, print_error
-from vitamine.triangulation import (linear_triangulation,
-                                    pose_point_from_keypoints)
 
 
 def init_empty():
@@ -60,21 +58,6 @@ class PointManager(object):
         self.keyerror_if_viewpoint_not_exist(viewpoint)
         point_index = self.index_map[viewpoint][keypoint_index]
         return self.points[point_index]
-
-    def initialize(self, keypoints0, keypoints1, matches01,
-                   viewpoint0, viewpoint1):
-        # no viewpoints added so far
-        assert(len(self.index_map.keys()) == 0)
-
-        pose0, pose1, points, valid_matches01 = pose_point_from_keypoints(
-            keypoints0, keypoints1, matches01
-        )
-
-        for point, (index0, index1) in zip(points, valid_matches01):
-            point_index = self.add_point(point, viewpoint0, viewpoint1,
-                                         index0, index1)
-
-        return pose0, pose1
 
     def associate_existing(self, src_viewpoint, dst_viewpoint,
                            src_keypoint_index, dst_keypoint_index):
