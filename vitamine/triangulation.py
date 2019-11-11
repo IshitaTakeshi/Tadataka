@@ -6,15 +6,6 @@ from vitamine.pose import Pose
 from vitamine.exceptions import InvalidDepthException
 
 
-def estimate_pose_change(keypoints0, keypoints1, matches01):
-    R, t = TR.pose_point_from_keypoints(
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
-
-    return Pose(R, t)
-
-
 def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
     points, depth_mask = TR.points_from_known_poses(
         pose0.R, pose1.R, pose0.t, pose1.t,

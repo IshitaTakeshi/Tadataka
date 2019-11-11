@@ -1,10 +1,15 @@
+import itertools
+
 from autograd import numpy as np
 
 # TODO make this independent from cv2
 import cv2
 
 from vitamine.exceptions import NotEnoughInliersException
+from vitamine.matrix import estimate_fundamental, decompose_essential
 from vitamine.so3 import exp_so3, log_so3
+from vitamine._triangulation import triangulation_
+from vitamine.depth import depth_condition, warn_points_behind_cameras
 
 
 class Pose(object):
@@ -68,3 +73,69 @@ def solve_pnp(points, keypoints):
         raise NotEnoughInliersException("No inliers found")
 
     return Pose(omega.flatten(), t.flatten())
+
+
+def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):
+    n = int(n_keypoints * triangulation_ratio)
+    # at least use 'n_min_triangulation' points
+    k = max(n, n_min_triangulation)
+    # make the return value not exceed the number of keypoints
+    return min(n_keypoints, k)
+
+
+def triangulation_indices(n_keypoints):
+    N = n_triangulated(n_keypoints)
+    indices = np.arange(0, n_keypoints)
+    np.random.shuffle(indices)
+    return indices[:N]
+
+
+def select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1):
+    R0, t0 = np.identity(3), np.zeros(3)
+
+    n_max_valid_depth = -1
+    argmax_R, argmax_t, argmax_depth_mask = None, None, None
+
+    # not necessary to triangulate all points to validate depths
+    indices = triangulation_indices(len(keypoints0))
+    for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
+        _, depth_mask = triangulation_(
+            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices]
+        )
+        n_valid_depth = np.sum(depth_mask)
+
+        # only 1 pair (R, t) among the candidates has to be
+        # the correct pair
+        if n_valid_depth > n_max_valid_depth:
+            n_max_valid_depth = n_valid_depth
+            argmax_R, argmax_t, argmax_depth_mask = R_, t_, depth_mask
+
+    if not depth_condition(argmax_depth_mask):
+        warn_points_behind_cameras()
+
+    return argmax_R, argmax_t
+
+
+def pose_change_from_stereo(keypoints0, keypoints1):
+    """Estimate camera pose change between two viewpoints"""
+
+    assert(keypoints0.shape == keypoints1.shape)
+
+    # we assume that keypoints are normalized
+    E = estimate_fundamental(keypoints0, keypoints1)
+
+    # R <- {R1, R2}, t <- {t1, t2} satisfy
+    # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
+    R1, R2, t1, t2 = decompose_essential(E)
+    return select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1)
+
+
+def estimate_pose_change(keypoints0, keypoints1, matches01):
+    # estimate pose change between viewpoint 0 and 1
+    # regarding viewpoint 0 as identity (world origin)
+    R, t = pose_change_from_stereo(
+        keypoints0[matches01[:, 0]],
+        keypoints1[matches01[:, 1]]
+    )
+
+    return Pose(R, t)
