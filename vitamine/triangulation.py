@@ -28,3 +28,20 @@ def linear_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
         )
 
     return point
+
+
+class Triangulation(object):
+    def __init__(self, pose0, pose1, keypoints0, keypoints1):
+        self.pose0, self.pose1 = pose0, pose1
+        self.keypoints0, self.keypoints1 = keypoints0, keypoints1
+
+    def triangulate(self, index0, index1):
+        keypoint0 = self.keypoints0[index0]
+        keypoint1 = self.keypoints1[index1]
+
+        try:
+            return linear_triangulation(self.pose0, self.pose1,
+                                        keypoint0, keypoint1)
+        except InvalidDepthException as e:
+            print_error(e)
+            return None
