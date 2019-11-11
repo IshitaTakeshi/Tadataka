@@ -5,11 +5,14 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 
 from vitamine.so3 import rodrigues, exp_so3
 
-from vitamine.pose import Pose, solve_pnp
-from vitamine.exceptions import NotEnoughInliersException
 from vitamine.camera import CameraParameters
-from vitamine.projection import PerspectiveProjection
+from vitamine.exceptions import NotEnoughInliersException
 from vitamine.dataset.observations import generate_translations
+from vitamine.pose import (
+    Pose, solve_pnp, pose_change_from_stereo,
+    n_triangulated, triangulation_indices
+)
+from vitamine.projection import PerspectiveProjection
 from vitamine.rigid_transform import transform
 
 from tests.utils import random_rotation_matrix
@@ -105,3 +108,67 @@ def test_R():
 
     pose = Pose(np.array([np.pi, 0, 0]), np.zeros(3))
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
+
+
+def test_n_triangulated():
+    assert(n_triangulated(1000, 0.2, 40) == 200)   # 1000 * 0.2
+    assert(n_triangulated(100, 0.2, 40) == 40)    # max(100 * 0.2, 40)
+    assert(n_triangulated(100, 0.2, 800) == 100)  # min(100, 800)
+
+
+def test_triangulation_indices():
+    indices = triangulation_indices(100)
+    np.unique(indices) == len(indices)  # non overlapping
+
+
+def test_estimate_pose_change():
+    projection = PerspectiveProjection(
+        CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
+    )
+
+    X_true = np.array([
+        [-1, -6, 5],
+        [9, 1, 8],
+        [-9, -2, 6],
+        [-3, 3, 6],
+        [3, -1, 4],
+        [-3, 7, -9],
+        [7, 1, 4],
+        [6, 5, 3],
+        [0, -4, 1],
+        [9, -1, 7]
+    ])
+
+    R_true = np.array([
+        [-1, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+    ])
+
+    def case1():
+        t_true = np.array([0, 0, 5])
+        P0 = X_true
+        P1 = transform(R_true, t_true, X_true)
+        keypoints0 = projection.compute(P0)
+        keypoints1 = projection.compute(P1)
+        R, t = pose_change_from_stereo(keypoints0, keypoints1)
+
+        assert_array_almost_equal(R, R_true)
+        # test if t and t_true are parallel
+        # because we cannot know the scale
+        assert_array_almost_equal(np.cross(t, t_true), np.zeros(3))
+
+    def case2():
+        # 5 points are behind cameras
+        t_true = np.array([0, 0, 0])
+        P0 = X_true
+        P1 = transform(R_true, t_true, X_true)
+        keypoints0 = projection.compute(P0)
+        keypoints1 = projection.compute(P1)
+
+        message = "Most of points are behind cameras. Maybe wrong matches?"
+        with pytest.warns(RuntimeWarning, match=message):
+            pose_change_from_stereo(keypoints0, keypoints1)
+
+    case1()
+    case2()
