@@ -5,7 +5,8 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.points import PointManager
-from vitamine.pose import Pose, solve_pnp
+from vitamine.pose import Pose, solve_pnp, estimate_pose_change
+from vitamine.triangulation import Triangulation
 from vitamine.keyframe_index import KeyframeIndices
 from skimage.color import rgb2gray
 from vitamine.so3 import rodrigues
@@ -24,13 +25,13 @@ def accumulate_correspondences(point_manager, keypoints, matches, viewpoints):
             try:
                 point = point_manager.get(viewpoint, index0)
             except KeyError as e:
-                # print_error(e)
+                # keypoint corresponding to 'index0' in 'viewpoint' is not
+                # triangulated yet
                 continue
 
-            keypoint = keypoints[index1]
-
             points.append(point)
-            keypoints_.append(keypoint)
+            keypoints_.append(keypoints[index1])
+
     return np.array(points), np.array(keypoints_)
 
 
@@ -49,49 +50,15 @@ def match(matcher, viewpoints, kds, kd1, min_matches=60):
     return matches, viewpoints_
 
 
-def try_init_first_two(point_manager, matcher, kd0, kd1,
-                       viewpoint0, viewpoint1, min_matches=8):
-    matches01 = matcher(kd0, kd1)
-
-    if len(matches01) < min_matches:
-        raise NotEnoughInliersException("Not enough matches found")
-
-    pose0, pose1 = point_manager.initialize(
-        kd0.keypoints, kd1.keypoints, matches01,
-        viewpoint0, viewpoint1
-    )
-    return point_manager, pose0, pose1
-
-
-def try_add_more(point_manager, matcher,
-                 poses, kds, viewpoints,
-                 kd1, viewpoint1):
-    matches, viewpoints = match(matcher, viewpoints, kds, kd1)
-    assert(len(matches) == len(viewpoints))
-
-    if len(matches) == 0:
-        raise NotEnoughInliersException("No matches found")
-
-    points, keypoints = accumulate_correspondences(
-        point_manager, kd1.keypoints,
-        matches, viewpoints
-    )
-
-    pose1 = solve_pnp(points, keypoints)
-
-    # if not self.pose_condition(poses[-1], pose1):
-    #     # if pose1 is too close from the latest active pose
-    #     return None
-
+def triangulation(point_manager, matches, viewpoints, viewpoint1, kds, kd1, poses, pose1):
     for viewpoint0, matches01 in zip(viewpoints, matches):
         kd0 = kds[viewpoint0]
         pose0 = poses[viewpoint0]
-        point_manager.triangulate(
-            pose0, pose1, kd0.keypoints, kd1.keypoints, matches01,
-            viewpoint0, viewpoint1
-        )
-
-    return point_manager, pose1
+        triangulator = Triangulation(pose0, pose1,
+                                     kd0.keypoints, kd1.keypoints)
+        point_manager.triangulate(triangulator, matches01,
+                                  viewpoint0, viewpoint1)
+    return point_manager
 
 
 class VisualOdometry(object):
@@ -131,19 +98,6 @@ class VisualOdometry(object):
         viewpoint = self.active_viewpoints.get_next()
         kd = KD(self.camera_model.undistort(keypoints), descriptors)
 
-        # from vitamine.plot.debug import plot_matches
-        # from matplotlib import pyplot as plt
-        # for v in self.active_viewpoints:
-        #     kdv = self.kds_[v]
-        #     imagev = self.images[v]
-        #     matches = self.matcher(kd, kdv)
-        #     print("n_matches =", len(matches))
-        #     plot_matches(image, imagev,
-        #                  keypoints, kdv.keypoints,
-        #                  matches)
-        # self.kds_[viewpoint] = KD(keypoints, descriptors)
-        # plt.show()
-
         pose = self.try_add_keyframe(viewpoint, kd, image)
         if pose is None:
             print_error("Pose estimation failed")
@@ -177,36 +131,47 @@ class VisualOdometry(object):
         for i, point in zip(point_indices, points):
             self.point_manager.overwrite(i, point)
 
-    def try_add_keyframe(self, new_viewpoint, new_kd, new_image):
-        if self.n_active_keyframes == 0:
+    def try_add_keyframe(self, viewpoint1, kd1, image1):
+        min_matches = 60
+        if len(self.active_viewpoints) == 0:
             return Pose.identity()
 
-        if self.n_active_keyframes == 1:
-            viewpoint0 = self.active_viewpoints[-1]
-            try:
-                self.point_manager, _, pose1 = try_init_first_two(
-                    point_manager=self.point_manager, matcher=self.matcher,
-                    kd0=self.kds[0], kd1=new_kd,
-                    viewpoint0=viewpoint0, viewpoint1=new_viewpoint
-                )
-            except NotEnoughInliersException as e:
-                print_error(e)
-                return None
+        if len(self.active_viewpoints) == 1:
+            viewpoint0 = self.active_viewpoints[0]
+            pose0 = self.poses[viewpoint0]
+            kd0 = self.kds[viewpoint0]
+
+            matches01 = self.matcher(kd0, kd1)
+            pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
+
+            if len(matches01) < min_matches:
+                raise NotEnoughInliersException("Not enough matches found")
+
+            triangulator = Triangulation(pose0, pose1,
+                                         kd0.keypoints, kd1.keypoints)
+            for index0, index1 in matches01:
+                point = triangulator.triangulate(index0, index1)
+                self.point_manager.add_point(point, viewpoint0, viewpoint1,
+                                             index0, index1)
 
             return pose1
 
-        active_viewpoints = self.active_viewpoints
-        active_kds = {v: self.kds[v] for v in active_viewpoints}
-        active_poses = {v: self.poses[v] for v in active_viewpoints}
-        try:
-            self.point_manager, pose1 = try_add_more(
-                self.point_manager, self.matcher,
-                active_poses, active_kds, active_viewpoints,
-                new_kd, new_viewpoint,
-            )
-        except NotEnoughInliersException as e:
-            print_error(e)
+        matches, viewpoints = match(self.matcher, self.active_viewpoints, self.kds, kd1)
+        assert(len(matches) == len(viewpoints))
+
+        if len(matches) == 0:
+            raise NotEnoughInliersException("No matches found")
             return None
+
+        points, keypoints = accumulate_correspondences(
+            self.point_manager, kd1.keypoints,
+            matches, viewpoints
+        )
+        pose1 = solve_pnp(points, keypoints)
+
+        self.point_manager = triangulation(self.point_manager, matches,
+                                           viewpoints, viewpoint1,
+                                           self.kds, kd1, self.poses, pose1)
 
         self.try_run_ba(self.active_viewpoints)
 
