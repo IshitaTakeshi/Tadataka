@@ -193,8 +193,8 @@ class VisualOdometry(object):
             return None
 
         maps = value_list(self.point_keypoint_maps, viewpoints)
-        point_keys, keypoint_indices = correspondences(maps, matches)
-        pose1 = solve_pnp(np.array(value_list(self.point_dict, point_keys)),
+        point_hashes, keypoint_indices = correspondences(maps, matches)
+        pose1 = solve_pnp(np.array(value_list(self.point_dict, point_hashes)),
                           kd1.keypoints[keypoint_indices])
 
         point_dict = dict()
@@ -207,14 +207,14 @@ class VisualOdometry(object):
             indices0, indices1 = matches01[:, 0], matches01[:, 1]
             mask01 = copy_required(point_keypoint_map0, point_keypoint_map1, indices0, indices1)
             mask10 = copy_required(point_keypoint_map1, point_keypoint_map0, indices1, indices0)
-            point_hashes1 = accumulate_shareable(point_keypoint_map0, indices0[mask01])
-            point_hashes0 = accumulate_shareable(point_keypoint_map1, indices1[mask10])
+            point_hashes0 = accumulate_shareable(point_keypoint_map0, indices0[mask01])
+            point_hashes1 = accumulate_shareable(point_keypoint_map1, indices1[mask10])
 
-            for point_hash, index1 in zip(point_hashes1, indices1[mask01]):
-                point_keypoint_map1[point_hash] = index1
+            for point_hash0, index1 in zip(point_hashes0, indices1[mask01]):
+                point_keypoint_map1[point_hash0] = index1
 
-            for point_hash, index0 in zip(point_hashes0, indices0[mask10]):
-                point_keypoint_map0[point_hash] = index0
+            for point_hash1, index0 in zip(point_hashes1, indices0[mask10]):
+                point_keypoint_map0[point_hash1] = index0
 
             mask = triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01)
 
@@ -225,9 +225,9 @@ class VisualOdometry(object):
 
             point_hashes = generate_hashes(len(point_array))
 
-            assert(len(matches01[depth_mask]) == len(point_hashes))
-
             indices0, indices1 = matches01[depth_mask, 0], matches01[depth_mask, 1]
+
+            assert(len(point_hashes) == len(indices0) == len(indices1))
 
             for point_hash, index0 in zip(point_hashes, indices0):
                 point_keypoint_map0[point_hash] = index0
