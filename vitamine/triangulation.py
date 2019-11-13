@@ -4,6 +4,7 @@ from autograd import numpy as np
 from vitamine import _triangulation as TR
 from vitamine.pose import Pose
 from vitamine.exceptions import InvalidDepthException
+from vitamine.keypoints import empty_match
 
 
 def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
@@ -22,12 +23,7 @@ def linear_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
         keypoint0, keypoint1
     )
 
-    if not TR.depths_are_valid(depth0, depth1, min_depth):
-        raise InvalidDepthException(
-            "Triangulated point has insufficient depth"
-        )
-
-    return point
+    return point, TR.depths_are_valid(depth0, depth1, min_depth)
 
 
 class Triangulation(object):
@@ -35,13 +31,16 @@ class Triangulation(object):
         self.pose0, self.pose1 = pose0, pose1
         self.keypoints0, self.keypoints1 = keypoints0, keypoints1
 
-    def triangulate(self, index0, index1):
+    def triangulate_(self, index0, index1):
         keypoint0 = self.keypoints0[index0]
         keypoint1 = self.keypoints1[index1]
+        return linear_triangulation(self.pose0, self.pose1, keypoint0, keypoint1)
 
-        try:
-            return linear_triangulation(self.pose0, self.pose1,
-                                        keypoint0, keypoint1)
-        except InvalidDepthException as e:
-            print_error(e)
-            return None
+    def triangulate(self, matches01):
+        points = []
+        depth_mask = []
+        for index0, index1 in matches01:
+            point, depth_is_positive = self.triangulate_(index0, index1)
+            points.append(point)
+            depth_mask.append(depth_is_positive)
+        return np.array(points), np.array(depth_mask)
