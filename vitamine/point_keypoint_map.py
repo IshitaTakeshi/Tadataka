@@ -61,6 +61,23 @@ def triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01):
     return mask
 
 
+def copy_required(src_map, dst_map, src_indices, dst_indices):
+    assert(len(src_indices) == len(dst_indices))
+    mask = np.zeros(len(src_indices), dtype=np.bool)
+    for i, (src_index, dst_index) in enumerate(zip(src_indices, dst_indices)):
+        src_exists = keypoint_exists(src_map, src_index)
+        dst_exists = keypoint_exists(dst_map, dst_index)
+        mask[i] = src_exists and not dst_exists
+    return mask
+
+
+def copy(src_map, dst_map, src_indices, dst_indices):
+    for i, (src_index, dst_index) in enumerate(zip(src_indices, dst_indices)):
+        point_hash = point_by_keypoint(src_map, src_index)
+        dst_map[point_hash] = dst_index
+    return dst_map
+
+
 def copy_existing_points(point_keypoint_map0, point_keypoint_map1, matches01):
     # whicth match is processed
     # matches corresponding to mask == False are not triangulated
