@@ -19,41 +19,12 @@ from skimage.color import rgb2gray
 from vitamine.local_ba import try_run_ba
 
 
-def triangulation(pose0, pose1, keypoints0, keypoints1, matches01):
-    triangulator = Triangulation(pose0, pose1, keypoints0, keypoints1)
-    point_array, depth_mask = triangulator.triangulate(matches01)
-    return point_array, matches01[depth_mask]
-
-
 def generate_hashes(n_hashes, n_bytes=18):
     return [random_bytes(n_bytes) for i in range(n_hashes)]
 
 
 def point_array(point_dict, point_keys):
     return np.array([point_dict[k] for k in point_keys])
-
-
-def try_run_ba(self, viewpoints):
-    poses = [self.poses[v] for v in viewpoints]
-    keypoints = [self.kds[v].keypoints for v in viewpoints]
-
-    try:
-        poses, points, point_indices = try_run_ba(
-            self.point_manager.index_map,
-            self.point_manager.points,
-            poses, keypoints, viewpoints
-        )
-    except ValueError as e:
-        print_error(e)
-        return
-
-    assert(len(point_indices) == len(points))
-
-    for j, pose in zip(viewpoints, poses):
-        self.poses[j] = pose
-
-    for i, point in zip(point_indices, points):
-        self.point_manager.overwrite(i, point)
 
 
 def match(matcher, viewpoints, kds, kd1, min_matches=60):
@@ -73,26 +44,6 @@ def match(matcher, viewpoints, kds, kd1, min_matches=60):
 
 def value_list(dict_, keys):
     return [dict_[k] for k in keys]
-
-
-def update(matches01, point_keypoint_map0, point_keypoint_map1,
-           pose0, pose1, kd0, kd1):
-
-    point_keypoint_map0, point_keypoint_map1, matches01 = associate_existing(
-        point_keypoint_map0, point_keypoint_map1, matches01)
-
-    point_array, matches01 = triangulation(pose0, pose1,
-                                           kd0.keypoints, kd1.keypoints,
-                                           matches01)
-
-    point_hashes = generate_hashes(len(point_array))
-    point_dict = dict(zip(point_hashes, point_array))
-
-    for (index0, index1), point_hash in zip(matches01, point_hashes):
-        point_keypoint_map0[point_hash] = index0
-        point_keypoint_map1[point_hash] = index1
-
-    return point_keypoint_map0, point_keypoint_map1, point_dict
 
 
 class VisualOdometry(object):
