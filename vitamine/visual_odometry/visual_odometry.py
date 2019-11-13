@@ -6,7 +6,7 @@ from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
     init_point_keypoint_map, copy_existing_points, correspondences,
-    triangulation_required, copy_required, copy
+    triangulation_required, copy_required, accumulate_shareable
 )
 from vitamine.utils import merge_dicts
 from vitamine.pose import Pose, solve_pnp, estimate_pose_change
@@ -232,20 +232,32 @@ class VisualOdometry(object):
             indices0, indices1 = matches01[:, 0], matches01[:, 1]
             mask01 = copy_required(point_keypoint_map0, point_keypoint_map1, indices0, indices1)
             mask10 = copy_required(point_keypoint_map1, point_keypoint_map0, indices1, indices0)
-            point_keypoint_map1 = copy(point_keypoint_map0, point_keypoint_map1, indices0[mask01], indices1[mask01])
-            point_keypoint_map0 = copy(point_keypoint_map1, point_keypoint_map0, indices1[mask10], indices0[mask10])
+            point_hashes1 = accumulate_shareable(point_keypoint_map0, indices0[mask01])
+            point_hashes0 = accumulate_shareable(point_keypoint_map1, indices1[mask10])
+
+            for point_hash, index1 in zip(point_hashes1, indices1[mask01]):
+                point_keypoint_map1[point_hash] = index1
+
+            for point_hash, index0 in zip(point_hashes0, indices0[mask10]):
+                point_keypoint_map0[point_hash] = index0
 
             mask = triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01)
 
             matches01 = matches01[mask]
+
             triangulator = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
             point_array, depth_mask = triangulator.triangulate(matches01)
 
             point_hashes = generate_hashes(len(point_array))
 
             assert(len(matches01[depth_mask]) == len(point_hashes))
-            for (index0, index1), point_hash in zip(matches01[depth_mask], point_hashes):
+
+            indices0, indices1 = matches01[depth_mask, 0], matches01[depth_mask, 1]
+
+            for point_hash, index0 in zip(point_hashes, indices0):
                 point_keypoint_map0[point_hash] = index0
+
+            for point_hash, index1 in zip(point_hashes, indices1):
                 point_keypoint_map1[point_hash] = index1
 
             for point_hash, point in zip(point_hashes, point_array):

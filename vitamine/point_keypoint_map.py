@@ -71,11 +71,8 @@ def copy_required(src_map, dst_map, src_indices, dst_indices):
     return mask
 
 
-def copy(src_map, dst_map, src_indices, dst_indices):
-    for i, (src_index, dst_index) in enumerate(zip(src_indices, dst_indices)):
-        point_hash = point_by_keypoint(src_map, src_index)
-        dst_map[point_hash] = dst_index
-    return dst_map
+def accumulate_shareable(src_map, src_indices):
+    return [point_by_keypoint(src_map, index) for index in src_indices]
 
 
 def copy_existing_points(point_keypoint_map0, point_keypoint_map1, matches01):
