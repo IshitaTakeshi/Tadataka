@@ -50,9 +50,10 @@ class VisualOdometry(object):
     def __init__(self, camera_parameters, distortion_model,
                  matcher=Matcher(enable_ransac=True,
                                  enable_homography_filter=True),
-                 max_active_keyframes=8):
+                 max_active_keyframes=8, min_matches=60):
 
         self.matcher = matcher
+        self.min_matches = min_matches
         self.max_active_keyframes = max_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
 
@@ -86,55 +87,57 @@ class VisualOdometry(object):
         viewpoint = self.active_viewpoints.get_next()
         kd = KD(self.camera_model.undistort(keypoints), descriptors)
 
-        self.try_add_keyframe(viewpoint, kd, image)
+        if len(self.active_viewpoints) == 0:
+            self.init_first(viewpoint)
+        elif len(self.active_viewpoints) == 1:
+            self.try_init_first_two(viewpoint, kd)
+        else:
+            self.try_add_keyframe(viewpoint, kd)
 
         self.active_viewpoints.add_new(viewpoint)
         self.kds[viewpoint] = kd
         self.images[viewpoint] = image
         return viewpoint
 
-    def try_add_keyframe(self, viewpoint1, kd1, image1):
-        min_matches = 60
-        if len(self.active_viewpoints) == 0:
-            self.poses[viewpoint1] = Pose.identity()
-            return
+    def init_first(self, viewpoint1):
+        self.poses[viewpoint1] = Pose.identity()
 
-        if len(self.active_viewpoints) == 1:
-            viewpoint0 = self.active_viewpoints[0]
-            kd0 = self.kds[viewpoint0]
+    def try_init_first_two(self, viewpoint1, kd1):
+        viewpoint0 = self.active_viewpoints[0]
+        kd0 = self.kds[viewpoint0]
 
-            matches01 = self.matcher(kd0, kd1)
-            if len(matches01) < min_matches:
-                raise NotEnoughInliersException("Not enough matches found")
+        matches01 = self.matcher(kd0, kd1)
+        if len(matches01) < self.min_matches:
+            raise NotEnoughInliersException("Not enough matches found")
 
-            pose0 = Pose.identity()
-            pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
+        pose0 = Pose.identity()
+        pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
 
-            triangulator = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
-            point_array, depth_mask = triangulator.triangulate(matches01)
-            matches01 = matches01[depth_mask]
+        triangulator = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
+        point_array, depth_mask = triangulator.triangulate(matches01)
+        matches01 = matches01[depth_mask]
 
-            point_hashes = generate_hashes(len(point_array))
-            point_dict = dict(zip(point_hashes, point_array))
+        point_hashes = generate_hashes(len(point_array))
+        point_dict = dict(zip(point_hashes, point_array))
 
-            point_keypoint_map0 = init_point_keypoint_map()
-            point_keypoint_map1 = init_point_keypoint_map()
-            for (index0, index1), point_hash in zip(matches01, point_hashes):
-                point_keypoint_map0[point_hash] = index0
-                point_keypoint_map1[point_hash] = index1
+        point_keypoint_map0 = init_point_keypoint_map()
+        point_keypoint_map1 = init_point_keypoint_map()
+        for (index0, index1), point_hash in zip(matches01, point_hashes):
+            point_keypoint_map0[point_hash] = index0
+            point_keypoint_map1[point_hash] = index1
 
-            self.point_keypoint_maps[viewpoint0] = point_keypoint_map0
-            self.point_keypoint_maps[viewpoint1] = point_keypoint_map1
-            self.point_dict = point_dict
-            self.poses[viewpoint0] = pose0
-            self.poses[viewpoint1] = pose1
-            return
+        self.point_keypoint_maps[viewpoint0] = point_keypoint_map0
+        self.point_keypoint_maps[viewpoint1] = point_keypoint_map1
+        self.point_dict = point_dict
+        self.poses[viewpoint0] = pose0
+        self.poses[viewpoint1] = pose1
 
+    def try_add_keyframe(self, viewpoint1, kd1):
         viewpoints = []
         matches = []
         for viewpoint0 in self.active_viewpoints:
             matches01 = self.matcher(self.kds[viewpoint0], kd1)
-            if len(matches01) < min_matches:
+            if len(matches01) < self.min_matches:
                 continue
             viewpoints.append(viewpoint0)
             matches.append(matches01)
