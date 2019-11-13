@@ -41,17 +41,6 @@ def warn_if_incorrect_match(point_keypoint_map0, point_keypoint_map1,
                       RuntimeWarning)
 
 
-def to_point_hashes(point_keypoint_map, keypoint_indices):
-    point_hashes = []
-    for index in keypoint_indices:
-        try:
-            h = point_keypoint_map[index]
-        except KeyError:
-            h = None
-        point_hashes.append(h)
-    return point_hashes
-
-
 def triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01):
     mask = np.zeros(len(matches01), dtype=np.bool)
     for i, (index0, index1) in enumerate(matches01):
@@ -71,37 +60,8 @@ def copy_required(src_map, dst_map, src_indices, dst_indices):
     return mask
 
 
-def accumulate_shareable(src_map, src_indices):
-    return [point_by_keypoint(src_map, index) for index in src_indices]
-
-
-def copy_existing_points(point_keypoint_map0, point_keypoint_map1, matches01):
-    # whicth match is processed
-    # matches corresponding to mask == False are not triangulated
-    for index0, index1 in matches01:
-        exists0 = keypoint_exists(point_keypoint_map0, index0)
-        exists1 = keypoint_exists(point_keypoint_map1, index1)
-
-        if exists0 and exists1:
-            warn_if_incorrect_match(point_keypoint_map0, point_keypoint_map1,
-                                    index0, index1)
-            continue
-
-        if exists0:  # and not exists1
-            point_hash = point_by_keypoint(point_keypoint_map0, index0)
-            point_keypoint_map1[point_hash] = index1
-            continue
-
-        if exists1:  # and not exists0
-            point_hash = point_by_keypoint(point_keypoint_map1, index1)
-            point_keypoint_map0[point_hash] = index0
-            continue
-
-        raise ValueError(
-            f"Neither keypoint index {index0} in viewpoint 0 "
-            f" nor keypoint index {index1} in viewpoint 1 is subscribed"
-        )
-    return point_keypoint_map0, point_keypoint_map1
+def accumulate_shareable(point_keypoint_map, keypoint_indices):
+    return [point_by_keypoint(point_keypoint_map, i) for i in keypoint_indices]
 
 
 def correspondences(point_keypoint_maps, matches):

@@ -5,7 +5,7 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
-    init_point_keypoint_map, copy_existing_points, correspondences,
+    init_point_keypoint_map, correspondences,
     triangulation_required, copy_required, accumulate_shareable
 )
 from vitamine.utils import merge_dicts
@@ -27,31 +27,6 @@ def triangulation(pose0, pose1, keypoints0, keypoints1, matches01):
 
 def generate_hashes(n_hashes, n_bytes=18):
     return [random_bytes(n_bytes) for i in range(n_hashes)]
-
-
-def init_from_two_views(matcher, kd0, kd1, min_matches=60):
-    matches01 = matcher(kd0, kd1)
-    if len(matches01) < min_matches:
-        raise NotEnoughInliersException("Not enough matches found")
-
-    pose0 = Pose.identity()
-    pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
-
-    triangulator = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
-    point_array, depth_mask = triangulator.triangulate(matches01)
-    matches01 = matches01[depth_mask]
-
-    point_hashes = generate_hashes(len(point_array))
-    point_dict = dict(zip(point_hashes, point_array))
-
-    point_keypoint_map0 = init_point_keypoint_map()
-    point_keypoint_map1 = init_point_keypoint_map()
-
-    for (index0, index1), point_hash in zip(matches01, point_hashes):
-        point_keypoint_map0[point_hash] = index0
-        point_keypoint_map1[point_hash] = index1
-
-    return point_keypoint_map0, point_keypoint_map1, pose0, pose1, point_dict
 
 
 def point_array(point_dict, point_keys):
