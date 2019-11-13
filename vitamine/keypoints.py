@@ -56,7 +56,7 @@ def extract_orb(image):
     return KeypointDescriptor(keypoints, descriptors)
 
 
-extract_keypoints =  extract_brief
+extract_keypoints = extract_brief
 
 
 empty_match = np.empty((0, 2), dtype=np.int64)
