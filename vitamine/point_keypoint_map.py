@@ -50,10 +50,9 @@ def triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01):
     return mask
 
 
-def copy_required(src_map, dst_map, src_indices, dst_indices):
-    assert(len(src_indices) == len(dst_indices))
-    mask = np.zeros(len(src_indices), dtype=np.bool)
-    for i, (src_index, dst_index) in enumerate(zip(src_indices, dst_indices)):
+def copy_required(src_map, dst_map, matches):
+    mask = np.zeros(len(matches), dtype=np.bool)
+    for i, (src_index, dst_index) in enumerate(matches):
         src_exists = keypoint_exists(src_map, src_index)
         dst_exists = keypoint_exists(dst_map, dst_index)
         mask[i] = src_exists and not dst_exists
