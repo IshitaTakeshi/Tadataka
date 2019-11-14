@@ -19,6 +19,12 @@ from skimage.color import rgb2gray
 from vitamine.local_ba import try_run_ba
 
 
+def get_new_viewpoint(viewpoints):
+    if len(viewpoints) == 0:
+        return 0
+    return viewpoints[-1] + 1
+
+
 def generate_hashes(n_hashes, n_bytes=18):
     return [random_bytes(n_bytes) for i in range(n_hashes)]
 
@@ -85,7 +91,7 @@ class VisualOdometry(object):
         self.max_active_keyframes = max_active_keyframes
         self.camera_model = CameraModel(camera_parameters, distortion_model)
 
-        self.active_viewpoints = KeyframeIndices()
+        self.active_viewpoints = np.empty((0, 0), np.int64)
         self.point_keypoint_maps = dict()
 
         self.point_dict = dict()
@@ -112,7 +118,7 @@ class VisualOdometry(object):
             print_error("Keypoints not sufficient")
             return -1
 
-        viewpoint = self.active_viewpoints.get_next()
+        viewpoint = get_new_viewpoint(self.active_viewpoints)
         kd = KD(self.camera_model.undistort(keypoints), descriptors)
 
         if len(self.active_viewpoints) == 0:
@@ -124,7 +130,7 @@ class VisualOdometry(object):
 
         self.kds[viewpoint] = kd
         self.images[viewpoint] = image
-        self.active_viewpoints.add_new(viewpoint)
+        self.active_viewpoints = np.append(self.active_viewpoints, viewpoint)
 
         if len(self.active_viewpoints) >= 3:
             self.run_ba(self.active_viewpoints)
@@ -185,18 +191,14 @@ class VisualOdometry(object):
         self.point_dict = point_dict
 
     def try_add_keyframe(self, viewpoint1, kd1):
-        viewpoints = []
-        matches = []
-        for viewpoint0 in self.active_viewpoints:
-            matches01 = self.matcher(self.kds[viewpoint0], kd1)
-            if len(matches01) < self.min_matches:
-                continue
-            viewpoints.append(viewpoint0)
-            matches.append(matches01)
+        kds = value_list(self.kds, self.active_viewpoints)
+        matches, mask = match(self.matcher, self.active_viewpoints, kds, kd1)
 
         if len(matches) == 0:
             warnings.warn("No matches found", RuntimeWarning)
             return None
+
+        viewpoints = self.active_viewpoints[mask]
 
         maps = value_list(self.point_keypoint_maps, viewpoints)
         point_hashes, keypoint_indices = get_correspondences(maps, matches)
