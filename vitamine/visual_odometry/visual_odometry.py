@@ -167,22 +167,18 @@ class VisualOdometry(object):
         pose0 = Pose.identity()
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
 
-        triangulator = Triangulation(pose0, pose1,
-                                     kd0.keypoints, kd1.keypoints)
-        point_array, depth_mask = triangulator.triangulate(matches01)
+        t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
+        point_array, depth_mask = t.triangulate(matches01)
         matches01 = matches01[depth_mask]
 
         point_hashes = generate_hashes(len(point_array))
+
+        map0 = init_point_keypoint_map(zip(point_hashes, matches01[:, 0]))
+        map1 = init_point_keypoint_map(zip(point_hashes, matches01[:, 1]))
         point_dict = dict(zip(point_hashes, point_array))
 
-        point_keypoint_map0 = init_point_keypoint_map()
-        point_keypoint_map1 = init_point_keypoint_map()
-        for (index0, index1), point_hash in zip(matches01, point_hashes):
-            point_keypoint_map0[point_hash] = index0
-            point_keypoint_map1[point_hash] = index1
-
-        self.point_keypoint_maps[viewpoint0] = point_keypoint_map0
-        self.point_keypoint_maps[viewpoint1] = point_keypoint_map1
+        self.point_keypoint_maps[viewpoint0] = map0
+        self.point_keypoint_maps[viewpoint1] = map1
         self.poses[viewpoint0] = pose0
         self.poses[viewpoint1] = pose1
         self.point_dict = point_dict
