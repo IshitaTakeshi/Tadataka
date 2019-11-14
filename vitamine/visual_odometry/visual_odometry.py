@@ -122,11 +122,14 @@ class VisualOdometry(object):
         kd = KD(self.camera_model.undistort(keypoints), descriptors)
 
         if len(self.active_viewpoints) == 0:
-            self.init_first(viewpoint)
+            retval = self.init_first(viewpoint)
         elif len(self.active_viewpoints) == 1:
-            self.try_init_first_two(viewpoint, kd)
+            retval = self.try_init_first_two(viewpoint, kd)
         else:
-            self.try_add_keyframe(viewpoint, kd)
+            retval = self.try_add_keyframe(viewpoint, kd)
+
+        if retval < 0:
+            return -1
 
         self.kds[viewpoint] = kd
         self.images[viewpoint] = image
@@ -160,6 +163,7 @@ class VisualOdometry(object):
 
     def init_first(self, viewpoint1):
         self.poses[viewpoint1] = Pose.identity()
+        return 0
 
     def try_init_first_two(self, viewpoint1, kd1):
         viewpoint0 = self.active_viewpoints[0]
@@ -167,7 +171,7 @@ class VisualOdometry(object):
 
         matches01 = self.matcher(kd0, kd1)
         if len(matches01) < self.min_matches:
-            raise NotEnoughInliersException("Not enough matches found")
+            return -1
 
         keypoints0, keypoints1 = kd0.keypoints, kd1.keypoints
 
@@ -189,6 +193,7 @@ class VisualOdometry(object):
         self.poses[viewpoint0] = pose0
         self.poses[viewpoint1] = pose1
         self.point_dict = point_dict
+        return 0
 
     def try_add_keyframe(self, viewpoint1, kd1):
         kds = value_list(self.kds, self.active_viewpoints)
@@ -196,7 +201,7 @@ class VisualOdometry(object):
 
         if len(matches) == 0:
             warnings.warn("No matches found", RuntimeWarning)
-            return None
+            return -1
 
         viewpoints = self.active_viewpoints[mask]
 
@@ -242,6 +247,7 @@ class VisualOdometry(object):
         self.point_dict = merge_dicts(self.point_dict, *point_dicts)
         self.poses[viewpoint1] = pose1
         # self.try_run_ba(self.active_viewpoints)
+        return 0
 
     def try_remove(self):
         if self.n_active_keyframes <= self.max_active_keyframes:
