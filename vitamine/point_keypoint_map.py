@@ -13,7 +13,7 @@ def point_by_keypoint(point_keypoint_map, keypoint_index):
     return point_keypoint_map.inverse[keypoint_index]
 
 
-def keypoint_exists(point_keypoint_map, keypoint_index):
+def point_exists(point_keypoint_map, keypoint_index):
     return keypoint_index in point_keypoint_map.values()
 
 
@@ -41,20 +41,15 @@ def warn_if_incorrect_match(point_keypoint_map0, point_keypoint_map1,
                       RuntimeWarning)
 
 
-def triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01):
-    mask = np.zeros(len(matches01), dtype=np.bool)
-    for i, (index0, index1) in enumerate(matches01):
-        exists0 = keypoint_exists(point_keypoint_map0, index0)
-        exists1 = keypoint_exists(point_keypoint_map1, index1)
-        mask[i] = (not exists0) and (not exists1)
-    return mask
+def triangulation_required(map_, keypoint_indices):
+    return np.array([not point_exists(map_, i) for i in keypoint_indices])
 
 
 def copy_required(map_, keypoint_indices):
-    return np.array([keypoint_exists(map_, i) for i in keypoint_indices])
+    return np.array([point_exists(map_, i) for i in keypoint_indices])
 
 
-def accumulate_shareable(map_, keypoint_indices):
+def get_point_hashes(map_, keypoint_indices):
     return [point_by_keypoint(map_, i) for i in keypoint_indices]
 
 
