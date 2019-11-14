@@ -14,7 +14,6 @@ from vitamine.triangulation import Triangulation
 from vitamine.keyframe_index import KeyframeIndices
 from vitamine.random import random_bytes
 from vitamine.so3 import rodrigues
-
 from skimage.color import rgb2gray
 from vitamine.local_ba import try_run_ba
 
@@ -44,6 +43,29 @@ def match(matcher, viewpoints, kds, kd1, min_matches=60):
 
 def value_list(dict_, keys):
     return [dict_[k] for k in keys]
+
+
+def unique_point_hashes(point_keypoint_maps):
+    point_hashes = set()
+    for point_keypoint_map in point_keypoint_maps:
+        point_hashes |= set(point_keypoint_map.keys())
+    return list(point_hashes)
+
+
+def projection_correspondences(point_keypoint_maps, kds, point_hashes):
+    ij = []
+    keypoints = []
+    Z = zip(kds, point_keypoint_maps)
+    for j, (kd, map_) in enumerate(Z):
+        for i, point_hash in enumerate(point_hashes):
+            try:
+                keypoint_index = map_[point_hash]
+            except KeyError:
+                continue
+            keypoints.append(kd.keypoints[keypoint_index])
+            ij.append([i, j])
+    point_indices, viewpoint_indices = zip(*ij)
+    return viewpoint_indices, point_indices, keypoints
 
 
 class VisualOdometry(object):
@@ -94,10 +116,41 @@ class VisualOdometry(object):
         else:
             self.try_add_keyframe(viewpoint, kd)
 
-        self.active_viewpoints.add_new(viewpoint)
         self.kds[viewpoint] = kd
         self.images[viewpoint] = image
+        self.active_viewpoints.add_new(viewpoint)
+
+        if len(self.active_viewpoints) >= 3:
+            self.run_ba(self.active_viewpoints)
         return viewpoint
+
+    def run_ba(self, viewpoints):
+        point_keypoint_maps = value_list(self.point_keypoint_maps, viewpoints)
+        poses = value_list(self.poses, viewpoints)
+        kds = value_list(self.kds, viewpoints)
+
+        point_hashes = unique_point_hashes(point_keypoint_maps)
+
+        point_array = np.array(value_list(self.point_dict, point_hashes))
+
+        assert(len(kds) == len(point_keypoint_maps))
+
+        viewpoint_indices, point_indices, keypoints = projection_correspondences(
+            point_keypoint_maps, kds, point_hashes
+        )
+
+        keypoints = np.array(keypoints)
+
+        poses, point_array = try_run_ba(viewpoint_indices, point_indices,
+                                        poses, point_array, keypoints)
+
+        assert(len(point_hashes) == len(point_array))
+
+        for point_hash, point in zip(point_hashes, point_array):
+            self.point_dict[point_hash] = point
+
+        for viewpoint, pose in zip(viewpoints, poses):
+            self.poses[viewpoint] = pose
 
     def init_first(self, viewpoint1):
         self.poses[viewpoint1] = Pose.identity()
@@ -128,9 +181,9 @@ class VisualOdometry(object):
 
         self.point_keypoint_maps[viewpoint0] = point_keypoint_map0
         self.point_keypoint_maps[viewpoint1] = point_keypoint_map1
-        self.point_dict = point_dict
         self.poses[viewpoint0] = pose0
         self.poses[viewpoint1] = pose1
+        self.point_dict = point_dict
 
     def try_add_keyframe(self, viewpoint1, kd1):
         viewpoints = []
