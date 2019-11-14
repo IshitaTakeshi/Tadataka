@@ -1,3 +1,4 @@
+import warnings
 from autograd import numpy as np
 
 from vitamine.exceptions import NotEnoughInliersException, print_error
@@ -5,7 +6,7 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
-    init_point_keypoint_map, correspondences,
+    init_point_keypoint_map, get_correspondences,
     triangulation_required, copy_required, accumulate_shareable,
     merge_point_keypoint_maps
 )
@@ -198,11 +199,11 @@ class VisualOdometry(object):
             matches.append(matches01)
 
         if len(matches) == 0:
-            raise NotEnoughInliersException("No matches found")
+            warnings.warn("No matches found", RuntimeWarning)
             return None
 
         maps = value_list(self.point_keypoint_maps, viewpoints)
-        point_hashes, keypoint_indices = correspondences(maps, matches)
+        point_hashes, keypoint_indices = get_correspondences(maps, matches)
         pose1 = solve_pnp(np.array(value_list(self.point_dict, point_hashes)),
                           kd1.keypoints[keypoint_indices])
 
@@ -217,33 +218,22 @@ class VisualOdometry(object):
             # if keypoint in one frame has corresponding 3D point,
             # copy it to the matched keypoint in the other frame
             indices0, indices1 = matches01[:, 0], matches01[:, 1]
-            mask01 = copy_required(map0, indices0)
-            point_hashes0 = accumulate_shareable(map0, indices0[mask01])
+            mask = copy_required(map0, indices0)
+            point_hashes0 = accumulate_shareable(map0, indices0[mask])
 
             map1 = init_point_keypoint_map()
-            for point_hash0, index1 in zip(point_hashes0, indices1[mask01]):
-                map1[point_hash0] = index1
+            map1.update(zip(point_hashes0, indices1[mask]))
 
             mask = triangulation_required(map0, map1, matches01)
-
             matches01 = matches01[mask]
-
-            triangulator = Triangulation(pose0, pose1,
-                                         kd0.keypoints, kd1.keypoints)
-            point_array, depth_mask = triangulator.triangulate(matches01)
+            t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
+            point_array, depth_mask = t.triangulate(matches01)
+            matches01 = matches01[depth_mask]
 
             point_hashes = generate_hashes(len(point_array))
-
-            indices0 = matches01[depth_mask, 0]
-            indices1 = matches01[depth_mask, 1]
-
-            assert(len(point_hashes) == len(indices0) == len(indices1))
-
-            for point_hash, index0 in zip(point_hashes, indices0):
-                map0[point_hash] = index0
-
-            for point_hash, index1 in zip(point_hashes, indices1):
-                map1[point_hash] = index1
+            assert(len(point_hashes) == len(matches01))
+            map0.update(zip(point_hashes, matches01[:, 0]))
+            map1.update(zip(point_hashes, matches01[:, 1]))
 
             point_dict = dict(zip(point_hashes, point_array))
 

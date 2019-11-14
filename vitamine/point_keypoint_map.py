@@ -50,18 +50,15 @@ def triangulation_required(point_keypoint_map0, point_keypoint_map1, matches01):
     return mask
 
 
-def copy_required(src_map, src_indices):
-    mask = np.zeros(len(src_indices), dtype=np.bool)
-    for i, src_index in enumerate(src_indices):
-        mask[i] = keypoint_exists(src_map, src_index)
-    return mask
+def copy_required(map_, keypoint_indices):
+    return np.array([keypoint_exists(map_, i) for i in keypoint_indices])
 
 
-def accumulate_shareable(point_keypoint_map, keypoint_indices):
-    return [point_by_keypoint(point_keypoint_map, i) for i in keypoint_indices]
+def accumulate_shareable(map_, keypoint_indices):
+    return [point_by_keypoint(map_, i) for i in keypoint_indices]
 
 
-def correspondences(point_keypoint_maps, matches):
+def get_correspondences(point_keypoint_maps, matches):
     assert(len(matches) == len(point_keypoint_maps))
     point_hashes = []
     keypoint_indices = []
