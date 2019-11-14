@@ -216,9 +216,10 @@ class VisualOdometry(object):
             # if keypoint in one frame has corresponding 3D point,
             # copy it to the matched keypoint in the other frame
             indices0, indices1 = matches01[:, 0], matches01[:, 1]
-            mask01 = copy_required(map0, map1, matches01)
+            mask01 = copy_required(map0, indices0)
             point_hashes0 = accumulate_shareable(map0, indices0[mask01])
 
+            map1 = init_point_keypoint_map()
             for point_hash0, index1 in zip(point_hashes0, indices1[mask01]):
                 map1[point_hash0] = index1
 
