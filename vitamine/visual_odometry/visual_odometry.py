@@ -247,8 +247,8 @@ class VisualOdometry(object):
             # Find keypoints that already have corresponding 3D points
             # If keypoint in one frame has corresponding 3D point,
             # associate it to the matched keypoint in the other frame
-            map1a = associate_triangulated(map0, matches01)
-            map1s.append(map1a)
+            map1 = associate_triangulated(map0, matches01)
+            map1s.append(map1)
 
         for viewpoint0, matches01 in zip(viewpoints, untriangulated):
             pose0, kd0 = self.poses[viewpoint0], self.kds[viewpoint0]
@@ -259,10 +259,11 @@ class VisualOdometry(object):
             matches01 = matches01[depth_mask]
 
             # if point doesn't exist, create it by triangulation
-            map0_, map1b, point_dict_ = associate(point_array, matches01)
-            map1s.append(map1b)
+            map0, map1, point_dict_ = associate(point_array, matches01)
+            map1s.append(map1)
+
             self.point_dict.update(point_dict_)
-            self.point_keypoint_maps[viewpoint0].update(map0_)
+            self.point_keypoint_maps[viewpoint0].update(map0)
 
         map1 = merge_point_keypoint_maps(*map1s)
         self.point_keypoint_maps[viewpoint1] = map1

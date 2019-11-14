@@ -115,5 +115,4 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    if i % 5 == 0:
-        plot_map_(vo.export_poses(), vo.export_points())
+    plot_map_(vo.export_poses(), vo.export_points())

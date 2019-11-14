@@ -12,6 +12,7 @@ setup(
     install_requires=[
         'autograd',
         'scipy',
+        'bidict',
         'scikit-image',
         'matplotlib',
         'numpy',

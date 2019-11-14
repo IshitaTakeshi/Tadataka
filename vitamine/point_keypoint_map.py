@@ -76,6 +76,7 @@ def merge_point_keypoint_maps(*maps):
     def update(M, map_):
         for key, value in map_.items():
             # avoid value duplication
+            # FIXME not preferred to avoid KeyError silently
             if (key not in M.keys()) and (value not in M.values()):
                 M[key] = value
         return M
