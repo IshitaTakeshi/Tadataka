@@ -5,8 +5,8 @@ from collections import defaultdict
 from bidict import bidict
 
 
-def init_point_keypoint_map():
-    return bidict()
+def init_point_keypoint_map(*args, **kwargs):
+    return bidict(*args, **kwargs)
 
 
 def point_by_keypoint(point_keypoint_map, keypoint_index):
