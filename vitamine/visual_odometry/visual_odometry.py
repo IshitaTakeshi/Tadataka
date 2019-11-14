@@ -6,7 +6,8 @@ from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
     init_point_keypoint_map, correspondences,
-    triangulation_required, copy_required, accumulate_shareable
+    triangulation_required, copy_required, accumulate_shareable,
+    merge_point_keypoint_maps
 )
 from vitamine.utils import merge_dicts
 from vitamine.pose import Pose, solve_pnp, estimate_pose_change
@@ -205,8 +206,8 @@ class VisualOdometry(object):
         pose1 = solve_pnp(np.array(value_list(self.point_dict, point_hashes)),
                           kd1.keypoints[keypoint_indices])
 
-        point_dict = dict()
-        map1 = init_point_keypoint_map()
+        map1s = []
+        point_dicts = []
         for viewpoint0, matches01 in zip(viewpoints, matches):
             map0 = self.point_keypoint_maps[viewpoint0]
             pose0 = self.poses[viewpoint0]
@@ -244,11 +245,14 @@ class VisualOdometry(object):
             for point_hash, index1 in zip(point_hashes, indices1):
                 map1[point_hash] = index1
 
-            for point_hash, point in zip(point_hashes, point_array):
-                point_dict[point_hash] = point
+            point_dict = dict(zip(point_hashes, point_array))
 
+            map1s.append(map1)
+            point_dicts.append(point_dict)
+
+        map1 = merge_point_keypoint_maps(*map1s)
         self.point_keypoint_maps[viewpoint1] = map1
-        self.point_dict = merge_dicts(self.point_dict, point_dict)
+        self.point_dict = merge_dicts(self.point_dict, *point_dicts)
         self.poses[viewpoint1] = pose1
         # self.try_run_ba(self.active_viewpoints)
 

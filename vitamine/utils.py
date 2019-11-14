@@ -15,6 +15,13 @@ def indices_other_than(size, indices):
     return np.setxor1d(indices, np.arange(size))
 
 
+def merge_dicts(*dicts):
+    merged = dict()
+    for d in dicts:
+        merged.update(d)
+    return merged
+
+
 def round_int(X):
     return np.round(X, 0).astype(np.int64)
 

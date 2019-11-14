@@ -78,3 +78,17 @@ def correspondences(point_keypoint_maps, matches):
             keypoint_indices.append(index1)
 
     return point_hashes, keypoint_indices
+
+
+def merge_point_keypoint_maps(*maps):
+    def update(M, map_):
+        for key, value in map_.items():
+            # avoid value duplication
+            if (key not in M.keys()) and (value not in M.values()):
+                M[key] = value
+        return M
+
+    M = init_point_keypoint_map()
+    for map_ in maps:
+        M = update(M, map_)
+    return M

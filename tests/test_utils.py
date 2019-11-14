@@ -1,7 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
 from vitamine.utils import (
-    is_in_image_range, radian_to_degree, indices_other_than)
+    merge_dicts, is_in_image_range, radian_to_degree, indices_other_than)
 from vitamine.keypoints import match
 from vitamine.utils import add_noise, break_other_than, random_binary
 
@@ -23,6 +23,15 @@ def test_break_other_than():
         match(descriptors, descriptors0),
         match(descriptors, descriptors1)
     )
+
+
+def test_merge_dicts():
+    d1 = {'a': 1, 'b': 2}
+    d2 = {'c': 2, 'd': 3}
+    d3 = {'e': 3, 'f': 4, 'g': 5}
+    d = merge_dicts(d1, d2, d3)
+    expected = {'a': 1, 'b': 2, 'c': 2, 'd': 3, 'e': 3, 'f': 4, 'g': 5}
+    assert(d == expected)
 
 
 def test_is_in_image_range():
