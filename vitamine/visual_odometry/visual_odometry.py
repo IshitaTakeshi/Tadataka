@@ -27,19 +27,20 @@ def point_array(point_dict, point_keys):
     return np.array([point_dict[k] for k in point_keys])
 
 
+# TODO test
 def match(matcher, viewpoints, kds, kd1, min_matches=60):
     matches = []
-    viewpoints_ = []
-    for viewpoint0 in viewpoints:
-        kd0 = kds[viewpoint0]
+    mask = []
+    for kd0 in kds:
         matches01 = matcher(kd0, kd1)
 
         if len(matches01) < min_matches:
+            mask.append(False)
             continue
 
+        mask.append(True)
         matches.append(matches01)
-        viewpoints_.append(viewpoint0)
-    return matches, viewpoints_
+    return matches, np.array(mask)
 
 
 def value_list(dict_, keys):
