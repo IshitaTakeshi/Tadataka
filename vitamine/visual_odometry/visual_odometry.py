@@ -6,9 +6,8 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
-    init_point_keypoint_map, get_correspondences,
-    triangulation_required, copy_required, get_point_hashes,
-    merge_point_keypoint_maps
+    get_correspondences, get_point_hashes, init_point_keypoint_map,
+    merge_point_keypoint_maps, point_exists
 )
 from vitamine.utils import merge_dicts
 from vitamine.pose import Pose, solve_pnp, estimate_pose_change
@@ -214,23 +213,18 @@ class VisualOdometry(object):
             pose0 = self.poses[viewpoint0]
             kd0 = self.kds[viewpoint0]
 
-            # find keypoints that already have corresponding 3D points
-            # if keypoint in one frame has corresponding 3D point,
-            # copy it to the matched keypoint in the other frame
-            indices0, indices1 = matches01[:, 0], matches01[:, 1]
-            mask = copy_required(map0, indices0)
-            point_hashes0 = get_point_hashes(map0, indices0[mask])
+            # Find keypoints that already have corresponding 3D points
+            # If keypoint in one frame has corresponding 3D point,
+            # associate it to the matched keypoint in the other frame
+            mask = np.array([point_exists(map0, i) for i in matches01[:, 0]])
+            point_hashes0 = get_point_hashes(map0, matches01[mask, 0])
+            map1 = init_point_keypoint_map(zip(point_hashes0, matches01[mask, 1]))
 
-            # copy point hashes in viwepoint 0 to viewpoint 1
-            # this means sharing 3D points that can be seen from viwepoint 0
-            # with viewpoint 1
-            map1 = init_point_keypoint_map()
-            map1.update(zip(point_hashes0, indices1[mask]))
-
-            mask = triangulation_required(map0, matches01[:, 0])
-            matches01 = matches01[mask]
+            # if point doesn't exist, create it by triangulation
+            matches01 = matches01[~mask]
             t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
             point_array, depth_mask = t.triangulate(matches01)
+            # preserve points that have positive depths
             matches01 = matches01[depth_mask]
 
             point_hashes = generate_hashes(len(point_array))
@@ -240,6 +234,7 @@ class VisualOdometry(object):
 
             point_dict = dict(zip(point_hashes, point_array))
 
+            self.point_keypoint_maps[viewpoint0] = map0
             map1s.append(map1)
             point_dicts.append(point_dict)
 
