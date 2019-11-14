@@ -49,6 +49,16 @@ def match(matcher, viewpoints, kds, kd1, min_matches=60):
     return matches, np.array(mask)
 
 
+def associate(point_array, matches01):
+    point_hashes = generate_hashes(len(point_array))
+
+    assert(len(point_hashes) == len(matches01))
+    map0 = init_point_keypoint_map(zip(point_hashes, matches01[:, 0]))
+    map1 = init_point_keypoint_map(zip(point_hashes, matches01[:, 1]))
+    point_dict = dict(zip(point_hashes, point_array))
+    return map0, map1, point_dict
+
+
 def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
@@ -182,17 +192,12 @@ class VisualOdometry(object):
         point_array, depth_mask = t.triangulate(matches01)
         matches01 = matches01[depth_mask]
 
-        point_hashes = generate_hashes(len(point_array))
-
-        map0 = init_point_keypoint_map(zip(point_hashes, matches01[:, 0]))
-        map1 = init_point_keypoint_map(zip(point_hashes, matches01[:, 1]))
-        point_dict = dict(zip(point_hashes, point_array))
-
+        map0, map1, point_dict = associate(point_array, matches01)
         self.point_keypoint_maps[viewpoint0] = map0
         self.point_keypoint_maps[viewpoint1] = map1
+        self.point_dict = point_dict
         self.poses[viewpoint0] = pose0
         self.poses[viewpoint1] = pose1
-        self.point_dict = point_dict
         return 0
 
     def try_add_keyframe(self, viewpoint1, kd1):
@@ -231,15 +236,10 @@ class VisualOdometry(object):
             # preserve points that have positive depths
             matches01 = matches01[depth_mask]
 
-            point_hashes = generate_hashes(len(point_array))
-            assert(len(point_hashes) == len(matches01))
-            map0.update(zip(point_hashes, matches01[:, 0]))
-            map1.update(zip(point_hashes, matches01[:, 1]))
+            map0_, map1b, point_dict = associate(point_array, matches01)
 
-            point_dict = dict(zip(point_hashes, point_array))
-
-            self.point_keypoint_maps[viewpoint0] = map0
-            map1s.append(map1)
+            self.point_keypoint_maps[viewpoint0].update(map0_)
+            map1s.append(map1b)
             point_dicts.append(point_dict)
 
         map1 = merge_point_keypoint_maps(*map1s)
