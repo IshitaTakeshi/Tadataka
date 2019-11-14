@@ -215,32 +215,40 @@ class VisualOdometry(object):
         pose1 = solve_pnp(np.array(value_list(self.point_dict, point_hashes)),
                           kd1.keypoints[keypoint_indices])
 
-        map1s = []
-        point_dicts = []
-        for viewpoint0, matches01 in zip(viewpoints, matches):
-            map0 = self.point_keypoint_maps[viewpoint0]
-            pose0 = self.poses[viewpoint0]
-            kd0 = self.kds[viewpoint0]
+        triangulated = []
+        untriangulated = []
+        for map0, matches01 in zip(maps, matches):
+            mask = np.array([point_exists(map0, i) for i in matches01[:, 0]])
+            triangulated.append(matches01[mask])
+            untriangulated.append(matches01[~mask])
 
+        map1s = []
+        for map0, matches01 in zip(maps, triangulated):
             # Find keypoints that already have corresponding 3D points
             # If keypoint in one frame has corresponding 3D point,
             # associate it to the matched keypoint in the other frame
-            mask = np.array([point_exists(map0, i) for i in matches01[:, 0]])
-            point_hashes0 = get_point_hashes(map0, matches01[mask, 0])
-            map1 = init_point_keypoint_map(zip(point_hashes0, matches01[mask, 1]))
+            point_hashes0 = get_point_hashes(map0, matches01[:, 0])
+            map1a = init_point_keypoint_map(zip(point_hashes0, matches01[:, 1]))
+            map1s.append(map1a)
 
+        poses = value_list(self.poses, viewpoints)
+        kds = value_list(self.kds, viewpoints)
+        map0s = []
+        point_dicts = []
+        for pose0, kd0, matches01 in zip(poses, kds, untriangulated):
             # if point doesn't exist, create it by triangulation
-            matches01 = matches01[~mask]
             t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
             point_array, depth_mask = t.triangulate(matches01)
             # preserve points that have positive depths
             matches01 = matches01[depth_mask]
 
             map0_, map1b, point_dict = associate(point_array, matches01)
-
-            self.point_keypoint_maps[viewpoint0].update(map0_)
+            map0s.append(map0_)
             map1s.append(map1b)
             point_dicts.append(point_dict)
+
+        for viewpoint0, map0_ in zip(viewpoints, map0s):
+            self.point_keypoint_maps[viewpoint0].update(map0_)
 
         map1 = merge_point_keypoint_maps(*map1s)
         self.point_keypoint_maps[viewpoint1] = map1
