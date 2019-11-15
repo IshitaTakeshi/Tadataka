@@ -140,7 +140,6 @@ class VisualOdometry(object):
         point_array = np.array([self.point_dict[h] for h in point_hashes])
         point_colors = np.array([self.point_colors[h] for h in point_hashes])
         point_colors = point_colors.astype(np.float64) / 255.
-        # point_colors = None
         return point_array, point_colors
 
     def export_poses(self):
@@ -208,6 +207,11 @@ class VisualOdometry(object):
 
         self.poses[viewpoint1] = pose1
         self.correspondences[viewpoint1] = map1
+
+        # use distorted (not normalized) keypoints
+        keypoints = keypoints.astype(np.int64)
+        point_colors = extract_colors(map1, point_dict, keypoints, image)
+        self.point_colors.update(point_colors)
         self.point_dict.update(point_dict)
 
         self.kds[viewpoint1] = kd1
@@ -276,7 +280,7 @@ class VisualOdometry(object):
         point_dict, map0_created, map1_created = associate_points_keypoints(
             point_array, triangulated_
         )
-        map1 = {**map1_copied, **map1_created}
+        map1 = merge_correspondences(map1_copied, map1_created)
         return point_dict, map0_created, map1
 
     def triangulate(self, viewpoints, matches, pose1, kd1):

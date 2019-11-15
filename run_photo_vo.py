@@ -87,11 +87,11 @@ def plot_keypoints(image, keypoints):
     plt.show()
 
 
-def plot_map_(poses, points):
+def plot_map_(poses, points, colors):
     omegas, translations = zip(*poses)
     omegas = np.array(omegas)
     translations = np.array(translations)
-    plot_map(*camera_to_world(omegas, translations), points)
+    plot_map(*camera_to_world(omegas, translations), points, colors)
 
 
 filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
@@ -115,4 +115,5 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    plot_map_(vo.export_poses(), vo.export_points())
+    points, colors = vo.export_points()
+    plot_map_(vo.export_poses(), points, colors)
