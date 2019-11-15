@@ -73,15 +73,7 @@ def get_correspondences(correspondences, matches):
 
 
 def merge_correspondences(*maps):
-    def update(M, map_):
-        for key, value in map_.items():
-            # avoid value duplication
-            # FIXME not preferred to avoid KeyError silently
-            if (key not in M.keys()) and (value not in M.values()):
-                M[key] = value
-        return M
-
     M = init_correspondence()
     for map_ in maps:
-        M = update(M, map_)
+        M.update(map_)
     return M

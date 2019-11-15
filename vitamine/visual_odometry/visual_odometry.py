@@ -33,6 +33,15 @@ def point_array(point_dict, point_keys):
     return np.array([point_dict[k] for k in point_keys])
 
 
+def extract_colors(correspondence, point_dict, keypoints, image):
+    point_colors = dict()
+    for point_hash in point_dict.keys():
+        keypoint_index = correspondence[point_hash]
+        y, x = keypoints[keypoint_index]
+        point_colors[point_hash] = image[y, x]
+    return point_colors
+
+
 def associate_points_keypoints(point_array, matches01):
     point_hashes = generate_hashes(len(point_array))
 
@@ -126,7 +135,13 @@ class VisualOdometry(object):
         self.kds_ = dict()
 
     def export_points(self):
-        return np.array(list(self.point_dict.values()))
+        assert(len(self.point_dict) == len(self.point_colors))
+        point_hashes = self.point_dict.keys()
+        point_array = np.array([self.point_dict[h] for h in point_hashes])
+        point_colors = np.array([self.point_colors[h] for h in point_hashes])
+        point_colors = point_colors.astype(np.float64) / 255.
+        # point_colors = None
+        return point_array, point_colors
 
     def export_poses(self):
         poses = [self.poses[v] for v in sorted(self.poses.keys())]
