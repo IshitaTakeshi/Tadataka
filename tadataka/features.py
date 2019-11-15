@@ -30,7 +30,7 @@ brief = BRIEF(
 orb = ORB(n_keypoints=100)
 
 
-def extract_keypoints_(image):
+def extract_features_(image):
     keypoints = keypoint_detector.detect(img_as_ubyte(image), None)
     if len(keypoints) == 0:
         return np.empty((0, 2), dtype=np.float64)
@@ -38,7 +38,7 @@ def extract_keypoints_(image):
 
 
 def extract_brief(image):
-    keypoints = extract_keypoints_(image)
+    keypoints = extract_features_(image)
     keypoints = xy_to_yx(keypoints)
 
     brief.extract(image, keypoints)
@@ -55,7 +55,7 @@ def extract_orb(image):
     return Features(keypoints, descriptors)
 
 
-extract_keypoints = extract_brief
+extract_features = extract_brief
 
 
 empty_match = np.empty((0, 2), dtype=np.int64)

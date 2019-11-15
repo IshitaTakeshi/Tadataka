@@ -2,7 +2,7 @@ import warnings
 from autograd import numpy as np
 
 from tadataka.exceptions import NotEnoughInliersException, print_error
-from tadataka.features import extract_keypoints, Matcher
+from tadataka.features import extract_features, Matcher
 from tadataka.features import Features as KD
 from tadataka.camera_distortion import CameraModel
 from tadataka.point_keypoint_map import (
@@ -187,7 +187,7 @@ class VisualOdometry(object):
         return pose1, point_dict, map0s, map1
 
     def add(self, image, min_keypoints=8):
-        keypoints, descriptors = extract_keypoints(rgb2gray(image))
+        keypoints, descriptors = extract_features(rgb2gray(image))
 
         if len(keypoints) <= min_keypoints:
             print_error("Keypoints not sufficient")
