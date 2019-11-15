@@ -265,16 +265,30 @@ class VisualOdometry(object):
         return point_dict, map0_created, map1
 
     def triangulate(self, viewpoints, matches, pose1, kd1):
+        # filter keypoints so that one keypoint has only one corresponding
+        # 3D point
+        used_indices1 = set()
+        def filter_unused(matches01):
+            matches01_ = []
+            for index0, index1 in matches01:
+                if index1 not in used_indices1:
+                    matches01_.append([index0, index1])
+                    used_indices1.add(index1)
+            return np.array(matches01_)
+
         point_dict = dict()
         map0s = dict()
         map1 = init_correspondence()
         for viewpoint0, matches01 in zip(viewpoints, matches):
+            matches01 = filter_unused(matches01)
+
             point_dict_, map0_, map1_ = self.triangulate_(
                 matches01, viewpoint0, pose1, kd1
             )
             map0s[viewpoint0] = map0_
             map1 = merge_correspondences(map1, map1_)
             point_dict.update(point_dict_)
+
         return point_dict, map0s, map1
 
     def try_remove(self):
