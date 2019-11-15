@@ -33,23 +33,7 @@ def point_array(point_dict, point_keys):
     return np.array([point_dict[k] for k in point_keys])
 
 
-# TODO test
-def match(matcher, viewpoints, kds, kd1, min_matches=60):
-    matches = []
-    mask = []
-    for kd0 in kds:
-        matches01 = matcher(kd0, kd1)
-
-        if len(matches01) < min_matches:
-            mask.append(False)
-            continue
-
-        mask.append(True)
-        matches.append(matches01)
-    return matches, np.array(mask)
-
-
-def associate(point_array, matches01):
+def associate_points_keypoints(point_array, matches01):
     point_hashes = generate_hashes(len(point_array))
 
     assert(len(point_hashes) == len(matches01))
@@ -75,16 +59,10 @@ def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
 
-def separate(map0s, matches):
-    assert(len(map0s) == len(matches))
-
-    triangulated = []
-    untriangulated = []
-    for map0, matches01 in zip(map0s, matches):
-        mask = np.array([point_exists(map0, i) for i in matches01[:, 0]])
-        triangulated.append(matches01[mask])
-        untriangulated.append(matches01[~mask])
-    return triangulated, untriangulated
+def separate(point_keypoint_map0, matches01):
+    indices0, map0 = matches01[:, 0], point_keypoint_map0
+    is_triangulated = np.array([point_exists(map0, i) for i in indices0])
+    return matches01[is_triangulated], matches01[~is_triangulated]
 
 
 def unique_point_hashes(point_keypoint_maps):
@@ -112,6 +90,17 @@ def get_ba_indices(point_keypoint_maps, kds, point_hashes):
 
     return (np.array(viewpoint_indices), np.array(point_indices),
             np.array(keypoints))
+
+
+def filter_matches(matches, viewpoints, min_matches):
+    assert(len(viewpoints) == len(matches))
+    matches_ = []
+    viewpoints_ = []
+    for viewpoint, matches01 in zip(viewpoints, matches):
+        if len(matches01) >= min_matches:
+            matches_.append(matches01)
+            viewpoints_.append(viewpoint)
+    return matches_, viewpoints_
 
 
 class VisualOdometry(object):
@@ -166,6 +155,12 @@ class VisualOdometry(object):
         if retval < 0:
             return -1
 
+        # map_ = self.point_keypoint_maps[viewpoint]
+        # for point_hash in point_dict.keys():
+        #     keypoint_index = map_[point_hash]
+        #     y, x = keypoints[keypoint_index]
+        #     self.point_colors[point_hash] = image[y, x]
+
         self.kds[viewpoint] = kd
         self.images[viewpoint] = image
         self.active_viewpoints = np.append(self.active_viewpoints, viewpoint)
@@ -213,11 +208,12 @@ class VisualOdometry(object):
         pose0 = Pose.identity()
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
 
-        t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
-        point_array, depth_mask = t.triangulate(matches01)
-        matches01 = matches01[depth_mask]
-
-        map0, map1, point_dict = associate(point_array, matches01)
+        point_array, matches01 = triangulate(
+            pose0, pose1, kd0.keypoints, kd1.keypoints, matches01
+        )
+        map0, map1, point_dict = associate_points_keypoints(
+            point_array, matches01
+        )
         self.point_keypoint_maps[viewpoint0] = map0
         self.point_keypoint_maps[viewpoint1] = map1
         self.point_dict = point_dict
@@ -225,47 +221,62 @@ class VisualOdometry(object):
         self.poses[viewpoint1] = pose1
         return 0
 
+    def estime_pose(self, kd1, point_keypoint_maps, matches):
+        assert(len(point_keypoint_maps) == len(matches))
+        point_hashes, keypoint_indices = get_correspondences(
+            point_keypoint_maps, matches
+        )
+        point_array = np.array(value_list(self.point_dict, point_hashes))
+        return solve_pnp(point_array, kd1.keypoints[keypoint_indices])
+
+    def match_(self, kd1, viewpoints):
+        kds = value_list(self.kds, viewpoints)
+        return [self.matcher(kd0, kd1) for kd0 in kds]
+
+    def match(self, kd1):
+        return self.match_(kd1, self.active_viewpoints)
+
     def try_add_keyframe(self, viewpoint1, kd1):
-        kds = value_list(self.kds, self.active_viewpoints)
-        matches, mask = match(self.matcher, self.active_viewpoints, kds, kd1)
+        matches = self.match_(kd1, viewpoints=self.active_viewpoints)
 
-        if len(matches) == 0:
-            warnings.warn("No matches found", RuntimeWarning)
-            return -1
-
-        viewpoints = self.active_viewpoints[mask]
+        # select matches that have enough inliers
+        matches, viewpoints = filter_matches(matches, self.active_viewpoints,
+                                             self.min_matches)
 
         maps = value_list(self.point_keypoint_maps, viewpoints)
-        point_hashes, keypoint_indices = get_correspondences(maps, matches)
-        point_array = np.array(value_list(self.point_dict, point_hashes))
-        pose1 = solve_pnp(point_array, kd1.keypoints[keypoint_indices])
-
-        triangulated, untriangulated = separate(maps, matches)
+        pose1 = self.estime_pose(kd1, maps, matches)
+        poses = value_list(self.poses, viewpoints)
+        kds = value_list(self.kds, viewpoints)
 
         map1s = []
-        for map0, matches01 in zip(maps, triangulated):
+        for viewpoint0, map0, matches01 in zip(viewpoints, maps, matches):
+            pose0 = self.poses[viewpoint0]
+            kd0 = self.kds[viewpoint0]
+            triangulated, untriangulated = separate(map0, matches01)
             # Find keypoints that already have corresponding 3D points
             # If keypoint in one frame has corresponding 3D point,
             # associate it to the matched keypoint in the other frame
-            map1 = associate_triangulated(map0, matches01)
-            map1s.append(map1)
-
-        for viewpoint0, matches01 in zip(viewpoints, untriangulated):
-            pose0, kd0 = self.poses[viewpoint0], self.kds[viewpoint0]
-
-            t = Triangulation(pose0, pose1, kd0.keypoints, kd1.keypoints)
-            point_array, depth_mask = t.triangulate(matches01)
-            # preserve points that have positive depths
-            matches01 = matches01[depth_mask]
+            map1a = associate_triangulated(
+                self.point_keypoint_maps[viewpoint0],
+                triangulated
+            )
+            map1s.append(map1a)
 
             # if point doesn't exist, create it by triangulation
-            map0, map1, point_dict_ = associate(point_array, matches01)
-            map1s.append(map1)
+            point_array, triangulated_ = triangulate(
+                pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
+            )
 
-            self.point_dict.update(point_dict_)
+            map0, map1b, point_dict = associate_points_keypoints(
+                point_array, triangulated_
+            )
+            map1s.append(map1b)
+            self.point_dict.update(point_dict)
+
             self.point_keypoint_maps[viewpoint0].update(map0)
 
         map1 = merge_point_keypoint_maps(*map1s)
+
         self.point_keypoint_maps[viewpoint1] = map1
         self.poses[viewpoint1] = pose1
         # self.try_run_ba(self.active_viewpoints)
