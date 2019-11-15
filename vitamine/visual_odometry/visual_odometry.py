@@ -6,8 +6,8 @@ from vitamine.keypoints import extract_keypoints, Matcher
 from vitamine.keypoints import KeypointDescriptor as KD
 from vitamine.camera_distortion import CameraModel
 from vitamine.point_keypoint_map import (
-    get_correspondences, get_point_hashes, init_point_keypoint_map,
-    merge_point_keypoint_maps, point_exists
+    get_correspondences, get_point_hashes, init_correspondence,
+    merge_correspondences, point_exists
 )
 from vitamine.utils import merge_dicts
 from vitamine.pose import Pose, solve_pnp, estimate_pose_change
@@ -37,15 +37,15 @@ def associate_points_keypoints(point_array, matches01):
     point_hashes = generate_hashes(len(point_array))
 
     assert(len(point_hashes) == len(matches01))
-    map0 = init_point_keypoint_map(zip(point_hashes, matches01[:, 0]))
-    map1 = init_point_keypoint_map(zip(point_hashes, matches01[:, 1]))
+    map0 = init_correspondence(zip(point_hashes, matches01[:, 0]))
+    map1 = init_correspondence(zip(point_hashes, matches01[:, 1]))
     point_dict = dict(zip(point_hashes, point_array))
     return map0, map1, point_dict
 
 
 def associate_triangulated(map0, matches01):
     point_hashes0 = get_point_hashes(map0, matches01[:, 0])
-    return init_point_keypoint_map(zip(point_hashes0, matches01[:, 1]))
+    return init_correspondence(zip(point_hashes0, matches01[:, 1]))
 
 
 def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
@@ -59,26 +59,26 @@ def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
 
-def separate(point_keypoint_map0, matches01):
-    indices0, map0 = matches01[:, 0], point_keypoint_map0
+def separate(correspondence0, matches01):
+    indices0, map0 = matches01[:, 0], correspondence0
     is_triangulated = np.array([point_exists(map0, i) for i in indices0])
     return matches01[is_triangulated], matches01[~is_triangulated]
 
 
-def unique_point_hashes(point_keypoint_maps):
+def unique_point_hashes(correspondences):
     point_hashes = set()
-    for point_keypoint_map in point_keypoint_maps:
-        point_hashes |= set(point_keypoint_map.keys())
+    for correspondence in correspondences:
+        point_hashes |= set(correspondence.keys())
     return list(point_hashes)
 
 
-def get_ba_indices(point_keypoint_maps, kds, point_hashes):
-    assert(len(kds) == len(point_keypoint_maps))
+def get_ba_indices(correspondences, kds, point_hashes):
+    assert(len(kds) == len(correspondences))
 
     viewpoint_indices = []
     point_indices = []
     keypoints = []
-    for j, (kd, map_) in enumerate(zip(kds, point_keypoint_maps)):
+    for j, (kd, map_) in enumerate(zip(kds, correspondences)):
         for i, point_hash in enumerate(point_hashes):
             try:
                 keypoint_index = map_[point_hash]
@@ -115,7 +115,7 @@ class VisualOdometry(object):
         self.camera_model = CameraModel(camera_parameters, distortion_model)
 
         self.active_viewpoints = np.empty((0, 0), np.int64)
-        self.point_keypoint_maps = dict()
+        self.correspondences = dict()
 
         self.point_colors = dict()
         self.point_dict = dict()
@@ -135,8 +135,7 @@ class VisualOdometry(object):
     def n_active_keyframes(self):
         return len(self.active_viewpoints)
 
-    def init_first_two(self, kd1):
-        viewpoint0 = self.active_viewpoints[0]
+    def init_first_two(self, kd1, viewpoint0):
         pose0 = self.poses[viewpoint0]
         kd0 = self.kds[viewpoint0]
 
@@ -150,21 +149,30 @@ class VisualOdometry(object):
         map0, map1, point_dict = associate_points_keypoints(
             point_array, matches01
         )
-        map0s = {viewpoint0: map0}
-        return map0s, map1, pose1, point_dict
+        return map0, map1, pose1, point_dict
 
-    def add_keyframe(self, kd1):
-        matches, viewpoints = self.match(kd1, self.active_viewpoints)
+    def estimate_pose_points(self, kd1):
+        if len(self.active_viewpoints) == 1:
+            viewpoint0 = self.active_viewpoints[0]
+            map0, map1, pose1, point_dict = self.init_first_two(
+                kd1, viewpoint0
+            )
+            map0s = {viewpoint0: map0}
+            return map0s, map1, pose1, point_dict
+        return self.estimate_pose_points_(kd1, self.active_viewpoints)
+
+    def estimate_pose_points_(self, kd1, viewpoints):
+        matches, viewpoints = self.match(kd1, viewpoints)
         pose1 = self.estime_pose(kd1, viewpoints, matches)
         point_dict = dict()
         map0s = dict()
-        map1 = init_point_keypoint_map()
+        map1 = init_correspondence()
         for viewpoint0, matches01 in zip(viewpoints, matches):
             point_dict_, map0_, map1_ = self.triangulate(
                 matches01, viewpoint0, pose1, kd1
             )
             map0s[viewpoint0] = map0_
-            map1 = merge_point_keypoint_maps(map1, map1_)
+            map1 = merge_correspondences(map1, map1_)
             point_dict.update(point_dict_)
         return map0s, map1, pose1, point_dict
 
@@ -180,23 +188,20 @@ class VisualOdometry(object):
         kd1 = KD(self.camera_model.undistort(keypoints), descriptors)
 
         if len(self.active_viewpoints) == 0:
+            map1 = init_correspondence()
             pose1 = Pose.identity()
-        elif len(self.active_viewpoints) == 1:
-            map0s, map1, pose1, point_dict = self.init_first_two(kd1)
-            for viewpoint0, map0 in map0s.items():
-                self.point_keypoint_maps[viewpoint0] = map0
-            self.point_keypoint_maps[viewpoint1] = map1
-            self.point_dict.update(point_dict)
+            point_dict = dict()
         else:
-            map0s, map1, pose1, point_dict = self.add_keyframe(kd1)
-            for viewpoint0, map0 in map0s.items():
-                map0_ = self.point_keypoint_maps[viewpoint0]
-                map0_ = merge_point_keypoint_maps(map0, map0_)
-                self.point_keypoint_maps[viewpoint0] = map0_
-            self.point_keypoint_maps[viewpoint1] = map1
-            self.point_dict.update(point_dict)
+            map0s, map1, pose1, point_dict = self.estimate_pose_points(kd1)
+            for viewpoint0, m0 in map0s.items():
+                self.correspondences[viewpoint0] = merge_correspondences(
+                    self.correspondences[viewpoint0], m0
+                )
 
         self.poses[viewpoint1] = pose1
+        self.correspondences[viewpoint1] = map1
+        self.point_dict.update(point_dict)
+
         self.kds[viewpoint1] = kd1
         self.images[viewpoint1] = image
         self.active_viewpoints = np.append(self.active_viewpoints, viewpoint1)
@@ -206,16 +211,16 @@ class VisualOdometry(object):
         return viewpoint1
 
     def run_ba(self, viewpoints):
-        point_keypoint_maps = value_list(self.point_keypoint_maps, viewpoints)
+        correspondences = value_list(self.correspondences, viewpoints)
         poses = value_list(self.poses, viewpoints)
         kds = value_list(self.kds, viewpoints)
 
-        point_hashes = unique_point_hashes(point_keypoint_maps)
+        point_hashes = unique_point_hashes(correspondences)
 
         point_array = np.array(value_list(self.point_dict, point_hashes))
 
         viewpoint_indices, point_indices, keypoints = get_ba_indices(
-            point_keypoint_maps, kds, point_hashes
+            correspondences, kds, point_hashes
         )
 
         poses, point_array = try_run_ba(viewpoint_indices, point_indices,
@@ -229,9 +234,9 @@ class VisualOdometry(object):
 
     def estime_pose(self, kd1, viewpoints, matches):
         assert(len(viewpoints) == len(matches))
-        point_keypoint_maps = value_list(self.point_keypoint_maps, viewpoints)
+        correspondences = value_list(self.correspondences, viewpoints)
         point_hashes, keypoint_indices = get_correspondences(
-            point_keypoint_maps, matches
+            correspondences, matches
         )
         point_array = np.array(value_list(self.point_dict, point_hashes))
         return solve_pnp(point_array, kd1.keypoints[keypoint_indices])
@@ -248,7 +253,7 @@ class VisualOdometry(object):
     def triangulate(self, matches01, viewpoint0, pose1, kd1):
         pose0 = self.poses[viewpoint0]
         kd0 = self.kds[viewpoint0]
-        map0 = self.point_keypoint_maps[viewpoint0]
+        map0 = self.correspondences[viewpoint0]
 
         triangulated, untriangulated = separate(map0, matches01)
         # Find keypoints that already have corresponding 3D points

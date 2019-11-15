@@ -5,7 +5,7 @@ from collections import defaultdict
 from bidict import bidict
 
 
-def init_point_keypoint_map(*args, **kwargs):
+def init_correspondence(*args, **kwargs):
     return bidict(*args, **kwargs)
 
 
@@ -53,11 +53,11 @@ def get_point_hashes(map_, keypoint_indices):
     return [point_by_keypoint(map_, i) for i in keypoint_indices]
 
 
-def get_correspondences(point_keypoint_maps, matches):
-    assert(len(matches) == len(point_keypoint_maps))
+def get_correspondences(correspondences, matches):
+    assert(len(matches) == len(correspondences))
     point_hashes = []
     keypoint_indices = []
-    for map_, matches01 in zip(point_keypoint_maps, matches):
+    for map_, matches01 in zip(correspondences, matches):
         for index0, index1 in matches01:
             try:
                 point_hash = point_by_keypoint(map_, index0)
@@ -72,7 +72,7 @@ def get_correspondences(point_keypoint_maps, matches):
     return point_hashes, keypoint_indices
 
 
-def merge_point_keypoint_maps(*maps):
+def merge_correspondences(*maps):
     def update(M, map_):
         for key, value in map_.items():
             # avoid value duplication
@@ -81,7 +81,7 @@ def merge_point_keypoint_maps(*maps):
                 M[key] = value
         return M
 
-    M = init_point_keypoint_map()
+    M = init_correspondence()
     for map_ in maps:
         M = update(M, map_)
     return M
