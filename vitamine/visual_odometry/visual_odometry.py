@@ -40,7 +40,7 @@ def associate_points_keypoints(point_array, matches01):
     map0 = init_correspondence(zip(point_hashes, matches01[:, 0]))
     map1 = init_correspondence(zip(point_hashes, matches01[:, 1]))
     point_dict = dict(zip(point_hashes, point_array))
-    return map0, map1, point_dict
+    return point_dict, map0, map1
 
 
 def associate_triangulated(map0, matches01):
@@ -147,28 +147,28 @@ class VisualOdometry(object):
         point_array, matches01 = triangulate(
             pose0, pose1, kd0.keypoints, kd1.keypoints, matches01
         )
-        map0, map1, point_dict = associate_points_keypoints(
+        point_dict, map0, map1 = associate_points_keypoints(
             point_array, matches01
         )
-        return map0, map1, pose1, point_dict
+        return pose1, point_dict, map0, map1
 
     def estimate_pose_points(self, kd1):
         if len(self.active_viewpoints) == 1:
             viewpoint0 = self.active_viewpoints[0]
-            map0, map1, pose1, point_dict = self.init_first_two(
+            pose1, point_dict, map0, map1 = self.init_first_two(
                 kd1, viewpoint0
             )
             map0s = {viewpoint0: map0}
-            return map0s, map1, pose1, point_dict
+            return pose1, point_dict, map0s, map1
         return self.estimate_pose_points_(kd1, self.active_viewpoints)
 
     def estimate_pose_points_(self, kd1, viewpoints):
         matches, viewpoints = self.match(kd1, viewpoints)
         pose1 = self.estime_pose(kd1, viewpoints, matches)
-        map0s, map1, point_dict = self.triangulate(
+        point_dict, map0s, map1 = self.triangulate(
             viewpoints, matches, pose1, kd1
         )
-        return map0s, map1, pose1, point_dict
+        return pose1, point_dict, map0s, map1
 
     def add(self, image, min_keypoints=8):
         keypoints, descriptors = extract_keypoints(rgb2gray(image))
@@ -185,7 +185,7 @@ class VisualOdometry(object):
             pose1 = Pose.identity()
             point_dict = dict()
         else:
-            map0s, map1, pose1, point_dict = self.estimate_pose_points(kd1)
+            pose1, point_dict, map0s, map1 = self.estimate_pose_points(kd1)
             for viewpoint0, m0 in map0s.items():
                 self.correspondences[viewpoint0] = merge_correspondences(
                     self.correspondences[viewpoint0], m0
@@ -258,7 +258,7 @@ class VisualOdometry(object):
         point_array, triangulated_ = triangulate(
             pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
         )
-        map0_created, map1_created, point_dict = associate_points_keypoints(
+        point_dict, map0_created, map1_created = associate_points_keypoints(
             point_array, triangulated_
         )
         map1 = {**map1_copied, **map1_created}
@@ -275,7 +275,7 @@ class VisualOdometry(object):
             map0s[viewpoint0] = map0_
             map1 = merge_correspondences(map1, map1_)
             point_dict.update(point_dict_)
-        return map0s, map1, point_dict
+        return point_dict, map0s, map1
 
     def try_remove(self):
         if self.n_active_keyframes <= self.max_active_keyframes:
