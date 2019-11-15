@@ -2,24 +2,13 @@ from autograd import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
 from pathlib import Path
-from tadataka.keypoints import extract_keypoints
-from tadataka.keypoints import KeypointDescriptor as KD
 from matplotlib import pyplot as plt
 from tadataka.coordinates import xy_to_yx
-from tadataka.dataset.tum_rgbd import TUMDataset
-from tadataka.visual_odometry.visual_odometry import VisualOdometry
+from tadataka.visual_odometry import VisualOdometry
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
 from tadataka.coordinates import camera_to_world
 from tadataka.plot.map import plot_map
-
-# camera_parameters = CameraParameters(
-#     focal_length=[525.0, 525.0],
-#     offset=[319.5, 239.5]
-# )
-# dataset = TUMDataset(Path("datasets", "TUM", "rgbd_dataset_freiburg1_xyz"))
-# vo = VisualOdometry(camera_parameters, FOV(0.0),
-#                     max_active_keyframes=3)
 
 # saba
 vo = VisualOdometry(
@@ -27,13 +16,6 @@ vo = VisualOdometry(
     FOV(0.01),
     max_active_keyframes=6
 )
-
-# ball
-# vo = VisualOdometry(
-#     CameraParameters(focal_length=[3104.3, 3113.34], offset=[1640, 1232]),
-#     FOV(-0.01),
-#     max_active_keyframes=3
-# )
 
 
 def match_point_indices(point_indices1, point_indices2):
