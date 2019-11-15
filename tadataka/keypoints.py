@@ -15,8 +15,7 @@ from tadataka.match import match_binary_descriptors
 
 
 
-KeypointDescriptor = namedtuple("KeypointDescriptor",
-                                ["keypoints", "descriptors"])
+Features = namedtuple("Features", ["keypoints", "descriptors"])
 
 
 keypoint_detector = cv2.FastFeatureDetector_create(threshold=50)
@@ -46,14 +45,14 @@ def extract_brief(image):
     keypoints = keypoints[brief.mask]
     keypoints = yx_to_xy(keypoints)
 
-    return KeypointDescriptor(keypoints, brief.descriptors)
+    return Features(keypoints, brief.descriptors)
 
 
 def extract_orb(image):
     orb.detect_and_extract(image)
     keypoints = yx_to_xy(orb.keypoints)
     descriptors = orb.descriptors
-    return KeypointDescriptor(keypoints, descriptors)
+    return Features(keypoints, descriptors)
 
 
 extract_keypoints = extract_brief
@@ -96,7 +95,7 @@ class Matcher(object):
         return inliers_mask
 
     def __call__(self, kd1, kd2, min_inliers=12):
-        # kd1, kd2 are instances of KeypointDescriptor
+        # kd1, kd2 are instances of Features
         keypoints1, descriptors1 = kd1
         keypoints2, descriptors2 = kd2
 

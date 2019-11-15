@@ -3,7 +3,7 @@ from autograd import numpy as np
 
 from tadataka.exceptions import NotEnoughInliersException, print_error
 from tadataka.keypoints import extract_keypoints, Matcher
-from tadataka.keypoints import KeypointDescriptor as KD
+from tadataka.keypoints import Features as KD
 from tadataka.camera_distortion import CameraModel
 from tadataka.point_keypoint_map import (
     get_correspondences, get_point_hashes, init_correspondence,

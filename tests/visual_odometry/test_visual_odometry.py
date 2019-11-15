@@ -11,7 +11,7 @@ from vitamine.dataset.observations import (
 from vitamine.rigid_transform import transform
 from vitamine.camera import CameraParameters
 from vitamine.camera_distortion import FOV
-from vitamine.keypoints import KeypointDescriptor as KD
+from vitamine.keypoints import Features as KD
 from vitamine.keypoints import Matcher
 from vitamine.exceptions import NotEnoughInliersException
 from vitamine.visual_odometry.visual_odometry import VisualOdometry
