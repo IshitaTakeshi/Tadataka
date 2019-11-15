@@ -3,14 +3,14 @@ from pathlib import Path
 from skimage.color import rgb2gray
 from skimage.io import imread
 
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import FOV
-from vitamine.dataset.tum_rgbd import TUMDataset
-from vitamine.visual_odometry.visual_odometry import VisualOdometry
-from vitamine.camera_distortion import FOV
+from tadataka.camera import CameraParameters
+from tadataka.camera_distortion import FOV
+from tadataka.dataset.tum_rgbd import TUMDataset
+from tadataka.visual_odometry.visual_odometry import VisualOdometry
+from tadataka.camera_distortion import FOV
 
 from matplotlib import pyplot as plt
-from vitamine.plot.visualizers import plot3d
+from tadataka.plot.visualizers import plot3d
 
 
 camera_parameters = CameraParameters(focal_length=[3104.3, 3113.34],

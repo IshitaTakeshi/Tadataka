@@ -4,17 +4,17 @@ from pathlib import Path
 
 from skimage.color import rgb2gray
 
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import FOV
-from vitamine.dataset.tum_rgbd import TUMDataset
-from vitamine.visual_odometry.visual_odometry import VisualOdometry
-from vitamine.dataset.observations import (
+from tadataka.camera import CameraParameters
+from tadataka.camera_distortion import FOV
+from tadataka.dataset.tum_rgbd import TUMDataset
+from tadataka.visual_odometry.visual_odometry import VisualOdometry
+from tadataka.dataset.observations import (
     generate_observations, generate_translations)
-from vitamine.dataset.points import cubic_lattice
-from vitamine.projection import PerspectiveProjection
-from vitamine.so3 import rodrigues
-from vitamine.utils import random_binary, break_other_than
-from vitamine.plot.visualizers import plot3d
+from tadataka.dataset.points import cubic_lattice
+from tadataka.projection import PerspectiveProjection
+from tadataka.so3 import rodrigues
+from tadataka.utils import random_binary, break_other_than
+from tadataka.plot.visualizers import plot3d
 from matplotlib import pyplot as plt
 
 

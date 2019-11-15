@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='vitamine',
+    name='tadataka',
     description='VITAMIN-E',
     url='http://github.com/IshitaTakeshi/VITAMIN-E',
     author='Takeshi Ishita',
     author_email='ishitah.takeshi@gmail.com',
     license='MIT',
-    packages=['vitamine'],
+    packages=['tadataka'],
     install_requires=[
         'autograd',
         'scipy',

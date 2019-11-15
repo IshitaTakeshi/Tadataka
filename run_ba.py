@@ -1,23 +1,23 @@
 from autograd import numpy as np
 
-from vitamine.dataset.points import donut
-from vitamine.bundle_adjustment.bundle_adjustment import bundle_adjustment_core
-from vitamine.camera import CameraParameters
-from vitamine.dataset.points import cubic_lattice
-from vitamine.dataset.observations import (
+from tadataka.dataset.points import donut
+from tadataka.bundle_adjustment.bundle_adjustment import bundle_adjustment_core
+from tadataka.camera import CameraParameters
+from tadataka.dataset.points import cubic_lattice
+from tadataka.dataset.observations import (
     generate_observations, generate_translations)
-from vitamine.projection.projections import PerspectiveProjection
-from vitamine.optimization.residuals import BaseResidual
-from vitamine.rigid.coordinates import world_to_camera, camera_to_world
-from vitamine.rigid.rotation import rodrigues
-from vitamine.visualization.cameras import cameras_poly3d
-from vitamine.visual_odometry.local_ba import LocalBundleAdjustment
+from tadataka.projection.projections import PerspectiveProjection
+from tadataka.optimization.residuals import BaseResidual
+from tadataka.rigid.coordinates import world_to_camera, camera_to_world
+from tadataka.rigid.rotation import rodrigues
+from tadataka.visualization.cameras import cameras_poly3d
+from tadataka.visual_odometry.local_ba import LocalBundleAdjustment
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from vitamine.visualization.visualizers import plot3d
-from vitamine.visualization.visualizers import object_color
+from tadataka.visualization.visualizers import plot3d
+from tadataka.visualization.visualizers import object_color
 
 camera_parameters = CameraParameters(
     focal_length=[1., 1.],

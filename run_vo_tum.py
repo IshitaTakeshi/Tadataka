@@ -4,12 +4,12 @@ from skimage.color import rgb2gray
 
 from matplotlib import pyplot as plt
 
-from vitamine.plot.visualizers import plot3d
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import FOV
-from vitamine.dataset.tum_rgbd import TUMDataset
-from vitamine.observations import GrayImageObserver
-from vitamine.visual_odometry.visual_odometry import VisualOdometry
+from tadataka.plot.visualizers import plot3d
+from tadataka.camera import CameraParameters
+from tadataka.camera_distortion import FOV
+from tadataka.dataset.tum_rgbd import TUMDataset
+from tadataka.observations import GrayImageObserver
+from tadataka.visual_odometry.visual_odometry import VisualOdometry
 
 
 camera_parameters = CameraParameters(

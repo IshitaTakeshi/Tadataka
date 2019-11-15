@@ -2,16 +2,16 @@ from autograd import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
 from pathlib import Path
-from vitamine.keypoints import extract_keypoints
-from vitamine.keypoints import KeypointDescriptor as KD
+from tadataka.keypoints import extract_keypoints
+from tadataka.keypoints import KeypointDescriptor as KD
 from matplotlib import pyplot as plt
-from vitamine.coordinates import xy_to_yx
-from vitamine.dataset.tum_rgbd import TUMDataset
-from vitamine.visual_odometry.visual_odometry import VisualOdometry
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import FOV
-from vitamine.coordinates import camera_to_world
-from vitamine.plot.map import plot_map
+from tadataka.coordinates import xy_to_yx
+from tadataka.dataset.tum_rgbd import TUMDataset
+from tadataka.visual_odometry.visual_odometry import VisualOdometry
+from tadataka.camera import CameraParameters
+from tadataka.camera_distortion import FOV
+from tadataka.coordinates import camera_to_world
+from tadataka.plot.map import plot_map
 
 # camera_parameters = CameraParameters(
 #     focal_length=[525.0, 525.0],
@@ -115,5 +115,6 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    points, colors = vo.export_points()
-    plot_map_(vo.export_poses(), points, colors)
+    if i % 20 == 0:
+        points, colors = vo.export_points()
+        plot_map_(vo.export_poses(), points, colors)
