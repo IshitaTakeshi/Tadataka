@@ -61,6 +61,8 @@ def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
     t = Triangulation(pose0, pose1, keypoints0, keypoints1)
     point_array, depth_mask = t.triangulate(matches01)
     # preserve points that have positive depths
+    print("depth_mask")
+    print(depth_mask)
     return point_array, matches01[depth_mask]
 
 
@@ -272,6 +274,9 @@ class VisualOdometry(object):
         # If keypoint in one frame has corresponding 3D point,
         # associate it to the matched keypoint in the other frame
         map1_copied = associate_triangulated(map0, triangulated)
+
+        if len(untriangulated) == 0:
+            return dict(), init_correspondence(), init_correspondence()
 
         # if point doesn't exist, create it by triangulation
         point_array, triangulated_ = triangulate(
