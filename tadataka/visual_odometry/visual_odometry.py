@@ -199,7 +199,12 @@ class VisualOdometry(object):
             pose1 = Pose.identity()
             point_dict = dict()
         else:
-            pose1, point_dict, map0s, map1 = self.estimate_pose_points(kd1)
+            try:
+                pose1, point_dict, map0s, map1 = self.estimate_pose_points(kd1)
+            except NotEnoughInliersException as e:
+                print_error(e)
+                return -1
+
             for viewpoint0, m0 in map0s.items():
                 self.correspondences[viewpoint0] = merge_correspondences(
                     self.correspondences[viewpoint0], m0
@@ -273,6 +278,9 @@ class VisualOdometry(object):
         # associate it to the matched keypoint in the other frame
         map1_copied = associate_triangulated(map0, triangulated)
 
+        if len(untriangulated) == 0:
+            return dict(), init_correspondence(), init_correspondence()
+
         # if point doesn't exist, create it by triangulation
         point_array, triangulated_ = triangulate(
             pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
@@ -300,6 +308,9 @@ class VisualOdometry(object):
         map1 = init_correspondence()
         for viewpoint0, matches01 in zip(viewpoints, matches):
             matches01 = filter_unused(matches01)
+
+            if len(matches01) == 0:
+                continue
 
             point_dict_, map0_, map1_ = self.triangulate_(
                 matches01, viewpoint0, pose1, kd1
