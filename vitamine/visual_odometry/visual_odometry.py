@@ -115,6 +115,7 @@ class VisualOdometry(object):
         self.camera_model = CameraModel(camera_parameters, distortion_model)
 
         self.active_viewpoints = np.empty((0, 0), np.int64)
+        # manages point -> keypoint correspondences
         self.correspondences = dict()
 
         self.point_colors = dict()
@@ -164,18 +165,10 @@ class VisualOdometry(object):
     def estimate_pose_points_(self, kd1, viewpoints):
         matches, viewpoints = self.match(kd1, viewpoints)
         pose1 = self.estime_pose(kd1, viewpoints, matches)
-        point_dict = dict()
-        map0s = dict()
-        map1 = init_correspondence()
-        for viewpoint0, matches01 in zip(viewpoints, matches):
-            point_dict_, map0_, map1_ = self.triangulate(
-                matches01, viewpoint0, pose1, kd1
-            )
-            map0s[viewpoint0] = map0_
-            map1 = merge_correspondences(map1, map1_)
-            point_dict.update(point_dict_)
+        map0s, map1, point_dict = self.triangulate(
+            viewpoints, matches, pose1, kd1
+        )
         return map0s, map1, pose1, point_dict
-
 
     def add(self, image, min_keypoints=8):
         keypoints, descriptors = extract_keypoints(rgb2gray(image))
@@ -250,7 +243,7 @@ class VisualOdometry(object):
         # select matches that have enough inliers
         return filter_matches(matches, viewpoints, self.min_matches)
 
-    def triangulate(self, matches01, viewpoint0, pose1, kd1):
+    def triangulate_(self, matches01, viewpoint0, pose1, kd1):
         pose0 = self.poses[viewpoint0]
         kd0 = self.kds[viewpoint0]
         map0 = self.correspondences[viewpoint0]
@@ -270,6 +263,19 @@ class VisualOdometry(object):
         )
         map1 = {**map1_copied, **map1_created}
         return point_dict, map0_created, map1
+
+    def triangulate(self, viewpoints, matches, pose1, kd1):
+        point_dict = dict()
+        map0s = dict()
+        map1 = init_correspondence()
+        for viewpoint0, matches01 in zip(viewpoints, matches):
+            point_dict_, map0_, map1_ = self.triangulate_(
+                matches01, viewpoint0, pose1, kd1
+            )
+            map0s[viewpoint0] = map0_
+            map1 = merge_correspondences(map1, map1_)
+            point_dict.update(point_dict_)
+        return map0s, map1, point_dict
 
     def try_remove(self):
         if self.n_active_keyframes <= self.max_active_keyframes:
