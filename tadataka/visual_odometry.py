@@ -37,7 +37,7 @@ def extract_colors(correspondence, point_dict, keypoints, image):
     point_colors = dict()
     for point_hash in point_dict.keys():
         keypoint_index = correspondence[point_hash]
-        y, x = keypoints[keypoint_index]
+        x, y = keypoints[keypoint_index]
         point_colors[point_hash] = image[y, x]
     return point_colors
 
