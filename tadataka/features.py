@@ -2,10 +2,11 @@ from collections import namedtuple
 
 from autograd import numpy as np
 import cv2
-from skimage import img_as_ubyte
 
+from skimage import img_as_ubyte
 from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
                              BRIEF, ORB)
+from skimage.color import rgb2gray
 from skimage import transform as tf
 from skimage.measure import ransac
 
@@ -55,7 +56,8 @@ def extract_orb(image):
     return Features(keypoints, descriptors)
 
 
-extract_features = extract_brief
+def extract_features(image):
+    return extract_brief(rgb2gray(image))
 
 
 empty_match = np.empty((0, 2), dtype=np.int64)
