@@ -42,7 +42,7 @@ def extract_colors(correspondence, point_dict, keypoints, image):
     return point_colors
 
 
-def associate_points_keypoints(point_array, matches01):
+def subscribe(point_array, matches01):
     point_hashes = generate_hashes(len(point_array))
 
     assert(len(point_hashes) == len(matches01))
@@ -163,7 +163,7 @@ class VisualOdometry(object):
         point_array, matches01 = triangulate(
             pose0, pose1, kd0.keypoints, kd1.keypoints, matches01
         )
-        point_dict, map0, map1 = associate_points_keypoints(
+        point_dict, map0, map1 = subscribe(
             point_array, matches01
         )
         return pose1, point_dict, map0, map1
@@ -287,7 +287,7 @@ class VisualOdometry(object):
         point_array, triangulated_ = triangulate(
             pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
         )
-        point_dict, map0_created, map1_created = associate_points_keypoints(
+        point_dict, map0_created, map1_created = subscribe(
             point_array, triangulated_
         )
         map1 = merge_correspondences(map1_copied, map1_created)
