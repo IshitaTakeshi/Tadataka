@@ -53,22 +53,19 @@ def get_point_hashes(map_, keypoint_indices):
     return [point_by_keypoint(map_, i) for i in keypoint_indices]
 
 
-def get_correspondences(correspondences, matches):
-    assert(len(matches) == len(correspondences))
+def get_indices(correspondence, matches01):
     point_hashes = []
     keypoint_indices = []
-    for map_, matches01 in zip(correspondences, matches):
-        for index0, index1 in matches01:
-            try:
-                point_hash = point_by_keypoint(map_, index0)
-            except KeyError as e:
-                # keypoint corresponding to 'index0' is not
-                # triangulated yet
-                continue
+    for index0, index1 in matches01:
+        try:
+            point_hash = point_by_keypoint(correspondence, index0)
+        except KeyError as e:
+            # keypoint corresponding to 'index0' is not
+            # triangulated yet
+            continue
 
-            point_hashes.append(point_hash)
-            keypoint_indices.append(index1)
-
+        point_hashes.append(point_hash)
+        keypoint_indices.append(index1)
     return point_hashes, keypoint_indices
 
 

@@ -6,7 +6,7 @@ from tadataka.features import extract_features, Matcher
 from tadataka.features import Features as KD
 from tadataka.camera_distortion import CameraModel
 from tadataka.point_keypoint_map import (
-    get_correspondences, get_point_hashes, init_correspondence,
+    get_indices, get_point_hashes, init_correspondence,
     merge_correspondences, point_exists
 )
 from tadataka.utils import merge_dicts
@@ -254,9 +254,15 @@ class VisualOdometry(object):
     def estime_pose(self, kd1, viewpoints, matches):
         assert(len(viewpoints) == len(matches))
         correspondences = value_list(self.correspondences, viewpoints)
-        point_hashes, keypoint_indices = get_correspondences(
-            correspondences, matches
-        )
+
+        point_hashes = []
+        keypoint_indices = []
+        for viewpoint, matches01 in zip(viewpoints, matches):
+            correspondences = self.correspondences[viewpoint]
+            hashes_, indices_ = get_indices(correspondences, matches01)
+            point_hashes += hashes_
+            keypoint_indices += indices_
+        assert(len(point_hashes) == len(keypoint_indices))
         point_array = np.array(value_list(self.point_dict, point_hashes))
         return solve_pnp(point_array, kd1.keypoints[keypoint_indices])
 
