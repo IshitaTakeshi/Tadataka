@@ -7,13 +7,12 @@ from tadataka.features import Features as KD
 from tadataka.camera_distortion import CameraModel
 from tadataka.point_keypoint_map import (
     get_indices, get_point_hashes, init_correspondence,
-    merge_correspondences, point_exists
+    merge_correspondences, point_exists, subscribe
 )
 from tadataka.utils import merge_dicts
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
 from tadataka.triangulation import Triangulation
 from tadataka.keyframe_index import KeyframeIndices
-from tadataka.random import random_bytes
 from tadataka.so3 import rodrigues
 from skimage.color import rgb2gray
 from tadataka.local_ba import try_run_ba
@@ -23,10 +22,6 @@ def get_new_viewpoint(viewpoints):
     if len(viewpoints) == 0:
         return 0
     return viewpoints[-1] + 1
-
-
-def generate_hashes(n_hashes, n_bytes=18):
-    return [random_bytes(n_bytes) for i in range(n_hashes)]
 
 
 def point_array(point_dict, point_keys):
@@ -40,16 +35,6 @@ def extract_colors(correspondence, point_dict, keypoints, image):
         x, y = keypoints[keypoint_index]
         point_colors[point_hash] = image[y, x]
     return point_colors
-
-
-def subscribe(point_array, matches01):
-    point_hashes = generate_hashes(len(point_array))
-
-    assert(len(point_hashes) == len(matches01))
-    map0 = init_correspondence(zip(point_hashes, matches01[:, 0]))
-    map1 = init_correspondence(zip(point_hashes, matches01[:, 1]))
-    point_dict = dict(zip(point_hashes, point_array))
-    return point_dict, map0, map1
 
 
 def associate_triangulated(map0, matches01):
