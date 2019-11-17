@@ -4,6 +4,8 @@ import numpy as np
 from collections import defaultdict
 from bidict import bidict
 
+from tadataka.random import random_bytes
+
 
 def init_correspondence(*args, **kwargs):
     return bidict(*args, **kwargs)
@@ -74,3 +76,17 @@ def merge_correspondences(*maps):
     for map_ in maps:
         M.update(map_)
     return M
+
+
+def generate_hashes(n_hashes, n_bytes=18):
+    return [random_bytes(n_bytes) for i in range(n_hashes)]
+
+
+def subscribe(point_array, matches01):
+    assert(len(point_array) == len(matches01))
+
+    point_hashes = generate_hashes(len(point_array))
+    map0 = init_correspondence(zip(point_hashes, matches01[:, 0]))
+    map1 = init_correspondence(zip(point_hashes, matches01[:, 1]))
+    point_dict = dict(zip(point_hashes, point_array))
+    return point_dict, map0, map1
