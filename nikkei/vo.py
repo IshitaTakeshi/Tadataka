@@ -5,9 +5,8 @@ from pathlib import Path
 
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
-from tadataka.coordinates import camera_to_world
 from tadataka.features import extract_features, Matcher
-from tadataka.plot.map import plot_map
+from tadataka.plot import plot_map
 from tadataka.pose import estimate_pose_change, Pose
 from tadataka.plot import plot_matches
 from tadataka.visual_odometry import VisualOdometry
@@ -19,13 +18,6 @@ vo = VisualOdometry(
     FOV(0.01),
     max_active_keyframes=6
 )
-
-
-def plot_map_(poses, points, colors):
-    omegas, translations = zip(*poses)
-    omegas = np.array(omegas)
-    translations = np.array(translations)
-    plot_map(*camera_to_world(omegas, translations), points, colors)
 
 
 # とりあえずこれを動かしてもらう
@@ -49,4 +41,4 @@ for i, filename in enumerate(filenames):
         continue
 
     points, colors = vo.export_points()
-    plot_map_(vo.export_poses(), points, colors)
+    plot_map(vo.export_poses(), points, colors)
