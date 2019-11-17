@@ -1,14 +1,9 @@
-from autograd import numpy as np
-from skimage.feature import plot_matches
 from skimage.io import imread
 from pathlib import Path
 
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
-from tadataka.features import extract_features, Matcher
 from tadataka.plot import plot_map
-from tadataka.pose import estimate_pose_change, Pose
-from tadataka.plot import plot_matches
 from tadataka.visual_odometry import VisualOdometry
 
 
