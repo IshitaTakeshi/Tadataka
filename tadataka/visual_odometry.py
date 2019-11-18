@@ -46,9 +46,7 @@ def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
     t = Triangulation(pose0, pose1, keypoints0, keypoints1)
     point_array, depth_mask = t.triangulate(matches01)
     # preserve points that have positive depths
-    print("depth_mask")
-    print(depth_mask)
-    return point_array, matches01[depth_mask]
+    return point_array[depth_mask], matches01[depth_mask]
 
 
 def value_list(dict_, keys):
