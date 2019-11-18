@@ -130,8 +130,7 @@ class VisualOdometry(object):
         return point_array, point_colors
 
     def export_poses(self):
-        poses = [self.poses[v] for v in sorted(self.poses.keys())]
-        return [[pose.omega, pose.t] for pose in poses]
+        return [self.poses[v] for v in sorted(self.poses.keys())]
 
     @property
     def n_active_keyframes(self):
