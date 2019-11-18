@@ -19,26 +19,6 @@ def projection(pose, point):
     return p[0:2] / (p[2] + EPSILON)
 
 
-def create_jacobian():
-    index = 0
-    for i, j in itertools.product(range(n_points), range(n_viewpoints)):
-        if not mask[i, j]:
-            continue
-
-        viewpoint_indices[index] = j
-        point_indices[index] = i
-
-        row = index * 2
-
-        col = j * n_pose_params
-        JA[row:row+2, col:col+n_pose_params] = A[index]
-
-        col = i * n_point_params
-        JB[row:row+2, col:col+n_point_params] = B[index]
-
-        index += 1
-
-
 class Projection(object):
     def __init__(self, viewpoint_indices, point_indices):
         assert(len(viewpoint_indices) == len(point_indices))
