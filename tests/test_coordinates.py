@@ -1,1 +1,1 @@
-from vitamine import coordinates
+from tadataka import coordinates

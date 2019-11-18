@@ -3,7 +3,7 @@ from pathlib import Path
 from numpy.testing import assert_equal
 import os
 
-from vitamine.dataset.tum_rgbd import TUMDataset
+from tadataka.dataset.tum_rgbd import TUMDataset
 
 
 dataset_root = Path(__file__).parent

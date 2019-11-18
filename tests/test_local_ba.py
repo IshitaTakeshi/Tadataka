@@ -1,7 +1,7 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from autograd import numpy as np
 
-from vitamine.local_ba import (
+from tadataka.local_ba import (
     LocalBundleAdjustment, Projection, IndexConverter,
     calc_error, calc_errors, calc_relative_error)
 from tests.utils import unit_uniform
@@ -50,7 +50,7 @@ def test_jacobian():
 
 
 def test_converter():
-    from vitamine.pose import Pose
+    from tadataka.pose import Pose
 
     # index_map = {viewpoint : {keypoint_index: point_index}}
     index_map = {

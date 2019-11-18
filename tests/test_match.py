@@ -33,7 +33,7 @@ from skimage._shared.testing import assert_equal
 from skimage import data
 from skimage import transform as tf
 from skimage.color import rgb2gray
-from vitamine.match import match_binary_descriptors
+from tadataka.match import match_binary_descriptors
 from skimage.feature import BRIEF, corner_peaks, corner_harris
 from skimage._shared import testing
 

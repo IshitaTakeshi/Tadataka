@@ -1,1 +1,1 @@
-from vitamine.optimization import functions
+from tadataka.optimization import functions

@@ -1,9 +1,9 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from vitamine.rigid_transform import (inv_transform_all, transform_all,
+from tadataka.rigid_transform import (inv_transform_all, transform_all,
                                            transform_each)
-from vitamine.coordinates import world_to_camera, camera_to_world
+from tadataka.coordinates import world_to_camera, camera_to_world
 
 
 def test_transform_each():

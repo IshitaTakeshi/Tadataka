@@ -5,13 +5,13 @@ from numpy.testing import (
     assert_array_almost_equal, assert_almost_equal, assert_array_equal,
     assert_equal)
 
-from vitamine.camera import CameraParameters
-from vitamine.matrix import (
+from tadataka.camera import CameraParameters
+from tadataka.matrix import (
     solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
     estimate_fundamental, fundamental_to_essential)
-from vitamine.projection import PerspectiveProjection
-from vitamine.rigid_transform import transform
-from vitamine.so3 import tangent_so3
+from tadataka.projection import PerspectiveProjection
+from tadataka.rigid_transform import transform
+from tadataka.so3 import tangent_so3
 
 from tests.utils import random_rotation_matrix
 from tests.data import dummy_points as points_true

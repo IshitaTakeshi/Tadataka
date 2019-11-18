@@ -1,6 +1,6 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
-from vitamine.camera import CameraParameters
+from tadataka.camera import CameraParameters
 
 
 def test_camera():

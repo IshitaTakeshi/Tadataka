@@ -1,7 +1,7 @@
 from autograd import numpy as np
 from numpy.testing import assert_array_equal
 
-from vitamine.feature_matching import MatchMatrixGenerator
+from tadataka.feature_matching import MatchMatrixGenerator
 
 
 def test_match_matrix_generator():
