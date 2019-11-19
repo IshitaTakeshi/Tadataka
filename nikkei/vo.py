@@ -14,7 +14,7 @@ vo = VisualOdometry(
     max_active_keyframes=6
 )
 
-filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
+filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
 filenames = [filenames[0]] + filenames[4:]
 
 for i, filename in enumerate(filenames):

@@ -13,7 +13,7 @@ from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
 from tadataka.point_keypoint_map import subscribe, get_indices
 
-filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
+filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
 
 # 視差を十分に得るためにファイルを飛ばす
 filenames = [filenames[0]] + filenames[4:]
