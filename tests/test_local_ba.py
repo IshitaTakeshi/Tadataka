@@ -1,5 +1,6 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 import numpy as np
+from numpy.linalg import norm
 
 from tadataka.local_ba import (
     LocalBundleAdjustment, Projection,
@@ -11,6 +12,10 @@ def to_poses(omegas, translations):
     return np.hstack((omegas, translations))
 
 
+def relative_error(x_true, x_pred):
+    return norm(x_true - x_pred) / norm(x_true)
+
+
 def test_jacobian():
     n_viewpoints = 3
     n_points = 4
@@ -20,9 +25,9 @@ def test_jacobian():
     translations = 10 * unit_uniform((n_viewpoints, 3))
     poses = to_poses(omegas, translations)
 
-    dpoints = 0.01 * unit_uniform(points.shape)
-    domegas = 0.001 * unit_uniform(omegas.shape)
-    dtranslations = 0.01 * unit_uniform(translations.shape)
+    dpoints = 1e-2 * unit_uniform(points.shape)
+    domegas = 1e-3 * unit_uniform(omegas.shape)
+    dtranslations = 1e-2 * unit_uniform(translations.shape)
     dposes = to_poses(domegas, dtranslations)
 
     # assume that all points are visible
@@ -36,17 +41,19 @@ def test_jacobian():
 
     # test sign(Q(a + da, b) - Q(a, b)) == sign(A * da)
     # where A = dQ / da
-    dx_true = Q(poses + dposes, points) - Q(poses, points)
+    dxs_true = Q(poses + dposes, points) - Q(poses, points)
     for index, j in enumerate(viewpoint_indices):
         dx_pred = A[index].dot(dposes[j])
-        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
+        dx_true = dxs_true[index]
+        assert(relative_error(dx_true, dx_pred) < 0.1)
 
     # test sign(Q(a, b + db) - Q(a, b)) == sign(B * db)
     # where B = dQ / db
-    dx_true = Q(poses, points + dpoints) - Q(poses, points)
+    dxs_true = Q(poses, points + dpoints) - Q(poses, points)
     for index, i in enumerate(point_indices):
         dx_pred = B[index].dot(dpoints[i])
-        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
+        dx_true = dxs_true[index]
+        assert(relative_error(dx_true, dx_pred) < 0.1)
 
 
 def add_noise(array, scale):
