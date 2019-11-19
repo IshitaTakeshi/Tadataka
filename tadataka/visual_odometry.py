@@ -139,6 +139,9 @@ class VisualOdometry(object):
         kd0 = self.kds[viewpoint0]
 
         matches, viewpoints = self.match(kd1, viewpoints=[viewpoint0])
+        if len(matches) == 0:
+            raise ValueError("Not enough matches found")
+
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
