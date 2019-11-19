@@ -14,6 +14,7 @@ setup(
         'scipy',
         'bidict',
         'scikit-image',
+        'scikit-learn',
         'matplotlib',
         'numpy',
         # TODO make independent from opencv
