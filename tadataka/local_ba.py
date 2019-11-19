@@ -146,58 +146,6 @@ class LocalBundleAdjustment(object):
         return omegas, translations, points
 
 
-class IndexConverter(object):
-    def __init__(self):
-        self.viewpoint_indices = []
-        self.point_indices = []
-
-        self.poses = []
-        self.translations = []
-        self.points = []
-        self.keypoints = []
-
-        self.point_map = dict()
-        self.viewpoint_map = dict()
-        self.point_index = 0
-        self.viewpoint_index = 0
-        self.point_ids = []
-
-    def add(self, viewpoint_id, point_id, pose, point, keypoint):
-        if viewpoint_id not in self.viewpoint_map.keys():
-            self.viewpoint_map[viewpoint_id] = self.viewpoint_index
-            self.viewpoint_index += 1
-            self.poses.append(pose)
-
-        if point_id not in self.point_map.keys():
-            self.point_map[point_id] = self.point_index
-            self.point_index += 1
-            self.point_ids.append(point_id)
-            self.points.append(point)
-
-        self.viewpoint_indices.append(self.viewpoint_map[viewpoint_id])
-        self.point_indices.append(self.point_map[point_id])
-        self.keypoints.append(keypoint)
-
-    def export_projection(self):
-        return (np.array(self.viewpoint_indices),
-                np.array(self.point_indices),
-                np.array(self.keypoints))
-
-    def export_pose_points(self):
-        return self.poses, self.points
-
-
-def get_converter(index_map, poses, points, keypoints_list, viewpoints):
-    converter = IndexConverter()
-    for viewpoint, pose, keypoints in zip(viewpoints, poses, keypoints_list):
-        M = index_map[viewpoint]
-        assert(len(M.keys()) == len(set(M.values())))
-        for keypoint_index, point_index in index_map[viewpoint].items():
-            converter.add(viewpoint, point_index, pose,
-                          points[point_index], keypoints[keypoint_index])
-    return converter
-
-
 def run_ba(viewpoint_indices, point_indices,
                 poses, points, keypoints_true):
     ba = LocalBundleAdjustment(viewpoint_indices, point_indices,

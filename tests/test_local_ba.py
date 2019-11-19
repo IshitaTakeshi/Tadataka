@@ -2,7 +2,7 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 import numpy as np
 
 from tadataka.local_ba import (
-    LocalBundleAdjustment, Projection, IndexConverter,
+    LocalBundleAdjustment, Projection,
     calc_error, calc_errors, calc_relative_error)
 from tests.utils import unit_uniform
 
@@ -47,66 +47,6 @@ def test_jacobian():
     for index, i in enumerate(point_indices):
         dx_pred = B[index].dot(dpoints[i])
         assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
-
-
-def test_converter():
-    from tadataka.pose import Pose
-
-    # index_map = {viewpoint : {keypoint_index: point_index}}
-    index_map = {
-        0: {1: 3, 3: 5, 4: 2, 5: 1},
-        1: {0: 2, 4: 1, 5: 5, 6: 4},
-        2: {0: 3, 1: 2, 4: 1}
-    }
-
-    viewpoints = [0, 2]
-
-    keypoints_list = [
-        np.random.randint(0, 100, (6, 2)),
-        np.random.randint(0, 100, (8, 2)),
-        np.random.randint(0, 100, (5, 2))
-    ]
-
-    omegas = np.random.uniform(-1, 1, (3, 3))
-    translations = np.random.uniform(-10, 10, (3, 3))
-    poses = [Pose(omega, t) for omega, t in zip(omegas, translations)]
-    points = np.random.uniform(-10, 10, (10, 3))
-
-    converter = IndexConverter()
-    for viewpoint in viewpoints:
-        keypoints = keypoints_list[viewpoint]
-        for keypoint_index, point_index in index_map[viewpoint].items():
-            converter.add(viewpoint, point_index,
-                          poses[viewpoint], points[point_index],
-                          keypoints[keypoint_index])
-
-    viewpoint_indices, point_indices, keypoints = converter.export_projection()
-
-    assert_array_equal(viewpoint_indices, [0, 0, 0, 0, 1, 1, 1])
-    # point map
-    # 3 -> 0
-    # 5 -> 1
-    # 2 -> 2
-    # 1 -> 3
-    assert_array_equal(point_indices, [0, 1, 2, 3, 0, 2, 3])
-    keypoints0, keypoints1, keypoints2 = keypoints_list
-    assert_array_equal(
-        keypoints,
-        np.array([
-            keypoints0[1], keypoints0[3], keypoints0[4], keypoints0[5],
-            keypoints2[0], keypoints2[1], keypoints2[4]
-        ])
-    )
-
-    poses_, points_ = converter.export_pose_points()
-    assert(len(poses_) == 2)
-    assert(poses_[0] == poses[0])
-    assert(poses_[1] == poses[2])
-
-    assert_array_almost_equal(
-        points_,
-        np.array([points[3], points[5], points[2], points[1]])
-    )
 
 
 def add_noise(array, scale):
