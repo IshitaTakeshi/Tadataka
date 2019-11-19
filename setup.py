@@ -11,16 +11,15 @@ setup(
     packages=['tadataka'],
     install_requires=[
         'autograd',
-        'scipy',
-        'bidict',
-        'scikit-image',
-        'scikit-learn',
-        'matplotlib',
-        'numpy',
         'bidict',
         # TODO make independent from opencv
+        'matplotlib',
+        'numpy',
         'opencv-python',
         'opencv-contrib-python',
+        'scikit-image',
+        'scikit-learn',
+        'scipy',
         'sba @ git+https://github.com/IshitaTakeshi/SBA.git@develop#egg=sba'
     ]
 )

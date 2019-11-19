@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.depth import depth_condition, warn_points_behind_cameras
 from tadataka.matrix import solve_linear, motion_matrix

@@ -1,5 +1,5 @@
 from autograd import jacobian
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.assertion import check_non_nan
 

@@ -1,5 +1,5 @@
 from autograd import elementwise_grad
-from autograd import numpy as np
+import numpy as np
 
 
 class BaseRobustifier(object):

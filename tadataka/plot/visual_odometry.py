@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from matplotlib.animation import FuncAnimation
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

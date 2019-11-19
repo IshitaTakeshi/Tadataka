@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
 from pathlib import Path

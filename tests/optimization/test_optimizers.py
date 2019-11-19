@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_equal
 
 from tadataka.optimization.robustifiers import SquaredRobustifier

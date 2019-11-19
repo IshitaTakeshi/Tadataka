@@ -1,5 +1,5 @@
 from numpy.testing import assert_array_almost_equal
-from autograd import numpy as np
+import numpy as np
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import (
     Normalizer, FOV, distort_factors, undistort_factors)

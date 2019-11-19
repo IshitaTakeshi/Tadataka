@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from autograd.numpy.linalg import inv
 
 from numpy.testing import (

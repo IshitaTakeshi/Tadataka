@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.rigid_transform import rotate_each
 from tadataka.so3 import rodrigues

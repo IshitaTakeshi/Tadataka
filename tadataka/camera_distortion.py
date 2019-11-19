@@ -1,7 +1,7 @@
 # reference
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
-from autograd import numpy as np
+import numpy as np
 
 
 EPSILON = 1e-4

@@ -1,5 +1,5 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.local_ba import (
     LocalBundleAdjustment, Projection, IndexConverter,

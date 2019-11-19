@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal
 from tadataka.utils import (
     merge_dicts, is_in_image_range, radian_to_degree, indices_other_than)

@@ -1,5 +1,5 @@
 import warnings
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.exceptions import NotEnoughInliersException, print_error
 from tadataka.features import extract_features, Matcher

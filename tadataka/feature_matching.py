@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 
 def reduce_redundancy(rows, cols, data):
