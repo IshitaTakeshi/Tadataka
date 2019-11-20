@@ -9,6 +9,7 @@ from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
 from skimage.color import rgb2gray
 from skimage import transform as tf
 from skimage.measure import ransac
+from skimage import exposure
 
 from tadataka.coordinates import yx_to_xy, xy_to_yx
 from tadataka.cost import symmetric_transfer_filter
@@ -31,15 +32,19 @@ brief = BRIEF(
 orb = ORB(n_keypoints=100)
 
 
-def extract_features_(image):
-    keypoints = keypoint_detector.detect(img_as_ubyte(image), None)
+def to_opencv_format(image):
+    return img_as_ubyte(image)
+
+
+def extract_keypoints(image):
+    keypoints = keypoint_detector.detect(to_opencv_format(image), None)
     if len(keypoints) == 0:
         return np.empty((0, 2), dtype=np.float64)
     return np.array([list(p.pt) for p in keypoints])
 
 
 def extract_brief(image):
-    keypoints = extract_features_(image)
+    keypoints = extract_keypoints(image)
     keypoints = xy_to_yx(keypoints)
 
     brief.extract(image, keypoints)
