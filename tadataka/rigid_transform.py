@@ -1,4 +1,4 @@
-import numpy as np
+from autograd import numpy as np
 
 
 def transform_each(rotations, translations, points):
