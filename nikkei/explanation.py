@@ -16,7 +16,7 @@ from tadataka.point_keypoint_map import subscribe, get_indices
 filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
 
 # 視差を十分に得るためにファイルを飛ばす
-filenames = [filenames[0]] + filenames[4:]
+# filenames = [filenames[0]] + filenames[4:]
 
 # カメラ歪みや焦点距離等の補正のためにカメラのパラメータを与える
 camera_parameters = CameraParameters(
@@ -49,7 +49,7 @@ features1 = Features(keypoints1_undistorted, descriptors1)
 # 特徴点の座標と記述子の両方が必要なのでどちらも渡す
 matches01 = match(features0, features1)
 
-# plot_matches(image0, image1, keypoints0, keypoints1, matches01)
+plot_matches(image0, image1, keypoints0, keypoints1, matches01)
 
 # pose0 をカメラの基準座標とし，そこからの姿勢変化を推定していく
 pose0 = Pose.identity()
@@ -98,6 +98,8 @@ keypoints2_undistorted = camera_model.undistort(keypoints2)
 features2 = Features(keypoints2_undistorted, descriptors2)
 
 matches02 = match(features0, features2)
+
+plot_matches(image0, image2, keypoints0, keypoints2, matches02)
 
 # 3フレーム目の姿勢推定では，1フレーム目と2フレーム目から
 # 復元された3次元点 'point_array01' と，3フレーム目の特徴点 'keypoints2'
