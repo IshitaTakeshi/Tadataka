@@ -11,10 +11,11 @@ from tadataka.visual_odometry import VisualOdometry
 vo = VisualOdometry(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
     FOV(0.01),
-    max_active_keyframes=6
+    max_active_keyframes=8
 )
 
 filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
+filenames = filenames[220:]
 filenames = [filenames[0]] + filenames[4:]
 
 for i, filename in enumerate(filenames):
@@ -31,6 +32,12 @@ for i, filename in enumerate(filenames):
 
     # 不要なフレームを削除する
     vo.try_remove()
+
+    if i == 0:
+        continue
+
+    # points, colors = vo.export_points()
+    # plot_map(vo.export_poses(), points, colors)
 
 points, colors = vo.export_points()
 plot_map(vo.export_poses(), points, colors)

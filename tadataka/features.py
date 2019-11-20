@@ -15,17 +15,16 @@ from tadataka.cost import symmetric_transfer_filter
 from tadataka.match import match_binary_descriptors
 
 
-
 Features = namedtuple("Features", ["keypoints", "descriptors"])
 
 
-keypoint_detector = cv2.FastFeatureDetector_create(threshold=50)
+keypoint_detector = cv2.FastFeatureDetector_create(threshold=25)
 
 brief = BRIEF(
     descriptor_size=512,
     patch_size=64,
     mode="uniform",
-    sigma=0.1
+    sigma=0.01
 )
 
 orb = ORB(n_keypoints=100)
@@ -120,7 +119,7 @@ class Matcher(object):
         if self.enable_homography_filter:
             mask = symmetric_transfer_filter(keypoints1[matches12[:, 0]],
                                              keypoints2[matches12[:, 1]],
-                                             p=0.95)
+                                             p=0.80)
             matches12 = matches12[mask]
 
         return matches12
