@@ -78,15 +78,13 @@ point_array01 = point_array01[depth_mask]
 matches01 = matches01[depth_mask]
 
 # 地図を表示する
-# plot_map_([pose0, pose1], points)
+plot_map([pose0, pose1], point_array01)
 
 # 1フレーム目の特徴点，2フレーム目の特徴点，それらを使って復元された3次元点
 # の対応関係を保存しておく
 points, correspondence0, correspondence1 = subscribe(
     point_array01, matches01
 )
-
-plot_map([pose0, pose1], point_array01)
 
 # ======================= 3次元点の復元ここまで =======================
 
