@@ -20,10 +20,10 @@ filenames = [filenames[0]] + filenames[4:]
 
 # カメラ歪みや焦点距離等の補正のためにカメラのパラメータを与える
 camera_parameters = CameraParameters(
-    focal_length=[2890.16, 3326.04],
+    focal_length=[3049, 4052],
     offset=[1640, 1232]
 )
-distortion_model = FOV(0.01)  # カメラの歪みを表す
+distortion_model = FOV(0.26)  # カメラの歪みを表す
 camera_model = CameraModel(camera_parameters, distortion_model)
 
 # 特徴点のマッチングを行うオブジェクト
