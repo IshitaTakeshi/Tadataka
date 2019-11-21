@@ -1,8 +1,8 @@
 from numpy.testing import assert_array_equal, assert_array_almost_equal
-from vitamine.flow_estimation.flow_estimation import (
+from tadataka.flow_estimation.flow_estimation import (
     estimate_affine_transform, AffineTransformer, predict,
     affine_params_to_theta, theta_to_affine_params)
-from autograd import numpy as np
+import numpy as np
 
 
 def test_transformer():

@@ -1,6 +1,6 @@
 from numpy.testing import assert_array_equal
 
-from vitamine.keyframe_index import KeyframeIndices
+from tadataka.keyframe_index import KeyframeIndices
 
 
 def test_keyframe_indices():

@@ -1,12 +1,11 @@
 from numpy.testing import assert_array_almost_equal
-from autograd import numpy as np
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import (
-    Normalizer, FOV, distort_factors, undistort_factors)
-from vitamine.projection import PerspectiveProjection
-from vitamine.rigid_transform import transform
-from vitamine.pose import solve_pnp
-from vitamine.so3 import exp_so3
+import numpy as np
+from tadataka.camera import CameraParameters, Normalizer
+from tadataka.camera_distortion import FOV, distort_factors, undistort_factors
+from tadataka.projection import PerspectiveProjection
+from tadataka.rigid_transform import transform
+from tadataka.pose import solve_pnp
+from tadataka.so3 import exp_so3
 from tests.data import dummy_points as points
 
 

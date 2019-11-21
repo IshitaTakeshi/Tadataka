@@ -1,23 +1,23 @@
-from autograd import numpy as np
+import numpy as np
 
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 import pytest
 
-from vitamine.so3 import rodrigues
-from vitamine.projection import PerspectiveProjection
-from vitamine.dataset.points import cubic_lattice
-from vitamine.dataset.observations import (
+from tadataka.so3 import rodrigues
+from tadataka.projection import PerspectiveProjection
+from tadataka.dataset.points import cubic_lattice
+from tadataka.dataset.observations import (
     generate_observations, generate_translations)
-from vitamine.rigid_transform import transform
-from vitamine.camera import CameraParameters
-from vitamine.camera_distortion import FOV
-from vitamine.keypoints import Features as KD
-from vitamine.keypoints import Matcher
-from vitamine.exceptions import NotEnoughInliersException
-from vitamine.visual_odometry.visual_odometry import VisualOdometry
-from vitamine.pose import Pose
-from vitamine.rigid_transform import transform_all
-from vitamine.utils import random_binary, break_other_than
+from tadataka.rigid_transform import transform
+from tadataka.camera import CameraParameters
+from tadataka.camera_distortion import FOV
+from tadataka.features import Features as KD
+from tadataka.features import Matcher
+from tadataka.exceptions import NotEnoughInliersException
+from tadataka.visual_odometry import VisualOdometry
+from tadataka.pose import Pose
+from tadataka.rigid_transform import transform_all
+from tadataka.utils import random_binary, break_other_than
 from tests.data import dummy_points as points_true
 from tests.assertion import assert_projection_equal
 

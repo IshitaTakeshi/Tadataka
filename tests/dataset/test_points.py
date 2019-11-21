@@ -1,6 +1,6 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
-from vitamine.dataset.points import donut
+from tadataka.dataset.points import donut
 
 
 def test_donut():

@@ -1,5 +1,5 @@
 from numpy.testing import assert_array_almost_equal
-from vitamine.rigid_transform import transform
+from tadataka.rigid_transform import transform
 
 
 def assert_projection_equal(projection, pose, points, keypoints_pred):

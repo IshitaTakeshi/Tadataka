@@ -1,7 +1,7 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal
 
-from vitamine.optimization import robustifiers
+from tadataka.optimization import robustifiers
 
 
 def test_squared_robustifier():

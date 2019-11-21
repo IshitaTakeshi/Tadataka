@@ -1,7 +1,7 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal
 
-from vitamine.flow_estimation.image_curvature import (
+from tadataka.flow_estimation.image_curvature import (
     grad_x, grad_y, compute_curvature, compute_image_curvature)
 
 

@@ -1,32 +1,10 @@
 # reference
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
-from autograd import numpy as np
+import numpy as np
 
 
 EPSILON = 1e-4
-
-
-class Normalizer(object):
-    def __init__(self, camera_parameters):
-        self.focal_length = camera_parameters.focal_length
-        self.offset = camera_parameters.offset
-
-    def normalize(self, keypoints):
-        """
-        Transform keypoints to the normalized plane
-        (x - cx) / fx = X / Z
-        (y - cy) / fy = Y / Z
-        """
-        return (keypoints - self.offset) / self.focal_length
-
-    def inverse(self, normalized_keypoints):
-        """
-        Inverse transformation from the normalized plane
-        x = fx * X / Z + cx
-        y = fy * Y / Z + cy
-        """
-        return normalized_keypoints * self.focal_length + self.offset
 
 
 def distort_factors(X, omega):
@@ -81,19 +59,3 @@ class FOV(object):
 
         factors = undistort_factors(distorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * distorted_keypoints
-
-
-class CameraModel(object):
-    def __init__(self, camera_parameters, distortion_model):
-        self.normalizer = Normalizer(camera_parameters)
-        self.distortion_model = distortion_model
-
-    def undistort(self, keypoints):
-        return self.distortion_model.undistort(
-            self.normalizer.normalize(keypoints)
-        )
-
-    def distort(self, normalized_keypoints):
-        return self.normalizer.inverse(
-            self.distortion_model.undistort(normalized_keypoints)
-        )

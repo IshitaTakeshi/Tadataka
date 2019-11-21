@@ -1,1 +1,1 @@
-from vitamine.optimization import updaters
+from tadataka.optimization import updaters

@@ -1,1 +1,1 @@
-from vitamine.optimization import residuals
+from tadataka.optimization import residuals

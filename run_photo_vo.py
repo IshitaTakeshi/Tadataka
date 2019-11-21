@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
 from pathlib import Path
@@ -8,7 +8,8 @@ from tadataka.visual_odometry import VisualOdometry
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
 from tadataka.coordinates import camera_to_world
-from tadataka.plot.map import plot_map
+from tadataka.plot import plot_map
+
 
 # saba
 vo = VisualOdometry(
@@ -69,15 +70,7 @@ def plot_keypoints(image, keypoints):
     plt.show()
 
 
-def plot_map_(poses, points, colors):
-    omegas, translations = zip(*poses)
-    omegas = np.array(omegas)
-    translations = np.array(translations)
-    plot_map(*camera_to_world(omegas, translations), points, colors)
-
-
 filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
-filenames = filenames[10:]
 filenames = [filenames[0]] + filenames[4:]
 
 
@@ -97,6 +90,6 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    if i % 20 == 0:
+    if i % 100 == 0:
         points, colors = vo.export_points()
-        plot_map_(vo.export_poses(), points, colors)
+        plot_map(vo.export_poses(), points, colors)

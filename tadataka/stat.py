@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from scipy.stats import chi2
 
 EPSILON = 1e-10

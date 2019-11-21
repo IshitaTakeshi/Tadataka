@@ -1,12 +1,12 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import (assert_array_less, assert_array_equal,
                            assert_array_almost_equal)
 
-from vitamine.camera import CameraParameters
-from vitamine.projection import PerspectiveProjection
-from vitamine.dataset.observations import (
+from tadataka.camera import CameraParameters
+from tadataka.projection import PerspectiveProjection
+from tadataka.dataset.observations import (
     generate_translations, generate_observations)
-from vitamine.rigid_transform import transform_all
+from tadataka.rigid_transform import transform_all
 
 
 points = np.array([

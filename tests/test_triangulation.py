@@ -1,17 +1,17 @@
 import itertools
 
 import pytest
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import (assert_array_equal, assert_array_almost_equal,
                            assert_equal, assert_almost_equal)
 
-from vitamine.camera import CameraParameters
-from vitamine.dataset.observations import generate_translations
-from vitamine.matrix import decompose_essential
-from vitamine.projection import PerspectiveProjection
-from vitamine.rigid_transform import transform, transform_all
-from vitamine.so3 import tangent_so3, rodrigues
-from vitamine._triangulation import linear_triangulation, triangulation
+from tadataka.camera import CameraParameters
+from tadataka.dataset.observations import generate_translations
+from tadataka.matrix import decompose_essential
+from tadataka.projection import PerspectiveProjection
+from tadataka.rigid_transform import transform, transform_all
+from tadataka.so3 import tangent_so3, rodrigues
+from tadataka._triangulation import linear_triangulation, triangulation
 
 # TODO add the case such that x[3] = 0
 

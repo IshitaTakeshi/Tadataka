@@ -1,7 +1,7 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_equal
-from vitamine.optimization.robustifiers import SquaredRobustifier
-from vitamine.optimization.errors import SumRobustifiedNormError
+from tadataka.optimization.robustifiers import SquaredRobustifier
+from tadataka.optimization.errors import SumRobustifiedNormError
 
 
 class TestSumRobustifiedNormError(object):

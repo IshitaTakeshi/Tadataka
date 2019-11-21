@@ -1,6 +1,6 @@
 import warnings
 
-from autograd import numpy as np
+import numpy as np
 from tadataka import _triangulation as TR
 from tadataka.pose import Pose
 from tadataka.exceptions import InvalidDepthException

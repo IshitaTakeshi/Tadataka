@@ -1,6 +1,6 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_almost_equal
-from vitamine.stat import zca_whitening, normalize_mean, ChiSquaredTest
+from tadataka.stat import zca_whitening, normalize_mean, ChiSquaredTest
 
 
 def test_chi_squared_test():

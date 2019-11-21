@@ -1,1 +1,1 @@
-from vitamine.optimization import array_utils
+from tadataka.optimization import array_utils

@@ -1,1 +1,1 @@
-from vitamine.optimization import initializers
+from tadataka.optimization import initializers

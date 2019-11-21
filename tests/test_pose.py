@@ -1,19 +1,19 @@
 import pytest
 
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from vitamine.so3 import rodrigues, exp_so3
+from tadataka.so3 import rodrigues, exp_so3
 
-from vitamine.camera import CameraParameters
-from vitamine.exceptions import NotEnoughInliersException
-from vitamine.dataset.observations import generate_translations
-from vitamine.pose import (
+from tadataka.camera import CameraParameters
+from tadataka.exceptions import NotEnoughInliersException
+from tadataka.dataset.observations import generate_translations
+from tadataka.pose import (
     Pose, solve_pnp, pose_change_from_stereo,
     n_triangulated, triangulation_indices
 )
-from vitamine.projection import PerspectiveProjection
-from vitamine.rigid_transform import transform
+from tadataka.projection import PerspectiveProjection
+from tadataka.rigid_transform import transform
 
 from tests.utils import random_rotation_matrix
 

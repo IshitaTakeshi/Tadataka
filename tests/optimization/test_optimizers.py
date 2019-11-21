@@ -1,11 +1,11 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_equal
 
-from vitamine.optimization.robustifiers import SquaredRobustifier
-from vitamine.optimization.errors import SumRobustifiedNormError
-from vitamine.optimization.transformers import BaseTransformer
-from vitamine.optimization.optimizers import BaseOptimizer
-from vitamine.optimization.residuals import BaseResidual
+from tadataka.optimization.robustifiers import SquaredRobustifier
+from tadataka.optimization.errors import SumRobustifiedNormError
+from tadataka.optimization.transformers import BaseTransformer
+from tadataka.optimization.optimizers import BaseOptimizer
+from tadataka.optimization.residuals import BaseResidual
 
 
 class Transformer(BaseTransformer):

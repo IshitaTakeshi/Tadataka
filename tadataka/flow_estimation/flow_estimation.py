@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.optimization.functions import Function
 from tadataka.transform import AffineTransform

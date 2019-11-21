@@ -1,10 +1,10 @@
 import warnings
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.exceptions import NotEnoughInliersException, print_error
 from tadataka.features import extract_features, Matcher
 from tadataka.features import Features as KD
-from tadataka.camera_distortion import CameraModel
+from tadataka.camera import CameraModel
 from tadataka.point_keypoint_map import (
     get_indices, get_point_hashes, init_correspondence,
     merge_correspondences, point_exists, subscribe
@@ -139,6 +139,9 @@ class VisualOdometry(object):
         kd0 = self.kds[viewpoint0]
 
         matches, viewpoints = self.match(kd1, viewpoints=[viewpoint0])
+        if len(matches) == 0:
+            raise ValueError("Not enough matches found")
+
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)

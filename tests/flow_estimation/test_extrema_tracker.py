@@ -1,10 +1,10 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from skimage.color import rgb2gray
 from skimage.data import astronaut
 
-from vitamine.optimization.robustifiers import SquaredRobustifier
-from vitamine.flow_estimation.extrema_tracker import (
+from tadataka.optimization.robustifiers import SquaredRobustifier
+from tadataka.flow_estimation.extrema_tracker import (
         ExtremaTracker, Energy, Neighbors, Regularizer, Maximizer)
 
 

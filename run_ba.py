@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 from tadataka.dataset.points import donut
 from tadataka.bundle_adjustment.bundle_adjustment import bundle_adjustment_core

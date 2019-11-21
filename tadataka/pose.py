@@ -1,6 +1,6 @@
 import itertools
 
-from autograd import numpy as np
+import numpy as np
 
 # TODO make this independent from cv2
 import cv2

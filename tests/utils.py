@@ -1,7 +1,7 @@
-from autograd import numpy as np
+import numpy as np
 
-from vitamine.utils import random_binary
-from vitamine.rigid_transform import transform_all
+from tadataka.utils import random_binary
+from tadataka.rigid_transform import transform_all
 
 
 local_hill = np.array([

@@ -1,14 +1,19 @@
 from numpy.testing import assert_array_almost_equal, assert_array_equal
-from autograd import numpy as np
+import numpy as np
+from numpy.linalg import norm
 
-from vitamine.local_ba import (
-    LocalBundleAdjustment, Projection, IndexConverter,
+from tadataka.local_ba import (
+    LocalBundleAdjustment, Projection,
     calc_error, calc_errors, calc_relative_error)
 from tests.utils import unit_uniform
 
 
 def to_poses(omegas, translations):
     return np.hstack((omegas, translations))
+
+
+def relative_error(x_true, x_pred):
+    return norm(x_true - x_pred) / norm(x_true)
 
 
 def test_jacobian():
@@ -20,9 +25,9 @@ def test_jacobian():
     translations = 10 * unit_uniform((n_viewpoints, 3))
     poses = to_poses(omegas, translations)
 
-    dpoints = 0.01 * unit_uniform(points.shape)
-    domegas = 0.001 * unit_uniform(omegas.shape)
-    dtranslations = 0.01 * unit_uniform(translations.shape)
+    dpoints = 1e-2 * unit_uniform(points.shape)
+    domegas = 1e-3 * unit_uniform(omegas.shape)
+    dtranslations = 1e-2 * unit_uniform(translations.shape)
     dposes = to_poses(domegas, dtranslations)
 
     # assume that all points are visible
@@ -36,77 +41,19 @@ def test_jacobian():
 
     # test sign(Q(a + da, b) - Q(a, b)) == sign(A * da)
     # where A = dQ / da
-    dx_true = Q(poses + dposes, points) - Q(poses, points)
+    dxs_true = Q(poses + dposes, points) - Q(poses, points)
     for index, j in enumerate(viewpoint_indices):
         dx_pred = A[index].dot(dposes[j])
-        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
+        dx_true = dxs_true[index]
+        assert(relative_error(dx_true, dx_pred) < 0.1)
 
     # test sign(Q(a, b + db) - Q(a, b)) == sign(B * db)
     # where B = dQ / db
-    dx_true = Q(poses, points + dpoints) - Q(poses, points)
+    dxs_true = Q(poses, points + dpoints) - Q(poses, points)
     for index, i in enumerate(point_indices):
         dx_pred = B[index].dot(dpoints[i])
-        assert_array_equal(np.sign(dx_true[index]), np.sign(dx_pred))
-
-
-def test_converter():
-    from vitamine.pose import Pose
-
-    # index_map = {viewpoint : {keypoint_index: point_index}}
-    index_map = {
-        0: {1: 3, 3: 5, 4: 2, 5: 1},
-        1: {0: 2, 4: 1, 5: 5, 6: 4},
-        2: {0: 3, 1: 2, 4: 1}
-    }
-
-    viewpoints = [0, 2]
-
-    keypoints_list = [
-        np.random.randint(0, 100, (6, 2)),
-        np.random.randint(0, 100, (8, 2)),
-        np.random.randint(0, 100, (5, 2))
-    ]
-
-    omegas = np.random.uniform(-1, 1, (3, 3))
-    translations = np.random.uniform(-10, 10, (3, 3))
-    poses = [Pose(omega, t) for omega, t in zip(omegas, translations)]
-    points = np.random.uniform(-10, 10, (10, 3))
-
-    converter = IndexConverter()
-    for viewpoint in viewpoints:
-        keypoints = keypoints_list[viewpoint]
-        for keypoint_index, point_index in index_map[viewpoint].items():
-            converter.add(viewpoint, point_index,
-                          poses[viewpoint], points[point_index],
-                          keypoints[keypoint_index])
-
-    viewpoint_indices, point_indices, keypoints = converter.export_projection()
-
-    assert_array_equal(viewpoint_indices, [0, 0, 0, 0, 1, 1, 1])
-    # point map
-    # 3 -> 0
-    # 5 -> 1
-    # 2 -> 2
-    # 1 -> 3
-    assert_array_equal(point_indices, [0, 1, 2, 3, 0, 2, 3])
-    keypoints0, keypoints1, keypoints2 = keypoints_list
-    assert_array_equal(
-        keypoints,
-        np.array([
-            keypoints0[1], keypoints0[3], keypoints0[4], keypoints0[5],
-            keypoints2[0], keypoints2[1], keypoints2[4]
-        ])
-    )
-
-    poses_, points_ = converter.export_pose_points()
-    assert(len(poses_) == 2)
-    assert(poses_[0] == poses[0])
-    assert(poses_[1] == poses[2])
-
-    assert_array_almost_equal(
-        points_,
-        np.array([points[3], points[5], points[2], points[1]])
-    )
+        dx_true = dxs_true[index]
+        assert(relative_error(dx_true, dx_pred) < 0.1)
 
 
 def add_noise(array, scale):

@@ -1,9 +1,9 @@
-from autograd import numpy as np
+import numpy as np
 from numpy.testing import assert_array_equal
-from vitamine.utils import (
+from tadataka.utils import (
     merge_dicts, is_in_image_range, radian_to_degree, indices_other_than)
-from vitamine.keypoints import match
-from vitamine.utils import add_noise, break_other_than, random_binary
+from tadataka.features import match
+from tadataka.utils import add_noise, break_other_than, random_binary
 
 
 def test_break_other_than():
