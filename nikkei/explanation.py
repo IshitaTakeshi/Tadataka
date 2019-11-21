@@ -3,9 +3,8 @@ import numpy as np
 from pathlib import Path
 from skimage.io import imread
 
-from tadataka.camera import CameraParameters
-# FIXME 'CameraModel' が 'camera_distortion' にあるのは不自然
-from tadataka.camera_distortion import FOV, CameraModel
+from tadataka.camera import CameraParameters, CameraModel
+from tadataka.camera_distortion import FOV
 from tadataka.features import extract_features, Features, Matcher
 from tadataka.plot import plot_matches, plot_map
 from tadataka.point_keypoint_map import subscribe, get_indices
