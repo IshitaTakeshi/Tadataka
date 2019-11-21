@@ -45,10 +45,6 @@ def homogeneous_matrix(A, b):
     return W
 
 
-def affine_transform(X, A, b):
-    return np.dot(A, X.T).T + b
-
-
 def to_homogeneous(X):
     """
     Args:

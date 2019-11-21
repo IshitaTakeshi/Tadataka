@@ -1,4 +1,4 @@
-import numpy as np
+from autograd import numpy as np
 from tadataka.optimization.robustifiers import GemanMcClureRobustifier
 from tadataka.utils import is_in_image_range
 

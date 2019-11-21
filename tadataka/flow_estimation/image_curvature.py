@@ -1,4 +1,4 @@
-import numpy as np
+from autograd import numpy as np
 from skimage import data
 from skimage.color import rgb2gray
 

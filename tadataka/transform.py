@@ -1,4 +1,8 @@
-from tadataka.matrix import affine_transform
+from autograd import numpy as np
+
+
+def affine_transform(A, b, X):
+    return np.dot(A, X.T).T + b
 
 
 class BaseTransform(object):
@@ -12,4 +16,4 @@ class AffineTransform(BaseTransform):
         self.b = b
 
     def transform(self, X):
-        return affine_transform(X, self.A, self.b)
+        return affine_transform(self.A, self.b, X)
