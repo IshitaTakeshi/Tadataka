@@ -1,8 +1,7 @@
 from numpy.testing import assert_array_almost_equal
 import numpy as np
-from tadataka.camera import CameraParameters
-from tadataka.camera_distortion import (
-    Normalizer, FOV, distort_factors, undistort_factors)
+from tadataka.camera import CameraParameters, Normalizer
+from tadataka.camera_distortion import FOV, distort_factors, undistort_factors
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.pose import solve_pnp

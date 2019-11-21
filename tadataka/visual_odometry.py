@@ -4,7 +4,7 @@ import numpy as np
 from tadataka.exceptions import NotEnoughInliersException, print_error
 from tadataka.features import extract_features, Matcher
 from tadataka.features import Features as KD
-from tadataka.camera_distortion import CameraModel
+from tadataka.camera import CameraModel
 from tadataka.point_keypoint_map import (
     get_indices, get_point_hashes, init_correspondence,
     merge_correspondences, point_exists, subscribe
