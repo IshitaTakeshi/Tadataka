@@ -6,17 +6,8 @@ from autograd import jacobian
 from sba import SBA, can_run_ba
 
 from tadataka.rigid_transform import transform
-from tadataka.so3 import exp_so3
 from tadataka.pose import Pose
-
-
-EPSILON = 1e-16
-
-
-def projection(pose, point):
-    omega, t = pose[0:3], pose[3:6]
-    p = transform(exp_so3(omega), t, point)
-    return p[0:2] / (p[2] + EPSILON)
+from tadataka.so3_codegen import projection, pose_jacobian, point_jacobian
 
 
 class Projection(object):
@@ -27,9 +18,6 @@ class Projection(object):
         self.point_indices = point_indices
 
         self.n_visible = len(self.point_indices)
-
-        self.pose_jacobian = jacobian(projection, argnum=0)
-        self.point_jacobian = jacobian(projection, argnum=1)
 
     def compute(self, poses, points):
         x_pred = np.empty((self.n_visible, 2))
@@ -45,8 +33,8 @@ class Projection(object):
         I = zip(self.viewpoint_indices, self.point_indices)
 
         for index, (j, i) in enumerate(I):
-            A[index] = self.pose_jacobian(poses[j], points[i])
-            B[index] = self.point_jacobian(poses[j], points[i])
+            A[index] = pose_jacobian(poses[j], points[i])
+            B[index] = point_jacobian(poses[j], points[i])
         return A, B
 
 
@@ -97,7 +85,6 @@ class LocalBundleAdjustment(object):
         return dposes, dpoints, error
 
     def lm_update(self, poses, points, mu, nu):
-
         error0 = self.calc_error(poses, points)
 
         new_mu = mu / nu

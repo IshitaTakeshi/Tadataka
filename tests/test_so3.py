@@ -4,6 +4,8 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_
 from tadataka.so3 import (is_rotation_matrix, tangent_so3,
                           inv_rodrigues, rodrigues)
 
+from tadataka.so3_codegen import exp_so3
+
 
 def test_is_rotation_matrix():
     M = np.array([[-1, 0, 0],
@@ -129,3 +131,6 @@ def test_rodrigues():
     ], dtype=np.float64)
 
     assert_array_almost_equal(rodrigues(V), expected)
+
+    for v, R_true in zip(V, expected):
+        assert_array_almost_equal(exp_so3(v), R_true)

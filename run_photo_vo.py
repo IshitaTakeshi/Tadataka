@@ -10,6 +10,7 @@ from tadataka.camera_distortion import FOV
 from tadataka.coordinates import camera_to_world
 from tadataka.plot import plot_map
 
+
 # saba
 vo = VisualOdometry(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
@@ -89,5 +90,6 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    points, colors = vo.export_points()
-    plot_map(vo.export_poses(), points, colors)
+    if i % 100 == 0:
+        points, colors = vo.export_points()
+        plot_map(vo.export_poses(), points, colors)
