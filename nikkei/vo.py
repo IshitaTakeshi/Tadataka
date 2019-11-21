@@ -9,8 +9,8 @@ from tadataka.visual_odometry import VisualOdometry
 
 # saba
 vo = VisualOdometry(
-    CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
-    FOV(0.01),
+    CameraParameters(focal_length=[3049, 4052], offset=[1640, 1232]),
+    FOV(0.26),
     max_active_keyframes=8
 )
 
