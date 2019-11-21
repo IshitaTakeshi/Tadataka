@@ -3,14 +3,15 @@ import numpy as np
 from pathlib import Path
 from skimage.io import imread
 
-from tadataka.features import extract_features, Matcher, Features
 from tadataka.camera import CameraParameters
 # FIXME 'CameraModel' が 'camera_distortion' にあるのは不自然
 from tadataka.camera_distortion import FOV, CameraModel
+from tadataka.features import extract_features, Features, Matcher
 from tadataka.plot import plot_matches, plot_map
+from tadataka.point_keypoint_map import subscribe, get_indices
 from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
-from tadataka.point_keypoint_map import subscribe, get_indices
+
 
 filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
 filenames = filenames[220:]
