@@ -19,13 +19,13 @@ def point_exists(point_keypoint_map, keypoint_index):
     return keypoint_index in point_keypoint_map.values()
 
 
-def get_point_hashes(map_, keypoint_indices):
-    return [point_by_keypoint(map_, i) for i in keypoint_indices]
+def get_point_hashes(point_keypoint_map, keypoint_indices):
+    return [point_by_keypoint(point_keypoint_map, i) for i in keypoint_indices]
 
 
 def get_indices(correspondence, matches01):
-    point_hashes = []
-    keypoint_indices = []
+    point_hashes0 = []
+    keypoint_indices1 = []
     for index0, index1 in matches01:
         try:
             point_hash = point_by_keypoint(correspondence, index0)
@@ -34,9 +34,9 @@ def get_indices(correspondence, matches01):
             # triangulated yet
             continue
 
-        point_hashes.append(point_hash)
-        keypoint_indices.append(index1)
-    return point_hashes, keypoint_indices
+        point_hashes0.append(point_hash)
+        keypoint_indices1.append(index1)
+    return point_hashes0, keypoint_indices1
 
 
 def merge_correspondences(*maps):
