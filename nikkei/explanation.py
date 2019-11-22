@@ -13,10 +13,7 @@ from tadataka.triangulation import Triangulation
 
 
 filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
-filenames = filenames[220:]
-
-# 視差を十分に得るためにファイルを飛ばす
-filenames = [filenames[0]] + filenames[4:]
+filenames = filenames[70:]
 
 # カメラ歪みや焦点距離等の補正のためにカメラのパラメータを与える
 camera_parameters = CameraParameters(
