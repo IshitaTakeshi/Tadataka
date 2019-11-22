@@ -19,14 +19,6 @@ def point_exists(point_keypoint_map, keypoint_index):
     return keypoint_index in point_keypoint_map.values()
 
 
-def triangulation_required(map_, keypoint_indices):
-    return np.array([not point_exists(map_, i) for i in keypoint_indices])
-
-
-def copy_required(map_, keypoint_indices):
-    return np.array([point_exists(map_, i) for i in keypoint_indices])
-
-
 def get_point_hashes(map_, keypoint_indices):
     return [point_by_keypoint(map_, i) for i in keypoint_indices]
 
