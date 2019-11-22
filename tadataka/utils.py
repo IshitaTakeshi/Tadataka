@@ -26,6 +26,10 @@ def round_int(X):
     return np.round(X, 0).astype(np.int64)
 
 
+def value_list(dict_, keys):
+    return [dict_[k] for k in keys]
+
+
 def is_in_image_range(keypoints, image_shape):
     height, width = image_shape
     xs, ys = keypoints[:, 0], keypoints[:, 1]

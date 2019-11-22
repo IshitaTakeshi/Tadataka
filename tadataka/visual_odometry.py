@@ -1,20 +1,21 @@
 import warnings
 import numpy as np
 
+from skimage.color import rgb2gray
 from tadataka.exceptions import NotEnoughInliersException, print_error
 from tadataka.features import extract_features, Matcher
 from tadataka.features import Features as KD
 from tadataka.camera import CameraModel
 from tadataka.point_keypoint_map import (
-    get_indices, get_point_hashes, init_correspondence,
-    merge_correspondences, point_exists, subscribe
+    associate_triangulated,
+    get_indices, get_point_hashes, init_correspondence, is_triangulated,
+    merge_correspondences, subscribe
 )
-from tadataka.utils import merge_dicts
+from tadataka.utils import merge_dicts, value_list
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
-from tadataka.triangulation import Triangulation
+from tadataka.triangulation import triangulate
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.so3 import rodrigues
-from skimage.color import rgb2gray
 from tadataka.local_ba import try_run_ba
 
 
@@ -24,10 +25,6 @@ def get_new_viewpoint(viewpoints):
     return viewpoints[-1] + 1
 
 
-def point_array(point_dict, point_keys):
-    return np.array([point_dict[k] for k in point_keys])
-
-
 def extract_colors(correspondence, point_dict, keypoints, image):
     point_colors = dict()
     for point_hash in point_dict.keys():
@@ -35,28 +32,6 @@ def extract_colors(correspondence, point_dict, keypoints, image):
         x, y = keypoints[keypoint_index]
         point_colors[point_hash] = image[y, x]
     return point_colors
-
-
-def associate_triangulated(map0, matches01):
-    point_hashes0 = get_point_hashes(map0, matches01[:, 0])
-    return init_correspondence(zip(point_hashes0, matches01[:, 1]))
-
-
-def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
-    t = Triangulation(pose0, pose1, keypoints0, keypoints1)
-    point_array, depth_mask = t.triangulate(matches01)
-    # preserve points that have positive depths
-    return point_array[depth_mask], matches01[depth_mask]
-
-
-def value_list(dict_, keys):
-    return [dict_[k] for k in keys]
-
-
-def separate(correspondence0, matches01):
-    indices0, map0 = matches01[:, 0], correspondence0
-    is_triangulated = np.array([point_exists(map0, i) for i in indices0])
-    return matches01[is_triangulated], matches01[~is_triangulated]
 
 
 def unique_point_hashes(correspondences):
@@ -77,6 +52,7 @@ def get_ba_indices(correspondences, kds, point_hashes):
             try:
                 keypoint_index = map_[point_hash]
             except KeyError:
+                # continue if corresponding keypoint does not exist
                 continue
             viewpoint_indices.append(j)
             point_indices.append(i)
@@ -88,13 +64,13 @@ def get_ba_indices(correspondences, kds, point_hashes):
 
 def filter_matches(matches, viewpoints, min_matches):
     assert(len(viewpoints) == len(matches))
-    matches_ = []
-    viewpoints_ = []
-    for viewpoint, matches01 in zip(viewpoints, matches):
-        if len(matches01) >= min_matches:
-            matches_.append(matches01)
-            viewpoints_.append(viewpoint)
-    return matches_, viewpoints_
+
+    def f(args):
+        matches01, viewpoint = args
+        return len(matches01) >= min_matches
+
+    Z = filter(f, zip(matches, viewpoints))
+    return zip(*Z)
 
 
 class VisualOdometry(object):
@@ -122,8 +98,8 @@ class VisualOdometry(object):
     def export_points(self):
         assert(len(self.point_dict) == len(self.point_colors))
         point_hashes = self.point_dict.keys()
-        point_array = np.array([self.point_dict[h] for h in point_hashes])
-        point_colors = np.array([self.point_colors[h] for h in point_hashes])
+        point_array = np.array(value_list(self.point_dict, point_hashes))
+        point_colors = np.array(value_list(self.point_colors, point_hashes))
         point_colors = point_colors.astype(np.float64) / 255.
         return point_array, point_colors
 
@@ -154,6 +130,10 @@ class VisualOdometry(object):
         return pose1, point_dict, map0, map1
 
     def estimate_pose_points(self, kd1):
+        # TODO swap if condition. this should be
+        # if len(self.active_viewpoints) > 1
+        #   return self.estimate_pose_points_(kd1, self.active_viewpoints)
+        # ...
         if len(self.active_viewpoints) == 1:
             viewpoint0 = self.active_viewpoints[0]
             pose1, point_dict, map0, map1 = self.init_first_two(
@@ -265,10 +245,9 @@ class VisualOdometry(object):
         kd0 = self.kds[viewpoint0]
         map0 = self.correspondences[viewpoint0]
 
-        triangulated, untriangulated = separate(map0, matches01)
-        # Find keypoints that already have corresponding 3D points
-        # If keypoint in one frame has corresponding 3D point,
-        # associate it to the matched keypoint in the other frame
+        mask = is_triangulated(map0, matches01[:, 0])
+        triangulated, untriangulated = matches01[mask], matches01[~mask]
+
         map1_copied = associate_triangulated(map0, triangulated)
 
         if len(untriangulated) == 0:

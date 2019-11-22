@@ -90,3 +90,15 @@ def subscribe(point_array, matches01):
     map1 = init_correspondence(zip(point_hashes, matches01[:, 1]))
     point_dict = dict(zip(point_hashes, point_array))
     return point_dict, map0, map1
+
+
+def is_triangulated(correspondence, indices):
+    return np.array([point_exists(correspondence, i) for i in indices])
+
+
+def associate_triangulated(correspondence0, matches01):
+    # Find keypoints that have corresponding 3D points
+    # If keypoint in one frame has corresponding 3D point,
+    # associate it to the matched keypoint in the other frame
+    point_hashes0 = get_point_hashes(correspondence0, matches01[:, 0])
+    return init_correspondence(zip(point_hashes0, matches01[:, 1]))
