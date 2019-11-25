@@ -17,6 +17,8 @@ def relative_error(x_true, x_pred):
 
 
 def test_jacobian():
+    np.random.seed(3939)
+
     n_viewpoints = 3
     n_points = 4
 
@@ -25,9 +27,9 @@ def test_jacobian():
     translations = 10 * unit_uniform((n_viewpoints, 3))
     poses = to_poses(omegas, translations)
 
-    dpoints = 1e-2 * unit_uniform(points.shape)
+    dpoints = 1e-3 * unit_uniform(points.shape)
     domegas = 1e-3 * unit_uniform(omegas.shape)
-    dtranslations = 1e-2 * unit_uniform(translations.shape)
+    dtranslations = 1e-3 * unit_uniform(translations.shape)
     dposes = to_poses(domegas, dtranslations)
 
     # assume that all points are visible
