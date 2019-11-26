@@ -27,6 +27,7 @@ def get_new_viewpoint(viewpoints):
 
 def extract_colors(correspondence, point_dict, keypoints, image):
     point_colors = dict()
+    keypoints = keypoints.astype(np.int64)
     for point_hash in point_dict.keys():
         keypoint_index = correspondence[point_hash]
         x, y = keypoints[keypoint_index]
@@ -181,7 +182,6 @@ class VisualOdometry(object):
         self.correspondences[viewpoint1] = map1
 
         # use distorted (not normalized) keypoints
-        keypoints = keypoints.astype(np.int64)
         point_colors = extract_colors(map1, point_dict, keypoints, image)
         self.point_colors.update(point_colors)
         self.point_dict.update(point_dict)
