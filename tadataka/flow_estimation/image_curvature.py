@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from skimage import data
 from skimage.color import rgb2gray
 
@@ -34,3 +34,10 @@ def compute_image_curvature(image):
     gyy = grad_y(gy)
 
     return compute_curvature(gx, gy, gxx, gxy, gyx, gyy)
+
+
+def extract_curvature_extrema(image, percentile=95):
+    extrema = compute_image_curvature(image)
+    threshold = np.percentile(extrema, percentile)
+    ys, xs = np.where(extrema > threshold)
+    return np.vstack((xs, ys)).T
