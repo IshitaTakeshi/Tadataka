@@ -143,7 +143,7 @@ def run_ba(viewpoint_indices, point_indices,
 
     omegas, ts, points = ba.compute(omegas, ts, points,
                                     absolute_error_threshold=1e-9,
-                                    relative_error_threshold=0.20)
+                                    relative_error_threshold=0.10)
 
     poses = [Pose(omega, t) for omega, t in zip(omegas, ts)]
     return poses, points

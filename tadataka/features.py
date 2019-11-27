@@ -23,7 +23,7 @@ keypoint_detector = cv2.FastFeatureDetector_create(threshold=25)
 
 brief = BRIEF(
     descriptor_size=512,
-    patch_size=64,
+    patch_size=81,
     mode="uniform",
     sigma=0.01
 )
