@@ -61,7 +61,9 @@ def extract_orb(image):
 
 
 def extract_features(image):
-    return extract_brief(rgb2gray(image))
+    image = rgb2gray(image)
+    image = exposure.adjust_log(image, gain=1.0)
+    return extract_brief(image)
 
 
 empty_match = np.empty((0, 2), dtype=np.int64)
