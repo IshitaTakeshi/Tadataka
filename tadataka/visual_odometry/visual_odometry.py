@@ -17,6 +17,7 @@ from tadataka.triangulation import triangulate
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.so3 import rodrigues
 from tadataka.local_ba import try_run_ba
+from tadataka.visual_odometry.base import BaseVO
 
 
 def get_new_viewpoint(viewpoints):
@@ -74,16 +75,17 @@ def filter_matches(matches, viewpoints, min_matches):
     return zip(*Z)
 
 
-class VisualOdometry(object):
+class FeatureBasedVO(BaseVO):
     def __init__(self, camera_parameters, distortion_model,
                  matcher=Matcher(enable_ransac=True,
                                  enable_homography_filter=True),
-                 max_active_keyframes=8, min_matches=60):
+                 window_size=8, min_matches=60):
+
+        super().__init__(camera_parameters, distortion_model)
+        self.__window_size = window_size
 
         self.matcher = matcher
         self.min_matches = min_matches
-        self.max_active_keyframes = max_active_keyframes
-        self.camera_model = CameraModel(camera_parameters, distortion_model)
 
         self.active_viewpoints = np.empty((0, 0), np.int64)
         # manages point -> keypoint correspondences
@@ -122,12 +124,9 @@ class VisualOdometry(object):
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
-        point_array, matches01 = triangulate(
-            pose0, pose1, kd0.keypoints, kd1.keypoints, matches01
-        )
-        point_dict, map0, map1 = subscribe(
-            point_array, matches01
-        )
+        point_array, matches01 = triangulate(pose0, pose1,
+                                             kd0.keypoints, kd1.keypoints, matches01)
+        point_dict, map0, map1 = subscribe(point_array, matches01)
         return pose1, point_dict, map0, map1
 
     def estimate_pose_points(self, kd1):
@@ -153,7 +152,7 @@ class VisualOdometry(object):
         return pose1, point_dict, map0s, map1
 
     def add(self, image, min_keypoints=8):
-        keypoints, descriptors = extract_features(rgb2gray(image))
+        keypoints, descriptors = extract_features(image)
 
         if len(keypoints) <= min_keypoints:
             print_error("Keypoints not sufficient")
@@ -294,7 +293,7 @@ class VisualOdometry(object):
         return point_dict, map0s, map1
 
     def try_remove(self):
-        if self.n_active_keyframes <= self.max_active_keyframes:
+        if self.n_active_keyframes <= self.__window_size:
             return False
 
         self.active_viewpoints = np.delete(self.active_viewpoints, 0)
