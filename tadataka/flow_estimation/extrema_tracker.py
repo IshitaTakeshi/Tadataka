@@ -78,29 +78,29 @@ def isint(array):
 
 
 # FIXME rename to 'LocalExtremaCorrection'
-# FIXME pass 'initial_coordinates' to ExtremaTracker.optimize,
-# not to ExtremaTracker.__init__
 class ExtremaTracker(object):
     """ Optimize equation (5) """
-    def __init__(self, image_curvature, initial_coordinates, lambda_):
-        assert(isint(initial_coordinates))
-
+    def __init__(self, image_curvature, lambda_):
         self.curvature = image_curvature
         self.image_shape = self.curvature.shape[0:2]
 
-        assert(is_in_image_range(initial_coordinates, self.image_shape).all())
-
-        self.initial_coordinates = initial_coordinates
         self.lambda_ = lambda_
 
-    def optimize(self):
+    def optimize(self, initial_coordinates):
         """
         Return corrected point coordinates
         """
-        coordinates = np.empty(self.initial_coordinates.shape, dtype=np.int64)
-        for i in range(self.initial_coordinates.shape[0]):
-            p0 = self.initial_coordinates[i]
-            energy = Energy(self.curvature, Regularizer(p0), self.lambda_)
+
+        print("initial_coordinates.shape", initial_coordinates.shape)
+
+        initial_coordinates = initial_coordinates.astype(np.int64)
+        assert(is_in_image_range(initial_coordinates, self.image_shape).all())
+
+        coordinates = np.empty(initial_coordinates.shape, dtype=np.int64)
+        for i in range(initial_coordinates.shape[0]):
+            p0 = initial_coordinates[i]
+            reguralizer = Regularizer(p0)
+            energy = Energy(self.curvature, reguralizer, self.lambda_)
             maximizer = Maximizer(energy, self.image_shape)
             coordinates[i] = maximizer.search(p0)
         return coordinates
