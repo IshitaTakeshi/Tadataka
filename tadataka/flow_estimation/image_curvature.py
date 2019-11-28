@@ -37,7 +37,7 @@ def compute_image_curvature(image):
 
 
 def extract_curvature_extrema(image, percentile=95):
-    extrema = compute_image_curvature(rgb2gray(image))
-    threshold = np.percentile(extrema, percentile)
-    ys, xs = np.where(extrema > threshold)
+    curvature = compute_image_curvature(rgb2gray(image))
+    threshold = np.percentile(curvature, percentile)
+    ys, xs = np.where(curvature > threshold)
     return np.vstack((xs, ys)).T
