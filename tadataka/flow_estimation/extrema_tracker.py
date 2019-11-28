@@ -3,22 +3,27 @@ from tadataka.optimization.robustifiers import GemanMcClureRobustifier
 from tadataka.utils import is_in_image_range
 
 
+def diff_to_neighbors():
+    # return the coordinate differences from the center, that is
+    #     [[-1, -1], [ 0, -1], [ 1, -1],
+    #      [-1,  0], [ 0,  0], [ 1,  0],
+    #      [-1,  1], [ 0,  1], [ 1,  1]]
+    xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
+    return np.vstack((xs.flatten(), ys.flatten())).T
+
+
+diff_to_neighbors_ = diff_to_neighbors()
+
+
 class Neighbors(object):
     def __init__(self, image_shape):
         self.image_shape = image_shape[0:2]
-
-        # 'diffs' is the coordinate differences from the center, that is
-        #     [[-1, -1], [ 0, -1], [ 1, -1],
-        #      [-1,  0], [ 0,  0], [ 1,  0],
-        #      [-1,  1], [ 0,  1], [ 1,  1]]
-        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-        self.diffs = np.vstack((xs.flatten(), ys.flatten())).T
 
     def get(self, p):
         """
         Return 8 neighbors of a point `p` along with `p` itself
         """
-        neighbors = p + self.diffs
+        neighbors = p + diff_to_neighbors_
         mask = is_in_image_range(neighbors, self.image_shape)
         return neighbors[mask]
 
