@@ -1,5 +1,5 @@
-from autograd import numpy as np
-from tadataka.optimization.robustifiers import GemanMcClureRobustifier
+import numpy as np
+
 from tadataka.utils import is_in_image_range
 
 
@@ -29,19 +29,18 @@ class Neighbors(object):
 
 
 class Regularizer(object):
-    def __init__(self, p0, robustifier=GemanMcClureRobustifier()):
+    def __init__(self, p0):
         self.p0 = p0
-        self.robustifier = robustifier
 
     def regularize(self, P):
-        norms = np.linalg.norm(P - self.p0, axis=1)
-        return 1 - self.robustifier.robustify(norms)
+        return 1 - np.sum(np.power(P - self.p0, 2), axis=1)
+        # norms = np.linalg.norm(P - self.p0, axis=1)
+        # return 1. - np.power(norms, 2)
 
 
 class Energy(object):
     def __init__(self, curvature, regularizer, lambda_):
         assert(np.ndim(curvature) == 2)
-
         self.curvature = curvature
         self.regularizer = regularizer
         self.lambda_ = lambda_
@@ -67,7 +66,7 @@ class Maximizer(object):
         p = np.copy(p0)
         for i in range(self.max_iter):
             p_new = self.search_neighbors(p)
-            if (p_new == p).all():
+            if (p_new == p).all():  # converged
                 return p
             p = p_new
         return p

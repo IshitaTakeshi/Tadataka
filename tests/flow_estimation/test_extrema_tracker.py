@@ -3,9 +3,8 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 from skimage.color import rgb2gray
 from skimage.data import astronaut
 
-from tadataka.optimization.robustifiers import SquaredRobustifier
 from tadataka.flow_estimation.extrema_tracker import (
-        ExtremaTracker, Energy, Neighbors, Regularizer, Maximizer)
+    ExtremaTracker, Energy, Neighbors, Regularizer, Maximizer)
 
 
 def test_neighbors():
@@ -43,7 +42,7 @@ def test_neighbors():
 def test_regularizer():
     p0 = np.array([40, 50])
     neighbors = Neighbors((100, 100)).get(p0)
-    regularizer = Regularizer(p0, robustifier=SquaredRobustifier())
+    regularizer = Regularizer(p0)
 
     squared_norms = np.array([
         2, 1, 2,
@@ -66,7 +65,7 @@ def test_error():
     lambda_ = 2
 
     p0 = np.array([1, 1])
-    regularizer = Regularizer(p0, robustifier=SquaredRobustifier())
+    regularizer = Regularizer(p0)
     energy = Energy(K, regularizer, lambda_)
 
     # compute errors at p0 and its 8 neighbors
@@ -122,8 +121,8 @@ def test_extrema_tracker():
     lambda_ = 0.0
 
     # disable regularization
-    extrema_tracker = ExtremaTracker(curvature, initial_coordinates, lambda_)
-    coordinates = extrema_tracker.optimize()
+    extrema_tracker = ExtremaTracker(curvature, lambda_)
+    coordinates = extrema_tracker.optimize(initial_coordinates)
 
     # the resulting points should have the maxium energies
     # compared to their local neighbors
@@ -134,8 +133,7 @@ def test_extrema_tracker():
         assert((E0 >= E).all())
 
     # apply regularization very strongly
-    extrema_tracker = ExtremaTracker(curvature, initial_coordinates,
-                                     lambda_=1e8)
-    coordinates = extrema_tracker.optimize()
+    extrema_tracker = ExtremaTracker(curvature, lambda_=1e8)
+    coordinates = extrema_tracker.optimize(initial_coordinates)
     # the points should not move from the initial values
     assert_array_equal(coordinates, initial_coordinates)
