@@ -96,7 +96,6 @@ class FeatureBasedVO(BaseVO):
         self.kds = dict()
         self.poses = dict()
         self.images = dict()
-        self.kds_ = dict()
 
     def export_points(self):
         assert(len(self.point_dict) == len(self.point_colors))
