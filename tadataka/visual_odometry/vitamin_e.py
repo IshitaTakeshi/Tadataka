@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 
 from skimage.color import rgb2gray
 
@@ -7,6 +8,7 @@ from tadataka.flow_estimation.image_curvature import (
 )
 from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.flow_estimation.extrema_tracker import ExtremaTracker
+from tadataka.triangulation import Triangulation
 from tadataka.utils import is_in_image_range
 from tadataka.visual_odometry.visual_odometry import FeatureBasedVO
 
@@ -32,50 +34,22 @@ class Tracker(object):
         dense_keypoints1 = keypoint_correction(dense_keypoints1, self.image1)
         return dense_keypoints1
 
-
-class DenseKeypointsGenerator(object):
-    def __init__(self, image, window_size):
-        keypoints = extract_curvature_extrema(image, percentile=99)
-
-        # from matplotlib import pyplot as plt
-        # plt.imshow(image)
-        # plt.scatter(keypoints[:, 0], keypoints[:, 1], s=0.1, c='red')
-        # plt.show()
-
-        self.keypoints = np.empty((window_size, *keypoints.shape))
-        self.keypoints[0] = keypoints
-        self.index = 0
-
-    def reached_max(self):
-        return self.index + 1 >= self.keypoints.shape[0]
-
-    def track(self, tracker):
-        self.keypoints[self.index+1] = tracker(self.keypoints[self.index])
-        self.index += 1
-
-    def export(self):
-        # Check if each feature point exists in the image range
-        # in at least two frames.
-        # If the keypoint is in image range in only one frame,
-        # it cannot be triangulated.
-
-        return self.keypoints
-
 @property
 def viewpoints(self):
     v = self.start_viewpoint
     return np.arange(v, v + self.window_size)
 
 
-def compute_range_mask(keypoints):
-    mask = is_image_range(keypoints.reshape(-1, 2))
+def compute_range_mask(keypoints, image_shape):
+    mask = is_in_image_range(keypoints.reshape(-1, 2), image_shape)
     return mask.reshape(keypoints.shape[0:2])
 
 
 def triangulate(poses, keypoints, keypoint_mask):
-    assert(keypoints.shape == keypoint_mask.shape)
+    assert(keypoints.shape[0:2] == keypoint_mask.shape[0:2])
+    window_size, n_keypoints = keypoints.shape[0:2]
     points = np.empty((n_keypoints, 3))
-
+    depth_mask = np.empty(n_keypoints, np.bool)
     for i in range(n_keypoints):
         viewpoint_indices = np.where(keypoint_mask[:, i])[0]
 
@@ -84,19 +58,19 @@ def triangulate(poses, keypoints, keypoint_mask):
         v1, v2 = np.min(viewpoint_indices), np.max(viewpoint_indices)
 
         t = Triangulation(poses[v1], poses[v2])
-        points[i] = t.triangulate(keypoints[v1, i], keypoints[v2, i])
+        keypoint1, keypoint2 = keypoints[v1, i], keypoints[v2, i]
+        points[i], depth_mask[i] = t.triangulate_(keypoint1, keypoint2)
+    return points, depth_mask
 
-    return points
 
-
-def compute_triangulation_mask(keypoint_mask):
+def compute_point_mask(keypoint_mask):
     # to perform triangulation,
     # we need to observe a 3D point from at least two viewpoints
-    return np.sum(keypoint_mask, axis=1) >= 2
+    return np.sum(keypoint_mask, axis=0) >= 2
 
 
 def compute_viewpoint_mask(keypoint_mask):
-    return np.sum(keypoint_mask, axis=0) >= 1
+    return np.sum(keypoint_mask, axis=1) >= 1
 
 
 def next_generator_id(ids):
@@ -105,62 +79,87 @@ def next_generator_id(ids):
     return max(ids)
 
 
-def track(tracker, keypoint_generators):
-    arg_reached = []
-    for i, generator in enumerate(keypoint_generators):
-        generator.track(tracker)
+class KeypointFlow(object):
+    def __init__(self, size):
+        self.list = [None] * size
+        self.size = size
 
-        if not generator.reached_max():
-            arg_reached.append(i)
-            continue
+    def flow(self, tracker):
+        # shift values
+        # [item0, item1, ..., itemN] -> [None, item0, ..., itemN-1]
+        # return itemN
 
-    return keypoint_generators, arg_reached
+        out = self.list[-1]
+
+        for i in reversed(range(1, self.size)):
+            keypoints = self.list[i-1]
+            if keypoints is None:
+                continue
+            keypoints[i] = tracker(keypoints[i-1])
+            self.list[i] = keypoints
+
+        return out
+
+    def set(self, new_keypoints):
+        # new_keypoints.shape == (n_keypoints, 2)
+        keypoints = np.empty((self.size, new_keypoints.shape[0], 2))
+        keypoints[0] = new_keypoints
+        self.list[0] = keypoints
 
 
 class VitaminE(FeatureBasedVO):
     def __init__(self, camera_parameters, distortion_model, window_size):
         super().__init__(camera_parameters, distortion_model)
-        self.__window_size = window_size
-        self.keypoint_generators = []
+        self.window_size = window_size
+        self.keypoint_flow = KeypointFlow(self.window_size)
+        self.points = np.empty((0, 3), np.float64)
+
+    def get_tracker(self, image1):
+        viewpoint0 = self.active_viewpoints[-2]
+        viewpoint1 = self.active_viewpoints[-1]
+        kd0, kd1 = self.kds[viewpoint0], self.kds[viewpoint1]
+        return Tracker(self.matcher, kd0, kd1, image1)
 
     def add(self, image1):
         super().add(image1)
 
+        keypoints = None
         if len(self.active_viewpoints) >= 2:
-            # track existing
-            viewpoint0 = self.active_viewpoints[-2]
-            viewpoint1 = self.active_viewpoints[-1]
-            kd0, kd1 = self.kds[viewpoint0], self.kds[viewpoint1]
-            tracker = Tracker(self.matcher, kd0, kd1, image1)
-            self.keypoint_generators, indices_to_remove = track(
-                tracker, self.keypoint_generators
-            )
+            tracker = self.get_tracker(image1)
+            keypoints = self.keypoint_flow.flow(tracker)
 
-            for i in sorted(indices_to_remove, reverse=True):
-                del self.keypoint_generators[i]
+        new_keypoints = extract_curvature_extrema(image1)
+        self.keypoint_flow.set(new_keypoints)
 
-        # add new
-        g = DenseKeypointsGenerator(image1, self.__window_size)
-        self.keypoint_generators.append(g)
+        if keypoints is None:
+            return self.active_viewpoints[-1]
+
+        from tadataka.plot.visualizers import plot3d
+        from tadataka.plot.common import axis3d
+        from matplotlib import pyplot as plt
+        fig, ax = plt.subplots()
+        ax.imshow(image1)
+        keypoints_ = keypoints[-1]
+        ax.scatter(keypoints_[:, 0], keypoints_[:, 1], s=0.1, c='red')
+        plt.show()
+
+        viewpoints = self.active_viewpoints[-self.window_size:]
+        poses = [self.poses[v] for v in viewpoints]
+        points = triangulate_(keypoints, poses, image1.shape)
+
+        print("points shape", points.shape)
+        ax = axis3d()
+        plot3d(ax, points)
+        plt.show()
+        self.points = np.vstack((self.points, points))
         return self.active_viewpoints[-1]
 
 
-def triangulate(keypoints, poses):
-    keypoint_mask = compute_range_mask(keypoints)
-    triangulation_mask = compute_triangulation_mask(keypoint_mask)
-    viewpoint_mask = compute_viewpoint_mask(keypoint_mask)
+def triangulate_(keypoints, poses, image_shape):
+    keypoint_mask = compute_range_mask(keypoints, image_shape)
+    point_mask = compute_point_mask(keypoint_mask)
+    keypoints = keypoints[:, point_mask]
+    keypoint_mask = keypoint_mask[:, point_mask]
 
-    keypoints = keypoints[viewpoint_mask, triangulation_mask]
-    keypoint_mask = keypoint_mask[viewpoint_mask, keypoint_mask]
-
-    poses_ = poses[viewpoint_mask]
-
-    points = triangulate(poses_, keypoints, keypoint_mask)
-
-    viewpoint_indices, point_indices = np.where(keypoint_mask)
-
-    poses_, points = try_run_ba(viewpoint_indices, point_indices,
-                                poses_, points, keypoints[keypoint_mask])
-
-    poses[viewpoint_mask] = poses_
-    return poses, points
+    points, depth_mask = triangulate(poses, keypoints, keypoint_mask)
+    return points # [depth_mask]
