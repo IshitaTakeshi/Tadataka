@@ -41,7 +41,7 @@ def regularize(p, p0):
 
 
 @njit
-def compute(curvature, p0, P, lambda_):
+def energy(curvature, p0, P, lambda_):
     N = len(P)
     E = np.empty(N, dtype=np.float64)
     for i in range(N):
@@ -54,7 +54,7 @@ def compute(curvature, p0, P, lambda_):
 @njit
 def search_neighbors(curvature, p0, p, lambda_):
     neighbors = get_neighbors(p, curvature.shape)
-    E = compute(neighbors, p0, neighbors, lambda_)
+    E = energy(curvature, p0, neighbors, lambda_)
     return neighbors[np.argmax(E)]
 
 
@@ -85,13 +85,10 @@ class ExtremaTracker(object):
 
         self.lambda_ = lambda_
 
-    @profile
     def optimize(self, initial_coordinates):
         """
         Return corrected point coordinates
         """
-
-        print("initial_coordinates.shape", initial_coordinates.shape)
 
         coordinates = initial_coordinates.astype(np.int64)
         image_shape = self.curvature.shape
