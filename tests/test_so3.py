@@ -1,10 +1,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_equal
 
-from tadataka.so3 import (is_rotation_matrix, tangent_so3,
+from tadataka.so3 import (is_rotation_matrix, exp_so3, tangent_so3,
                           inv_rodrigues, rodrigues)
-
-from tadataka.so3_codegen import exp_so3
 
 
 def test_is_rotation_matrix():
@@ -132,5 +130,5 @@ def test_rodrigues():
 
     assert_array_almost_equal(rodrigues(V), expected)
 
-    for v, R_true in zip(V, expected):
-        assert_array_almost_equal(exp_so3(v), R_true)
+    for omega, R in zip(V, expected):
+        assert_array_almost_equal(exp_so3(omega), R)

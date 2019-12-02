@@ -1,7 +1,9 @@
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 
-from tadataka.so3_codegen import projection, pose_jacobian, point_jacobian
+from tadataka.so3_codegen import (
+    exp_so3, projection, pose_jacobian, point_jacobian
+)
 
 
 def test_projection():
@@ -36,3 +38,34 @@ def test_projection():
             projection(pose, point),
             expected[i]
         )
+
+
+def test_exp_so3():
+    V = np.array([
+        [0, 0, 0],
+        [np.pi / 2, 0, 0],
+        [0, -np.pi / 2, 0],
+        [0, 0, np.pi],
+        [-np.pi, 0, 0]
+    ], dtype=np.float64)
+
+    expected = np.array([
+        [[1, 0, 0],
+         [0, 1, 0],
+         [0, 0, 1]],
+        [[1, 0, 0],
+         [0, 0, -1],
+         [0, 1, 0]],
+        [[0, 0, -1],
+         [0, 1, 0],
+         [1, 0, 0]],
+        [[-1, 0, 0],
+         [0, -1, 0],
+         [0, 0, 1]],
+        [[1, 0, 0],
+         [0, -1, 0],
+         [0, 0, -1]]
+    ], dtype=np.float64)
+
+    for v, R_true in zip(V, expected):
+        assert_array_almost_equal(exp_so3(v), R_true)
