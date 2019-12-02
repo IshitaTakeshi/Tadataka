@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy.spatial.transform import Rotation
 
 EPSILON = 1e-16
 
@@ -150,4 +150,4 @@ def rodrigues(omegas):
 
 def exp_so3(omega):
     assert(omega.shape == (3,))
-    return rodrigues(np.atleast_2d(omega))[0]
+    return Rotation.from_rotvec(omega).as_dcm()
