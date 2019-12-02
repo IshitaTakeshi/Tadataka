@@ -6,7 +6,7 @@ import os
 from tadataka.dataset.tum_rgbd import TUMDataset
 
 
-dataset_root = Path(__file__).parent
+dataset_root = Path(Path(__file__).parent, "tum_rgbd")
 
 
 def test_tum_dataset():
