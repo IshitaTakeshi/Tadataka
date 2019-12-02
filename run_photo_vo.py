@@ -15,7 +15,7 @@ from tadataka.plot import plot_map
 vo = FeatureBasedVO(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
     FOV(0.01),
-    max_active_keyframes=6
+    window_size=6
 )
 
 
@@ -70,7 +70,7 @@ def plot_keypoints(image, keypoints):
     plt.show()
 
 
-filenames = sorted(Path("./datasets/saba/").glob("*.jpg"))
+filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
 filenames = [filenames[0]] + filenames[4:]
 
 
