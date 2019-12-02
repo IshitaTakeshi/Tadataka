@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from numpy.testing import assert_equal
-import os
 
 from tadataka.dataset.tum_rgbd import TUMDataset
 
