@@ -4,7 +4,7 @@ from skimage.io import imread
 from pathlib import Path
 from matplotlib import pyplot as plt
 from tadataka.coordinates import xy_to_yx
-from tadataka.visual_odometry import VisualOdometry
+from tadataka.visual_odometry import FeatureBasedVO
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
 from tadataka.coordinates import camera_to_world
@@ -12,7 +12,7 @@ from tadataka.plot import plot_map
 
 
 # saba
-vo = VisualOdometry(
+vo = FeatureBasedVO(
     CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
     FOV(0.01),
     max_active_keyframes=6

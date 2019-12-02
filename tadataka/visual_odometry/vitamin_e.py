@@ -10,7 +10,7 @@ from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.flow_estimation.extrema_tracker import ExtremaTracker
 from tadataka.triangulation import Triangulation
 from tadataka.utils import is_in_image_range
-from tadataka.visual_odometry.visual_odometry import FeatureBasedVO
+from tadataka.visual_odometry.feature_based import FeatureBasedVO
 
 
 def keypoint_correction(keypoints, image):
