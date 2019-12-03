@@ -32,12 +32,13 @@ from sklearn.metrics import pairwise_distances
 # from scipy.spatial.distance import cdist
 
 
-def match_binary_descriptors(descriptors1, descriptors2,
-                             cross_check=True, max_ratio=1.0):
+def match_descriptors(descriptors1, descriptors2,
+                      cross_check=True, max_ratio=1.0):
     if descriptors1.shape[1] != descriptors2.shape[1]:
         raise ValueError("Descriptor length must equal.")
 
-    # this line gets slower if metric='hamming' is specified
+    # this line gets slower if metric='hamming' is specified even in the case
+    # features are in binary
     distances = pairwise_distances(descriptors1, descriptors2, n_jobs=-1)
 
     indices1 = np.arange(descriptors1.shape[0])
