@@ -19,9 +19,6 @@ def test_new_tsukuba():
     assert_equal(frame.depth_map_left.shape, image_shape[0:2])
     assert_equal(frame.depth_map_right.shape, image_shape[0:2])
 
-    assert(dataset[1].timestamp_rgb == 1.0 / 30)
-    assert(dataset[2].timestamp_rgb == 2.0 / 30)
-
     frames = dataset[1:4:2]
 
     assert_equal(frames[0].image_left.shape, image_shape)

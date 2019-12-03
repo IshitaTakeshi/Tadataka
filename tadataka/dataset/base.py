@@ -9,5 +9,8 @@ class BaseDataset(object):
         step = 1 if index.step is None else index.step
         return [self.load(i) for i in range(start, stop, step)]
 
+    def load(self, index):
+        raise NotImplementedError()
+
     def __len__(self):
-        return len(self.timestamps_rgb)
+        return len(self.positions)

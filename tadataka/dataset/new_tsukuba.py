@@ -45,20 +45,11 @@ def discard_alpha(image):
 FPS = 30.
 
 
-def load_timestamps(n_frames):
-    return np.arange(0, n_frames) / FPS
-
-
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
     def __init__(self, dataset_root):
         pose_path = Path(dataset_root, "camera_track.txt")
         self.rotvecs, self.positions = load_poses(pose_path)
-
-        N = len(self.rotvecs)
-
-        timestamps = load_timestamps(N)
-        self.timestamps_rgb = self.timestamps_depth = timestamps
 
         depth_dir = Path(dataset_root, "depth_maps")
         image_dir = Path(dataset_root, "images")
@@ -68,8 +59,8 @@ class NewTsukubaDataset(BaseDataset):
         self.image_left_paths = sorted(Path(image_dir, "left").glob("*.png"))
         self.image_right_paths = sorted(Path(image_dir, "right").glob("*.png"))
 
-        assert(len(self.depth_left_paths) == len(self.depth_right_paths) == N)
-        assert(len(self.image_left_paths) == len(self.image_right_paths) == N)
+        assert((len(self.depth_left_paths) == len(self.depth_right_paths) ==
+                len(self.image_left_paths) == len(self.image_right_paths)))
 
     def load(self, index):
         image_left = imread(self.image_left_paths[index])
@@ -82,7 +73,6 @@ class NewTsukubaDataset(BaseDataset):
         depth_right = load_depth(self.depth_right_paths[index])
 
         return StereoFrame(
-            self.timestamps_rgb[index], self.timestamps_depth[index],
             image_left, image_right,
             depth_left, depth_right,
             self.rotvecs[index], self.positions[index]

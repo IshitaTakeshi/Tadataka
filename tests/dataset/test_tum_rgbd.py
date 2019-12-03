@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from numpy.testing import assert_equal
+import numpy as np
+from numpy.testing import assert_array_almost_equal, assert_equal
+from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.tum_rgbd import TUMDataset
 
@@ -9,29 +11,28 @@ dataset_root = Path(Path(__file__).parent, "tum_rgbd")
 
 
 def test_tum_dataset():
-    dataset = TUMDataset(dataset_root)
+    # 3rd frame should not be loaded because
+    # the depth timestamp cannot match the corresponding pose timestamp
 
-    assert_equal(len(dataset), 5)
+    valid_indices = [0, 1, 2, 4, 5, 6]
+    dataset = TUMDataset(dataset_root)
+    image_shape = (30, 40)
+
+    # test index access
+    assert_equal(len(dataset), len(valid_indices))
+    assert_equal(len(dataset[1:4:2]), 2)
 
     frame = dataset[0]
-    assert_equal(frame.timestamp_rgb, 0.1)
-    assert_equal(frame.timestamp_depth, 0.2)
-    assert_equal(frame.image.shape[0:2],
-                 frame.depth_map.shape[0:2])
+    assert_equal(frame.image.shape[0:2], image_shape)
+    assert_equal(frame.depth_map.shape[0:2], image_shape)
     assert_equal(frame.image.shape[2], 3)
 
-    frames = dataset[1:4:2]
+    angles = np.repeat(np.arange(0., 0.7, 0.1), 3).reshape(7, 3)
+    expected_rotvecs = Rotation.from_euler('xyz', angles).as_rotvec()
+    expected_rotvecs = expected_rotvecs[valid_indices]
+    expected_positions = np.arange(0., 0.21, 0.01).reshape(7, 3)
+    expected_positions = expected_positions[valid_indices]
 
-    assert_equal(frames[0].timestamp_rgb, 1.1)
-    assert_equal(frames[0].timestamp_depth, 1.2)
-    assert_equal(frames[0].image.shape[0:2],
-                 frames[0].depth_map.shape[0:2])
-    assert_equal(frames[0].image.shape[2], 3)
-
-    assert_equal(frames[1].timestamp_rgb, 3.1)
-    assert_equal(frames[1].timestamp_depth, 3.2)
-    assert_equal(frames[1].image.shape[0:2],
-                 frames[1].depth_map.shape[0:2])
-    assert_equal(frames[1].image.shape[2], 3)
-
-    assert_equal(len(frames), 2)
+    for i, frame in enumerate(dataset):
+        assert_array_almost_equal(frame.rotvec, expected_rotvecs[i])
+        assert_array_almost_equal(frame.position, expected_positions[i])
