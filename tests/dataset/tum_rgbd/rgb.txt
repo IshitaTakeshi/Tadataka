@@ -1,0 +1,7 @@
+100.004 rgb/0.png
+100.203 rgb/1.png
+100.401 rgb/2.png
+100.595 rgb/3.png
+100.793 rgb/4.png
+101.002 rgb/5.png
+101.194 rgb/6.png
