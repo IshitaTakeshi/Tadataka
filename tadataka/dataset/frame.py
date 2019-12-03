@@ -7,8 +7,6 @@ from collections import namedtuple
 MonoFrame = namedtuple(
     "MonoFrame",
     [
-        "timestamp_rgb",
-        "timestamp_depth",
         "image",
         "depth_map",
         "rotvec",
@@ -20,8 +18,6 @@ MonoFrame = namedtuple(
 StereoFrame = namedtuple(
     "StereoFrame",
     [
-        "timestamp_rgb",
-        "timestamp_depth",
         "image_left",
         "image_right",
         "depth_map_left",
