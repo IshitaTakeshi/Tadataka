@@ -38,8 +38,8 @@ def load_poses(path):
     timestamps = array[:, 0]
     positions = array[:, 1:4]
     quaternions = array[:, 4:8]
-    rotvecs = Rotation.from_quat(quaternions).as_rotvec()
-    return timestamps, rotvecs, positions
+    rotations = Rotation.from_quat(quaternions)
+    return timestamps, rotations, positions
 
 
 def load_ground_truth_poses(dataset_root):
@@ -62,7 +62,9 @@ class TUMDataset(BaseDataset):
     def __init__(self, dataset_root, depth_factor=5000.):
         self.depth_factor = depth_factor
 
-        timestamps_gt, rotvecs, positions = load_ground_truth_poses(dataset_root)
+        timestamps_gt, rotations, positions =\
+            load_ground_truth_poses(dataset_root)
+
         timestamps_rgb, paths_rgb = load_rgb_image_paths(dataset_root)
         timestamps_depth, paths_depth = load_depth_image_paths(dataset_root)
 
@@ -71,7 +73,9 @@ class TUMDataset(BaseDataset):
         indices_rgb = matches[:, 1]
         indices_depth = matches[:, 2]
 
-        self.rotvecs, self.positions = rotvecs[indices_gt], positions[indices_gt]
+        self.rotations = rotations[indices_gt]
+        self.positions = positions[indices_gt]
+
         self.paths_rgb = value_list(paths_rgb, indices_rgb)
         self.paths_depth = value_list(paths_depth, indices_depth)
 
@@ -81,4 +85,4 @@ class TUMDataset(BaseDataset):
         D = D / self.depth_factor
 
         # TODO load ground truth
-        return MonoFrame(I, D, self.rotvecs[index], self.positions[index])
+        return MonoFrame(I, D, self.positions[index], self.rotations[index])

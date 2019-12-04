@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from scipy.spatial.transform import Rotation
 from skimage.io import imread
 import numpy as np
 
@@ -21,35 +22,30 @@ def load_depth(path):
     return depth_map.reshape(height, width)
 
 
-def text_to_pose(line):
-    pose = np.fromstring(line, sep=' ')
-    position, rotvec = pose[0:3], pose[3:6]
-    return rotvec, position
-
-
 def load_poses(pose_path):
-    rotvecs = []
-    positions = []
-    with open(pose_path) as f:
-        for i, line in enumerate(f):
-            rotvec, position = text_to_pose(line)
-            rotvecs.append(rotvec)
-            positions.append(position)
-    return rotvecs, positions
+    poses = np.loadtxt(pose_path, delimiter=',')
+    positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
+    rotations = Rotation.from_euler('xyz', euler_angles)
+    return rotations, positions
 
 
 def discard_alpha(image):
     return image[:, :, 0:3]
 
 
-FPS = 30.
+def calc_baseline_offset(rotation, baseline_length):
+    local_offset = np.array([baseline_length, 0, 0])
+    R = rotation.as_dcm()
+    return np.dot(R, local_offset)
 
 
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
     def __init__(self, dataset_root):
         pose_path = Path(dataset_root, "camera_track.txt")
-        self.rotvecs, self.positions = load_poses(pose_path)
+
+        self.baseline_length = 10.0
+        self.rotations, self.positions = load_poses(pose_path)
 
         depth_dir = Path(dataset_root, "depth_maps")
         image_dir = Path(dataset_root, "images")
@@ -71,9 +67,15 @@ class NewTsukubaDataset(BaseDataset):
 
         depth_left = load_depth(self.depth_left_paths[index])
         depth_right = load_depth(self.depth_right_paths[index])
+        position_center = self.positions[index]
+
+        rotation = self.rotations[index]
+        offset = calc_baseline_offset(rotation, self.baseline_length)
 
         return StereoFrame(
             image_left, image_right,
             depth_left, depth_right,
-            self.rotvecs[index], self.positions[index]
+            position_center - offset / 2.0,
+            position_center + offset / 2.0,
+            rotation
         )
