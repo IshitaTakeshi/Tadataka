@@ -9,8 +9,8 @@ MonoFrame = namedtuple(
     [
         "image",
         "depth_map",
-        "rotvec",
-        "position"
+        "position",
+        "rotation"
     ]
 )
 
@@ -22,7 +22,8 @@ StereoFrame = namedtuple(
         "image_right",
         "depth_map_left",
         "depth_map_right",
-        "rotvec",
-        "position"
+        "position_left",
+        "position_right",
+        "rotation"
     ]
 )
