@@ -7,7 +7,7 @@ from tadataka.coordinates import xy_to_yx
 from tadataka.visual_odometry import FeatureBasedVO
 from tadataka.camera import CameraParameters
 from tadataka.camera_distortion import FOV
-from tadataka.coordinates import camera_to_world
+from tadataka.coordinates import local_to_world
 from tadataka.plot import plot_map
 
 

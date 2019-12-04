@@ -3,7 +3,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from tadataka.rigid_transform import (inv_transform_all, transform_all,
                                            transform_each)
-from tadataka.coordinates import world_to_camera, camera_to_world
+from tadataka.coordinates import world_to_local, local_to_world
 
 
 def test_transform_each():
@@ -142,7 +142,7 @@ def test_convert_coordinates():
         [0, 0, -1]  # move 1.0 to the back
     ])
 
-    rotations, translations = world_to_camera(camera_rotations, camera_locations)
+    rotations, translations = world_to_local(camera_rotations, camera_locations)
 
     expected = np.array([
         [0, 0, -1],
@@ -161,7 +161,7 @@ def test_convert_coordinates():
     assert_array_equal(rotations, expected)
 
     camera_rotations_, camera_locations_ =\
-        camera_to_world(rotations, translations)
+        local_to_world(rotations, translations)
 
     assert_array_almost_equal(camera_rotations_, camera_rotations)
     assert_array_almost_equal(camera_locations_, camera_locations)

@@ -19,5 +19,5 @@ def plot_map(poses, points, colors=None):
     omegas, translations = zip(*[[p.omega, p.t] for p in poses])
     omegas = np.array(omegas)
     translations = np.array(translations)
-    omegas, translations = camera_to_world(omegas, translations)
+    omegas, translations = local_to_world(omegas, translations)
     plot_map_(omegas, translations, points, colors)

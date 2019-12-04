@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from tadataka.rigid_transform import inv_transform_all
 from tadataka.so3 import rodrigues
-from tadataka.rigid.coordinates import camera_to_world
+from tadataka.rigid.coordinates import local_to_world
 from tadataka.plot.visualizers import object_color
 from tadataka.plot.cameras import cameras_poly3d
 
