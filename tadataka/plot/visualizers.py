@@ -5,6 +5,8 @@ from matplotlib.font_manager import FontProperties
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from tadataka.plot.common import axis3d
+
 
 def object_color(X):
     color = np.mean(np.abs(X), axis=1)
@@ -78,7 +80,13 @@ def plot2d(P: np.ndarray, do_annotate=False, color=None):
     return ax
 
 
-def plot3d(ax, P: np.ndarray, color=None, do_annotate=False, elev=45, azim=0):
+def plot3d(P, *args, **kwargs):
+    ax = axis3d()
+    plot3d_(ax, P)
+    plt.show()
+
+
+def plot3d_(ax, P: np.ndarray, color=None, do_annotate=False, elev=45, azim=0):
     """
     Plot 3D points
 
