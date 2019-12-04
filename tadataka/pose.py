@@ -1,6 +1,7 @@
 import itertools
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 # TODO make this independent from cv2
 import cv2
@@ -13,22 +14,31 @@ from tadataka._triangulation import triangulation_
 from tadataka.depth import depth_condition, warn_points_behind_cameras
 
 
-class Pose(object):
-    def __init__(self, R_or_omega, t):
-        if np.ndim(R_or_omega) == 1:
-            self.omega = R_or_omega
-        elif np.ndim(R_or_omega) == 2:
-            self.omega = log_so3(R_or_omega)
+def convert_coordinates(rotation, t, f):
+    rotvec = rotation.as_rotvec().reshape(1, -1)
+    t = t.reshape(1, -1)
+    rotvec, t = f(rotvec, t)
+    return Pose(Rotation.from_rotvec(rotvec[0]), t[0])
 
-        self.t = t
+
+class Pose(object):
+    def __init__(self, rotation, translation):
+        self.rotation = rotation  # SciPy's Rotation object
+        self.t = translation
 
     @property
     def R(self):
-        return exp_so3(self.omega)
+        return self.rotation.as_dcm()
 
     def __str__(self):
         with np.printoptions(precision=3, suppress=True):
             return "omega = " + str(self.omega)  + "   t = " + str(self.t)
+
+    def world_to_local(self):
+        return convert_coordinates(self.rotation, self.t, world_to_local)
+
+    def local_to_world(self):
+        return convert_coordinates(self.rotation, self.t, local_to_world)
 
     @staticmethod
     def identity():
