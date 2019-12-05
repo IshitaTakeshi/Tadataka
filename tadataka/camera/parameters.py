@@ -19,3 +19,11 @@ class CameraParameters(object):
             [0., fy, oy],
             [0., 0., 1.]
         ])
+
+    @property
+    def params(self):
+        return list(self.focal_length) + list(self.offset)
+
+    @staticmethod
+    def from_params(params):
+        return CameraParameters(focal_length=params[0:2], offset=params[2:4])

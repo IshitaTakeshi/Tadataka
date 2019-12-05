@@ -60,5 +60,11 @@ class FOV(object):
         factors = undistort_factors(distorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * distorted_keypoints
 
-    def __str__(self):
-        return str(self.omega)
+    @staticmethod
+    def from_params(params):
+        assert(len(params) == 1)
+        return FOV(omega=params[0])
+
+    @property
+    def params(self):
+        return [self.omega]
