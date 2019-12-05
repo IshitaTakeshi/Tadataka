@@ -25,6 +25,8 @@ def compute_curvature(fx, fy, fxx, fxy, fyx, fyy):
 
 
 def compute_image_curvature(image):
+    assert(np.ndim(image) == 2)
+
     gx = grad_x(image)
     gy = grad_y(image)
 
