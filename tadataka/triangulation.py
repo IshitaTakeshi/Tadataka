@@ -44,3 +44,10 @@ class Triangulation(object):
             points.append(point)
             depth_mask.append(depth_is_positive)
         return np.array(points), np.array(depth_mask)
+
+
+def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
+    t = Triangulation(pose0, pose1, keypoints0, keypoints1)
+    point_array, depth_mask = t.triangulate(matches01)
+    # preserve points that have positive depths
+    return point_array[depth_mask], matches01[depth_mask]

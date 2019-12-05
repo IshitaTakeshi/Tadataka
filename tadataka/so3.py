@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 
 
 EPSILON = 1e-16

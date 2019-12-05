@@ -3,6 +3,9 @@ from sympy import Matrix
 from sympy.utilities.autowrap import autowrap
 
 
+autowrap_backend = "cython"
+
+
 so3_base0 = Matrix([
     [0, 0, 0],
     [0, 0, -1],
@@ -58,12 +61,12 @@ pose = Matrix([*omega, *t])
 point = Matrix([[x, y, z]])
 
 x_symbols = projection_symbols(pose, point)
-projection_ = autowrap(x_symbols, backend="cython")
+projection_ = autowrap(x_symbols, backend=autowrap_backend)
 
-pose_jacobian_ = autowrap(x_symbols.jacobian(pose), backend="cython")
-point_jacobian_ = autowrap(x_symbols.jacobian(point), backend="cython")
+pose_jacobian_ = autowrap(x_symbols.jacobian(pose), backend=autowrap_backend)
+point_jacobian_ = autowrap(x_symbols.jacobian(point), backend=autowrap_backend)
 
-exp_so3_ = autowrap(exp_so3_symbols(omega), backend="cython")
+exp_so3_ = autowrap(exp_so3_symbols(omega), backend=autowrap_backend)
 
 
 def exp_so3(omega):

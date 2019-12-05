@@ -12,6 +12,7 @@ setup(
     install_requires=[
         'autograd',
         'bidict',
+        'Cython',
         # TODO make independent from opencv
         'matplotlib',
         'numpy',

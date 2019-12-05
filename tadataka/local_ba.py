@@ -1,7 +1,6 @@
 import warnings
 
-from autograd import numpy as np
-from autograd import jacobian
+import numpy as np
 
 from sba import SBA, can_run_ba
 
