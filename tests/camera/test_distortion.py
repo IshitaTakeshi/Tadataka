@@ -1,7 +1,11 @@
 from numpy.testing import assert_array_almost_equal
 import numpy as np
-from tadataka.camera import CameraParameters, Normalizer
-from tadataka.camera_distortion import FOV, distort_factors, undistort_factors
+from scipy.spatial.transform import Rotation
+
+from tadataka.camera.distortion import FOV, distort_factors, undistort_factors
+from tadataka.camera.model import CameraModel
+from tadataka.camera.normalizer import Normalizer
+from tadataka.camera.parameters import CameraParameters
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.pose import solve_pnp
@@ -35,17 +39,17 @@ def test_normalizer():
         )
 
     def case2():
-        omega_true = np.array([-1.0, 0.2, 3.1])
+        rotation_true = Rotation.from_rotvec(np.array([-1.0, 0.2, 3.1]))
         t_true = np.array([-0.8, 1.0, 8.3])
 
-        P = transform(exp_so3(omega_true), t_true, points)
+        P = transform(rotation_true.as_dcm(), t_true, points)
         keypoints_true = projection.compute(P)
 
         # poses should be able to be estimated without a camera matrix
         keypoints_ = normalizer.normalize(keypoints_true)
         pose = solve_pnp(points, keypoints_)
 
-        P = transform(exp_so3(pose.omega), pose.t, points)
+        P = transform(pose.R, pose.t, points)
         keypoints_pred = projection.compute(P)
 
         assert_array_almost_equal(t_true, pose.t)
