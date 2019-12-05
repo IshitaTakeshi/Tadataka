@@ -2,6 +2,7 @@ import pytest
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
+from scipy.spatial.transform import Rotation
 
 from tadataka.so3 import rodrigues, exp_so3
 
@@ -50,7 +51,7 @@ def test_solve_pnp():
 
         pose = solve_pnp(points, keypoints_true)
 
-        P = transform(exp_so3(pose.omega), pose.t, points)
+        P = transform(pose.R, pose.t, points)
         keypoints_pred = projection.compute(P)
 
         # omega_true and omega_pred can be different but
@@ -73,40 +74,30 @@ def test_solve_pnp():
 
 
 def test_eq():
-    omega0 = np.zeros(3)
-    omega1 = np.arange(3)
+    rotaiton0 = Rotation.from_dcm(random_rotation_matrix(3))
+    rotaiton1 = Rotation.from_dcm(random_rotation_matrix(3))
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
-    assert(Pose(omega0, t0) == Pose(omega0, t0))
-    assert(Pose(omega1, t1) == Pose(omega1, t1))
-    assert(Pose(omega0, t0) != Pose(omega0, t1))
-    assert(Pose(omega0, t0) != Pose(omega1, t0))
-    assert(Pose(omega0, t0) != Pose(omega1, t1))
-
-    R0 = random_rotation_matrix(3)
-    R1 = random_rotation_matrix(3)
-    t0 = np.zeros(3)
-    t1 = np.arange(3)
-
-    assert(Pose(R0, t0) == Pose(R0, t0))
-    assert(Pose(R1, t1) == Pose(R1, t1))
-    assert(Pose(R0, t0) != Pose(R0, t1))
-    assert(Pose(R0, t0) != Pose(R1, t0))
-    assert(Pose(R0, t0) != Pose(R1, t1))
+    assert(Pose(rotaiton0, t0) == Pose(rotaiton0, t0))
+    assert(Pose(rotaiton1, t1) == Pose(rotaiton1, t1))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton0, t1))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t0))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t1))
 
 
 def test_identity():
     pose = Pose.identity()
-    assert_array_equal(pose.omega, np.zeros(3))
+    assert_array_equal(pose.rotation.as_rotvec(), np.zeros(3))
     assert_array_equal(pose.t, np.zeros(3))
 
 
 def test_R():
-    pose = Pose(np.zeros(3), np.zeros(3))
+    pose = Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
     assert_array_almost_equal(pose.R, np.identity(3))
 
-    pose = Pose(np.array([np.pi, 0, 0]), np.zeros(3))
+    rotvec, t = np.array([np.pi, 0, 0]), np.zeros(3)
+    pose = Pose(Rotation.from_rotvec(rotvec), t)
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
 
 
