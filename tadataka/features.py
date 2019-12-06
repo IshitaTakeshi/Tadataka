@@ -4,8 +4,7 @@ import numpy as np
 import cv2
 
 from skimage import img_as_ubyte
-from skimage.feature import (match_descriptors, corner_peaks, corner_harris,
-                             BRIEF, ORB)
+from skimage.feature import corner_peaks, corner_harris, BRIEF, ORB
 from skimage.color import rgb2gray
 from skimage import transform as tf
 from skimage.measure import ransac
@@ -13,7 +12,7 @@ from skimage import exposure
 
 from tadataka.coordinates import yx_to_xy, xy_to_yx
 from tadataka.cost import symmetric_transfer_filter
-from tadataka.match import match_binary_descriptors
+from tadataka.match import match_descriptors
 
 
 Features = namedtuple("Features", ["keypoints", "descriptors"])
@@ -70,8 +69,7 @@ empty_match = np.empty((0, 2), dtype=np.int64)
 
 
 def match(descriptors0, descriptors1):
-    return match_binary_descriptors(descriptors0, descriptors1,
-                                    cross_check=True, max_ratio=0.8)
+    return match_descriptors(descriptors0, descriptors1, cross_check=True, max_ratio=0.8)
 
 
 def ransac_affine(keypoints1, keypoints2):

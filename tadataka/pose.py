@@ -1,10 +1,12 @@
 import itertools
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 # TODO make this independent from cv2
 import cv2
 
+from tadataka.coordinates import local_to_world, world_to_local
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
@@ -12,29 +14,47 @@ from tadataka._triangulation import triangulation_
 from tadataka.depth import depth_condition, warn_points_behind_cameras
 
 
-class Pose(object):
-    def __init__(self, R_or_omega, t):
-        if np.ndim(R_or_omega) == 1:
-            self.omega = R_or_omega
-        elif np.ndim(R_or_omega) == 2:
-            self.omega = log_so3(R_or_omega)
+def convert_coordinates_(rotvec, t, f):
+    rotvec, t = rotvec.reshape(1, -1), t.reshape(1, -1)
+    rotvec, t = f(rotvec, t)
+    return rotvec[0], t[0]
 
-        self.t = t
+
+def convert_coordinates(pose, f):
+    rotation, t = pose.rotation, pose.t
+    rotvec = rotation.as_rotvec()
+    rotvec, t = convert_coordinates_(rotvec, t, f)
+    return Pose(Rotation.from_rotvec(rotvec), t)
+
+
+class Pose(object):
+    def __init__(self, rotation, translation):
+        self.rotation = rotation  # SciPy's Rotation object
+        self.t = translation
 
     @property
     def R(self):
-        return exp_so3(self.omega)
+        return self.rotation.as_dcm()
 
     def __str__(self):
+        rotvec = self.rotation.as_rotvec()
         with np.printoptions(precision=3, suppress=True):
-            return "omega = " + str(self.omega)  + "   t = " + str(self.t)
+            return "rotvec = " + str(rotvec)  + "   t = " + str(self.t)
+
+    def world_to_local(self):
+        return convert_coordinates(self, world_to_local)
+
+    def local_to_world(self):
+        return convert_coordinates(self, local_to_world)
 
     @staticmethod
     def identity():
-        return Pose(np.zeros(3), np.zeros(3))
+        return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
     def __eq__(self, other):
-        return (np.isclose(self.omega, other.omega).all() and
+        self_rotvec = self.rotation.as_rotvec()
+        other_rotvec = other.rotation.as_rotvec()
+        return (np.isclose(self_rotvec, other_rotvec).all() and
                 np.isclose(self.t, other.t).all())
 
 
@@ -55,9 +75,7 @@ def solve_pnp(points, keypoints):
     if keypoints.shape[0] < min_correspondences:
         raise NotEnoughInliersException("No sufficient correspondences")
 
-    print("keypoints.shape", keypoints.shape)
     t = calc_reprojection_threshold(keypoints, k=3.0)
-    print("reprojectionError", t)
     retval, omega, t, inliers = cv2.solvePnPRansac(
         points.astype(np.float64),
         keypoints.astype(np.float64),
@@ -65,14 +83,11 @@ def solve_pnp(points, keypoints):
         reprojectionError=t,
         flags=cv2.SOLVEPNP_EPNP
     )
-    print("retval: {}".format(retval))
-    print("inlier ratio")
-    print(len(inliers.flatten()) / points.shape[0])
 
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")
 
-    return Pose(omega.flatten(), t.flatten())
+    return Pose(Rotation.from_rotvec(omega.flatten()), t.flatten())
 
 
 def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):
@@ -138,4 +153,4 @@ def estimate_pose_change(keypoints0, keypoints1, matches01):
         keypoints1[matches01[:, 1]]
     )
 
-    return Pose(R, t)
+    return Pose(Rotation.from_dcm(R), t)

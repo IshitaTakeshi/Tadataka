@@ -1,101 +1,97 @@
-from autograd import numpy as np
-from tadataka.optimization.robustifiers import GemanMcClureRobustifier
-from tadataka.utils import is_in_image_range
+import numpy as np
+
+import numba
+from numba import jitclass, njit
 
 
-class Neighbors(object):
-    def __init__(self, image_shape):
-        self.image_shape = image_shape[0:2]
-
-        # 'diffs' is the coordinate differences from the center, that is
-        #     [[-1, -1], [ 0, -1], [ 1, -1],
-        #      [-1,  0], [ 0,  0], [ 1,  0],
-        #      [-1,  1], [ 0,  1], [ 1,  1]]
-        xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-        self.diffs = np.vstack((xs.flatten(), ys.flatten())).T
-
-    def get(self, p):
-        """
-        Return 8 neighbors of a point `p` along with `p` itself
-        """
-        neighbors = p + self.diffs
-        mask = is_in_image_range(neighbors, self.image_shape)
-        return neighbors[mask]
+def diff_to_neighbors():
+    # return the coordinate differences from the center, that is
+    #     [[-1, -1], [ 0, -1], [ 1, -1],
+    #      [-1,  0], [ 0,  0], [ 1,  0],
+    #      [-1,  1], [ 0,  1], [ 1,  1]]
+    xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
+    return np.vstack((xs.flatten(), ys.flatten())).T
 
 
-class Regularizer(object):
-    def __init__(self, p0, robustifier=GemanMcClureRobustifier()):
-        self.p0 = p0
-        self.robustifier = robustifier
-
-    def regularize(self, P):
-        norms = np.linalg.norm(P - self.p0, axis=1)
-        return 1 - self.robustifier.robustify(norms)
+diff_to_neighbors_ = diff_to_neighbors()
 
 
-class Energy(object):
-    def __init__(self, curvature, regularizer, lambda_):
-        assert(np.ndim(curvature) == 2)
-
-        self.curvature = curvature
-        self.regularizer = regularizer
-        self.lambda_ = lambda_
-
-    def compute(self, coordinates):
-        R = self.regularizer.regularize(coordinates)
-        xs, ys = coordinates[:, 0], coordinates[:, 1]
-        return self.curvature[ys, xs] + self.lambda_ * R
+@njit
+def get_neighbors(p, image_shape):
+    """
+    Return 8 neighbors of a point `p` along with `p` itself
+    """
+    neighbors = p + diff_to_neighbors_
+    mask = is_in_image_range(neighbors, image_shape)
+    return neighbors[mask]
 
 
-class Maximizer(object):
-    def __init__(self, energy, image_shape, max_iter=20):
-        self.energy = energy
-        self.neighbors = Neighbors(image_shape)
-        self.max_iter = max_iter
-
-    def search_neighbors(self, p):
-        neighbors = self.neighbors.get(p)
-        argmax = np.argmax(self.energy.compute(neighbors))
-        return neighbors[argmax]
-
-    def search(self, p0):
-        p = np.copy(p0)
-        for i in range(self.max_iter):
-            p_new = self.search_neighbors(p)
-            if (p_new == p).all():
-                return p
-            p = p_new
-        return p
+@njit
+def is_in_image_range(P, image_shape):
+    height, width = image_shape[0:2]
+    xs, ys = P[:, 0], P[:, 1]
+    mask_x = np.logical_and(0 <= xs, xs < width)
+    mask_y = np.logical_and(0 <= ys, ys < height)
+    return np.logical_and(mask_x, mask_y)
 
 
-def isint(array):
-    return array.dtype.kind == 'i'
+@njit
+def regularize(p, p0):
+    return 1. - np.sum(np.power(p - p0, 2))
+
+
+@njit
+def energy(curvature, p0, P, lambda_):
+    N = len(P)
+    E = np.empty(N, dtype=np.float64)
+    for i in range(N):
+        p = P[i]
+        x, y = p
+        E[i] = curvature[y, x] + lambda_ * regularize(p, p0)
+    return E
+
+
+@njit
+def search_neighbors(curvature, p0, p, lambda_):
+    neighbors = get_neighbors(p, curvature.shape)
+    E = energy(curvature, p0, neighbors, lambda_)
+    return neighbors[np.argmax(E)]
+
+
+@njit
+def maximize_(curvature, p0, lambda_, max_iter=20):
+    p = np.copy(p0)
+    for i in range(max_iter):
+        p_new = search_neighbors(curvature, p0, p, lambda_)
+        if (p_new == p).all():
+            # converged
+            return p
+        p = p_new
+    return p
+
+
+@njit
+def maximize(curvature, coordinates, lambda_):
+    for i in range(coordinates.shape[0]):
+        coordinates[i] = maximize_(curvature, coordinates[i], lambda_)
+    return coordinates
 
 
 # FIXME rename to 'LocalExtremaCorrection'
-# FIXME pass 'initial_coordinates' to ExtremaTracker.optimize,
-# not to ExtremaTracker.__init__
 class ExtremaTracker(object):
     """ Optimize equation (5) """
-    def __init__(self, image_curvature, initial_coordinates, lambda_):
-        assert(isint(initial_coordinates))
-
+    def __init__(self, image_curvature, lambda_):
         self.curvature = image_curvature
-        self.image_shape = self.curvature.shape[0:2]
 
-        assert(is_in_image_range(initial_coordinates, self.image_shape).all())
-
-        self.initial_coordinates = initial_coordinates
         self.lambda_ = lambda_
 
-    def optimize(self):
+    def optimize(self, initial_coordinates):
         """
         Return corrected point coordinates
         """
-        coordinates = np.empty(self.initial_coordinates.shape, dtype=np.int64)
-        for i in range(self.initial_coordinates.shape[0]):
-            p0 = self.initial_coordinates[i]
-            energy = Energy(self.curvature, Regularizer(p0), self.lambda_)
-            maximizer = Maximizer(energy, self.image_shape)
-            coordinates[i] = maximizer.search(p0)
-        return coordinates
+
+        coordinates = initial_coordinates.astype(np.int64)
+        image_shape = self.curvature.shape
+        assert(is_in_image_range(coordinates, image_shape).all())
+
+        return maximize(self.curvature, coordinates, self.lambda_)

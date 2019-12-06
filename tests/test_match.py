@@ -33,7 +33,7 @@ from skimage._shared.testing import assert_equal
 from skimage import data
 from skimage import transform as tf
 from skimage.color import rgb2gray
-from tadataka.match import match_binary_descriptors
+from tadataka.match import match_descriptors
 from skimage.feature import BRIEF, corner_peaks, corner_harris
 from skimage._shared import testing
 
@@ -45,7 +45,7 @@ def test_binary_descriptors_unequal_descriptor_sizes_error():
     descs2 = np.array([[True, False, False, True, False],
                        [False, True, True, True, False]])
     with testing.raises(ValueError):
-        match_binary_descriptors(descs1, descs2)
+        match_descriptors(descs1, descs2)
 
 
 def test_binary_descriptors():
@@ -53,7 +53,7 @@ def test_binary_descriptors():
                        [False, True, False, True, True]])
     descs2 = np.array([[True, False, False, True, False],
                        [False, False, True, True, True]])
-    matches = match_binary_descriptors(descs1, descs2)
+    matches = match_descriptors(descs1, descs2)
     assert_equal(matches, [[0, 0], [1, 1]])
 
 
@@ -78,7 +78,7 @@ def test_binary_descriptors_rotation_crosscheck_false():
     extractor.extract(rotated_img, keypoints2)
     descriptors2 = extractor.descriptors
 
-    matches = match_binary_descriptors(descriptors1, descriptors2,
+    matches = match_descriptors(descriptors1, descriptors2,
                                        cross_check=False)
 
     exp_matches1 = np.array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
@@ -114,7 +114,7 @@ def test_binary_descriptors_rotation_crosscheck_true():
     extractor.extract(rotated_img, keypoints2)
     descriptors2 = extractor.descriptors
 
-    matches = match_binary_descriptors(descriptors1, descriptors2,
+    matches = match_descriptors(descriptors1, descriptors2,
                                        cross_check=True)
 
     exp_matches1 = np.array([ 0,  2,  3,  4,  5,  6,  9, 11, 12, 13, 14, 17,

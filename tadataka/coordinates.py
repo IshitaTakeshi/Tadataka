@@ -42,7 +42,7 @@ def convert_coordinates(rotations_or_omegas, translations):
     raise ValueError("ndim of 'rotations_or_omegas' must be 2 or 3")
 
 
-def world_to_camera(camera_rotations_or_omegas, camera_locations):
+def world_to_local(camera_rotations_or_omegas, camera_locations):
     """
     Given rotations and camera locations in the world coordinate system,
     return rotations and translations for rigid transformation
@@ -56,7 +56,7 @@ def world_to_camera(camera_rotations_or_omegas, camera_locations):
     return convert_coordinates(camera_rotations_or_omegas, camera_locations)
 
 
-def camera_to_world(rotations_or_omegas, translations):
+def local_to_world(rotations_or_omegas, translations):
     """
     Given rotations and translations in the camera coordinate system,
     return camera rotations and locations
