@@ -3,8 +3,7 @@ import numpy as np
 from pathlib import Path
 from skimage.io import imread
 
-from tadataka.camera import CameraParameters, CameraModel
-from tadataka.camera_distortion import FOV
+from tadataka.camera.io import load
 from tadataka.features import extract_features, Features, Matcher
 from tadataka.plot import plot_matches, plot_map
 from tadataka.point_keypoint_map import subscribe, get_indices
@@ -12,16 +11,12 @@ from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
 
 
-filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
-filenames = filenames[70:]
+# ファイルに記録されている1番目のカメラを使う
+camera_models = load("./datasets/nikkei/cameras.txt")
+camera_model = camera_models[1]
 
-# カメラ歪みや焦点距離等の補正のためにカメラのパラメータを与える
-camera_parameters = CameraParameters(
-    focal_length=[3049, 4052],
-    offset=[1640, 1232]
-)
-distortion_model = FOV(0.26)  # カメラの歪みを表す
-camera_model = CameraModel(camera_parameters, distortion_model)
+filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
+filenames = filenames[70:]
 
 # 特徴点のマッチングを行うオブジェクト
 # 'match' は関数のように振る舞うことができる
