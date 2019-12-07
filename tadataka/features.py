@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 
 import numpy as np
@@ -32,7 +33,12 @@ orb = ORB(n_keypoints=100)
 
 
 def to_opencv_format(image):
-    return img_as_ubyte(image)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+
+        # Raises warning because of precision loss
+        # but we can ignore it in this case
+        return img_as_ubyte(image)
 
 
 def extract_keypoints(image):
