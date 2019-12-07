@@ -13,7 +13,6 @@ camera_model = camera_models[1]
 vo = FeatureBasedVO(camera_model, window_size=4)
 
 filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
-filenames = filenames[70:]
 
 for i, filename in enumerate(filenames):
     print("filename = {}".format(filename))
@@ -33,7 +32,7 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    if i % 100 == 0:
+    if i % 20 == 0:
         points, colors = vo.export_points()
         plot_map(vo.export_poses(), points, colors)
 
