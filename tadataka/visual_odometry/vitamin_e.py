@@ -108,8 +108,8 @@ class KeypointFlow(object):
 
 
 class VitaminE(FeatureBasedVO):
-    def __init__(self, camera_parameters, distortion_model, window_size):
-        super().__init__(camera_parameters, distortion_model)
+    def __init__(self, camera_model, window_size):
+        super().__init__(camera_model)
         self.window_size = window_size
         self.keypoint_flow = KeypointFlow(self.window_size)
         self.points = np.empty((0, 3), np.float64)

@@ -76,12 +76,12 @@ def filter_matches(matches, viewpoints, min_matches):
 
 
 class FeatureBasedVO(BaseVO):
-    def __init__(self, camera_parameters, distortion_model,
+    def __init__(self, camera_model,
                  matcher=Matcher(enable_ransac=True,
                                  enable_homography_filter=True),
                  window_size=8, min_matches=60):
 
-        super().__init__(camera_parameters, distortion_model)
+        super().__init__(camera_model)
         self.__window_size = window_size
 
         self.matcher = matcher
