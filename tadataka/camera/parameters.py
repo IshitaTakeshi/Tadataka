@@ -2,7 +2,7 @@ import numpy as np
 
 
 class CameraParameters(object):
-    def __init__(self, image_shape, focal_length, offset):
+    def __init__(self, focal_length, offset, image_shape=None):
         assert(len(focal_length) == 2)
         assert(len(offset) == 2)
 
