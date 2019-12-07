@@ -45,12 +45,11 @@ plot_matches(image0, image1, keypoints0, keypoints1, matches01)
 
 # pose0 をカメラの基準座標とし，そこからの姿勢変化を推定していく
 pose0 = Pose.identity()
+
 # 基準座標からどれだけ変化したかを推定する
-pose1 = estimate_pose_change(
-    keypoints0_undistorted,
-    keypoints1_undistorted,
-    matches01
-)
+pose1 = estimate_pose_change(keypoints0_undistorted,
+                             keypoints1_undistorted,
+                             matches01)
 
 # ==================== カメラ姿勢の初期化ここまで ====================
 
@@ -58,14 +57,17 @@ pose1 = estimate_pose_change(
 
 # カメラの姿勢が推定できたので，triangulationによって3次元点を復元する
 
-t = Triangulation(pose0, pose1,
-                  keypoints0_undistorted, keypoints1_undistorted)
+t = Triangulation(pose0, pose1)
+
 # depth_mask はそれぞれの点がカメラの前にあるかどうかを表す配列
 # カメラの後ろにあるものが撮影されることはありえないので，
 # depth_mask を見ることで復元結果が正しいかどうかを見極めることができる
-point_array01, depth_mask = t.triangulate(matches01)
+point_array01, depth_mask = t.triangulate(
+    keypoints0_undistorted[matches01[:, 0]],
+    keypoints1_undistorted[matches01[:, 1]]
+)
+
 # カメラの前にある点と，その点を作るのに使われた特徴点だけ残す
-print(depth_mask)
 point_array01 = point_array01[depth_mask]
 matches01 = matches01[depth_mask]
 
@@ -113,10 +115,12 @@ pose2 = solve_pnp(np.array([points[i] for i in point_indices2]),
 # =================== 3フレーム目の姿勢推定ここまで ===================
 # ================== 3フレーム目による triangulation ==================
 
-t = Triangulation(pose0, pose2,
-                  keypoints0_undistorted, keypoints2_undistorted)
+t = Triangulation(pose0, pose2)
+point_array02, depth_mask = t.triangulate(
+    keypoints0_undistorted[matches02[:, 0]],
+    keypoints2_undistorted[matches02[:, 1]]
+)
 
-point_array02, depth_mask = t.triangulate(matches02)
 point_array02 = point_array02[depth_mask]
 matches02 = matches02[depth_mask]
 
