@@ -7,9 +7,9 @@ def parse_(string):
     params = string.split(' ')
     distortion_type = params[0]
     params = [float(v) for v in params[1:]]
-    camera_parameters = CameraParameters.from_params(params[0:4])
+    camera_parameters = CameraParameters.from_params(params[0:6])
     if distortion_type == "FOV":
-        distortion_model = FOV.from_params(params[4:])
+        distortion_model = FOV.from_params(params[6:])
     else:
         ValueError("Unknown distortion model: " + distortion_type)
     return CameraModel(camera_parameters, distortion_model)

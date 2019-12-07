@@ -15,6 +15,7 @@ from tests.data import dummy_points as points
 
 def test_normalizer():
     camera_parameters = CameraParameters(
+        image_shape=[100, 100],  # temporal values
         focal_length=[2., 3.],
         offset=[-1., 4.]
     )
