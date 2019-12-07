@@ -10,11 +10,10 @@ from tadataka.visual_odometry import FeatureBasedVO
 
 camera_models = load("./datasets/nikkei/cameras.txt")
 camera_model = camera_models[1]
-vo = FeatureBasedVO(camera_model, window_size=8)
+vo = FeatureBasedVO(camera_model, window_size=4)
 
 filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
-filenames = filenames[200:]
-filenames = [filenames[0]] + filenames[4:]
+filenames = filenames[70:]
 
 for i, filename in enumerate(filenames):
     print("filename = {}".format(filename))
@@ -34,8 +33,9 @@ for i, filename in enumerate(filenames):
     if i == 0:
         continue
 
-    # points, colors = vo.export_points()
-    # plot_map(vo.export_poses(), points, colors)
+    if i % 100 == 0:
+        points, colors = vo.export_points()
+        plot_map(vo.export_poses(), points, colors)
 
 points, colors = vo.export_points()
 plot_map(vo.export_poses(), points, colors)
