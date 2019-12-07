@@ -144,7 +144,7 @@ def run_ba(viewpoint_indices, point_indices,
     rotvecs, ts, points = ba.compute(rotvecs, ts, points,
                                      absolute_error_threshold=1e-9,
                                      max_iter=5,
-                                     relative_error_threshold=0.20)
+                                     relative_error_threshold=0.10)
 
     rotations = [Rotation.from_rotvec(rotvec) for rotvec in rotvecs]
     poses = [Pose(r, t) for r, t in zip(rotations, ts)]
