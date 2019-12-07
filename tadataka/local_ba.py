@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 
+from scipy.spatial.transform import Rotation
 from sba import SBA, can_run_ba
 
 from tadataka.rigid_transform import transform
@@ -103,11 +104,11 @@ class LocalBundleAdjustment(object):
             dposes, dpoints, error = self.calc_new_error(poses, points, new_mu)
         return poses + dposes, points + dpoints, new_mu, error
 
-    def compute(self, initial_omegas, initial_translations, initial_points,
+    def compute(self, initial_rotvecs, initial_translations, initial_points,
                 max_iter=200, initial_mu=1.0, nu=100.0,
                 absolute_error_threshold=1e-8, relative_error_threshold=1e-6):
 
-        poses = np.hstack((initial_omegas, initial_translations))
+        poses = np.hstack((initial_rotvecs, initial_translations))
         points = initial_points
 
         mu = initial_mu
@@ -128,8 +129,8 @@ class LocalBundleAdjustment(object):
 
             current_error = new_error
 
-        omegas, translations = poses[:, 0:3], poses[:, 3:6]
-        return omegas, translations, points
+        rotvecs, translations = poses[:, 0:3], poses[:, 3:6]
+        return rotvecs, translations, points
 
 
 def run_ba(viewpoint_indices, point_indices,
@@ -137,14 +138,16 @@ def run_ba(viewpoint_indices, point_indices,
     ba = LocalBundleAdjustment(viewpoint_indices, point_indices,
                                keypoints_true)
 
-    omegas = np.array([p.omega for p in poses])
+    rotvecs = np.array([p.rotation.as_rotvec() for p in poses])
     ts = np.array([p.t for p in poses])
 
-    omegas, ts, points = ba.compute(omegas, ts, points,
-                                    absolute_error_threshold=1e-9,
-                                    relative_error_threshold=0.10)
+    rotvecs, ts, points = ba.compute(rotvecs, ts, points,
+                                     absolute_error_threshold=1e-9,
+                                     max_iter=5,
+                                     relative_error_threshold=0.20)
 
-    poses = [Pose(omega, t) for omega, t in zip(omegas, ts)]
+    rotations = [Rotation.from_rotvec(rotvec) for rotvec in rotvecs]
+    poses = [Pose(r, t) for r, t in zip(rotations, ts)]
     return poses, points
 
 

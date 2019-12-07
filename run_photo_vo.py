@@ -5,18 +5,9 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from tadataka.coordinates import xy_to_yx
 from tadataka.visual_odometry import FeatureBasedVO
-from tadataka.camera import CameraParameters
-from tadataka.camera_distortion import FOV
+from tadataka.camera.io import load
 from tadataka.coordinates import local_to_world
 from tadataka.plot import plot_map
-
-
-# saba
-vo = FeatureBasedVO(
-    CameraParameters(focal_length=[2890.16, 3326.04], offset=[1640, 1232]),
-    FOV(0.01),
-    window_size=6
-)
 
 
 def match_point_indices(point_indices1, point_indices2):
@@ -69,6 +60,9 @@ def plot_keypoints(image, keypoints):
                facecolors='none', edgecolors='r')
     plt.show()
 
+
+camera_models = load("datasets/saba/cameras.txt")
+vo = FeatureBasedVO(camera_models[1], window_size=6)
 
 filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
 filenames = [filenames[0]] + filenames[4:]

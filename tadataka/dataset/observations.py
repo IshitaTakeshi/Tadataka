@@ -4,25 +4,6 @@ from tadataka.so3 import rodrigues
 from tadataka.rigid_transform import transform_all
 
 
-def generate_observations(rotations, translations, points, projection):
-    assert(points.shape[1] == 3)
-    assert(rotations.shape[0] == translations.shape[0])
-    assert(translations.shape[1] == 3)
-    assert(rotations.shape[1:3] == (3, 3))
-
-    n_points = points.shape[0]
-    n_viewpoints = rotations.shape[0]
-
-    points = transform_all(rotations, translations, points)
-
-    positive_depth_mask = points[:, :, 2] > 0
-
-    observations = projection.compute(points.reshape(-1, 3))
-    observations = observations.reshape(*points.shape[0:2], 2)
-
-    return observations, positive_depth_mask
-
-
 def generate_translations(rotations, points, depth_margin=2.0):
     """
     Generate translations given rotations and 3D points such that

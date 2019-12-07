@@ -4,8 +4,7 @@ from numpy.testing import (assert_array_less, assert_array_equal,
 
 from tadataka.camera import CameraParameters
 from tadataka.projection import PerspectiveProjection
-from tadataka.dataset.observations import (
-    generate_translations, generate_observations)
+from tadataka.dataset.observations import generate_translations
 from tadataka.rigid_transform import transform_all
 
 
@@ -47,24 +46,3 @@ def test_generate_translations():
     run(offset=0.0)
     run(offset=2.0)
     run(offset=4.0)
-
-
-def test_generate_observations():
-    camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
-    projection = PerspectiveProjection(camera_parameters)
-    observations, positive_depth_mask = generate_observations(
-        rotations, translations, points, projection)
-
-    expected = np.array([
-        [[2 / -1, 1 / -1],
-         [0 / 1, 3 / 1],
-         [-1 / 3, 4 / 3]],
-        [[4 / -5, 1 / -5],
-         [2 / -3, -1 / -3],
-         [1 / -1, -2 / -1]],
-    ])
-
-    assert_array_almost_equal(observations, expected)
-
-    expected = np.array([[False, True, True], [False, False, False]])
-    assert_array_equal(positive_depth_mask, expected)
