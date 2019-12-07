@@ -5,6 +5,7 @@ from tadataka.camera import CameraParameters
 
 def test_camera():
     camera_parameters = CameraParameters(
+        image_shape=[100, 100],  # temporal values
         focal_length=[1.0, 1.2],
         offset=[0.8, 0.2]
     )
