@@ -2,19 +2,17 @@ from skimage.io import imread
 from pathlib import Path
 
 from tadataka.camera import CameraParameters
-from tadataka.camera_distortion import FOV
+from tadataka.camera.distortion import FOV
+from tadataka.camera.io import load
 from tadataka.plot import plot_map
-from tadataka.visual_odometry import VisualOdometry
+from tadataka.visual_odometry import FeatureBasedVO
 
 
-# saba
-vo = VisualOdometry(
-    CameraParameters(focal_length=[2916.05, 3982.35], offset=[1640, 1232]),
-    FOV(-0.01),
-    max_active_keyframes=8
-)
+camera_models = load("./datasets/nikkei/cameras.txt")
+camera_model = camera_models[1]
+vo = FeatureBasedVO(camera_model, window_size=8)
 
-filenames = sorted(Path("./datasets/nikkei/").glob("*.jpg"))
+filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
 filenames = filenames[200:]
 filenames = [filenames[0]] + filenames[4:]
 
