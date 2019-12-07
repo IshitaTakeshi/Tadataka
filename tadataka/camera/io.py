@@ -3,7 +3,11 @@ from tadataka.camera.model import CameraModel
 
 def parse_(line):
     camera_id, model_params = line.split(' ', maxsplit=1)
-    return int(camera_id), CameraModel.fromstring(model_params)
+    try:
+        camera_id = int(camera_id)
+    except ValueError:
+        raise ValueError("Camera ID must be integer")
+    return camera_id, CameraModel.fromstring(model_params)
 
 
 def load(filename):
