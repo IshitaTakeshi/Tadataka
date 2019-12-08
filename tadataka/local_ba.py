@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 
 from scipy.spatial.transform import Rotation
-from sba import SBA, can_run_ba
+from sparseba import SBA, can_run_ba
 
 from tadataka.rigid_transform import transform
 from tadataka.pose import Pose
