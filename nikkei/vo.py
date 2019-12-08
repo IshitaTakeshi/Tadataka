@@ -7,7 +7,10 @@ from tadataka.plot import plot_map
 from tadataka.visual_odometry import FeatureBasedVO
 
 
+# カメラパラメータの読み込み
 camera_models = load("./datasets/nikkei/cameras.txt")
+# ID = 1 で登録されているパラメータを使う
+# IDはカメラが複数あるときに使われるものなので今回は気にしなくてよい
 camera_model = camera_models[1]
 vo = FeatureBasedVO(camera_model, window_size=4)
 
