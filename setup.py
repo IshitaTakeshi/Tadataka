@@ -13,9 +13,10 @@ setup(
         'autograd',
         'bidict',
         'Cython',
-        # TODO make independent from opencv
         'matplotlib',
+        'numba',
         'numpy',
+        # TODO make independent from opencv
         'opencv-python',
         'opencv-contrib-python',
         'scikit-image',
