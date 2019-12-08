@@ -23,6 +23,6 @@ setup(
         'scikit-learn',
         'scipy',
         'sympy',
-        'sba @ git+https://github.com/IshitaTakeshi/SBA.git@develop#egg=sba'
+        'sparseba'
     ]
 )
