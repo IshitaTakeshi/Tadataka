@@ -17,7 +17,7 @@ setup(
         'numba',
         'numpy',
         # TODO make independent from opencv
-        'opencv-python',
+        'opencv-python-headless',
         'opencv-contrib-python',
         'scikit-image',
         'scikit-learn',
