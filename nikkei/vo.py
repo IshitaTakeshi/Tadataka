@@ -1,8 +1,7 @@
-from skimage.io import imread
 from pathlib import Path
 
-from tadataka.camera import CameraParameters
-from tadataka.camera.distortion import FOV
+from skimage.io import imread
+
 from tadataka.camera.io import load
 from tadataka.plot import plot_map
 from tadataka.visual_odometry import FeatureBasedVO

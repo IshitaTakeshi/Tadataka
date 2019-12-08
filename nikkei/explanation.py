@@ -4,9 +4,9 @@ from pathlib import Path
 from skimage.io import imread
 
 from tadataka.camera.io import load
+from tadataka.correspondence import subscribe, get_indices
 from tadataka.feature import extract_features, Features, Matcher
 from tadataka.plot import plot_matches, plot_map
-from tadataka.correspondence import subscribe, get_indices
 from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
 
@@ -38,7 +38,6 @@ features0 = Features(keypoints0_undistorted, descriptors0)
 features1 = Features(keypoints1_undistorted, descriptors1)
 
 # 特徴点のマッチングを行う
-# 特徴点の座標と記述子の両方が必要なのでどちらも渡す
 matches01 = match(features0, features1)
 
 plot_matches(image0, image1, keypoints0, keypoints1, matches01)
