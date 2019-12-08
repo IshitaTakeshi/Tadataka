@@ -4,9 +4,9 @@ from pathlib import Path
 from skimage.io import imread
 
 from tadataka.camera.io import load
-from tadataka.features import extract_features, Features, Matcher
+from tadataka.feature import extract_features, Features, Matcher
 from tadataka.plot import plot_matches, plot_map
-from tadataka.point_keypoint_map import subscribe, get_indices
+from tadataka.correspondence import subscribe, get_indices
 from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
 
