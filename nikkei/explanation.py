@@ -111,6 +111,8 @@ point_indices2, keypoint_indices2 = get_indices(correspondence0, matches02)
 pose2 = solve_pnp(np.array([points[i] for i in point_indices2]),
                   keypoints2_undistorted[keypoint_indices2])
 
+plot_map([pose0, pose1, pose2], point_array01)
+
 # =================== 3フレーム目の姿勢推定ここまで ===================
 # ================== 3フレーム目による triangulation ==================
 
