@@ -4,7 +4,7 @@ import numpy as np
 from tadataka import _triangulation as TR
 from tadataka.pose import Pose
 from tadataka.exceptions import InvalidDepthException
-from tadataka.features import empty_match
+from tadataka.feature import empty_match
 
 
 def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):

@@ -3,10 +3,10 @@ import numpy as np
 
 from skimage.color import rgb2gray
 from tadataka.exceptions import NotEnoughInliersException, print_error
-from tadataka.features import extract_features, Matcher
-from tadataka.features import Features as KD
+from tadataka.feature import extract_features, Matcher
+from tadataka.feature import Features as KD
 from tadataka.camera import CameraModel
-from tadataka.point_keypoint_map import (
+from tadataka.correspondence import (
     associate_triangulated,
     get_indices, get_point_hashes, init_correspondence, is_triangulated,
     merge_correspondences, subscribe
