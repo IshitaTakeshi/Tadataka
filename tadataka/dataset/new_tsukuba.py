@@ -41,14 +41,17 @@ def calc_baseline_offset(rotation, baseline_length):
 
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
-    def __init__(self, dataset_root):
-        pose_path = Path(dataset_root, "camera_track.txt")
+    def __init__(self, dataset_root, condition="daylight"):
+        groundtruth_dir = Path(dataset_root, "groundtruth")
+        illumination_dir = Path(dataset_root, "illumination")
+
+        pose_path = Path(groundtruth_dir, "camera_track.txt")
 
         self.baseline_length = 10.0
         self.rotations, self.positions = load_poses(pose_path)
 
-        depth_dir = Path(dataset_root, "depth_maps")
-        image_dir = Path(dataset_root, "images")
+        depth_dir = Path(groundtruth_dir, "depth_maps")
+        image_dir = Path(illumination_dir, condition)
 
         self.depth_left_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
         self.depth_right_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
