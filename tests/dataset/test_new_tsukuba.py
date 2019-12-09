@@ -32,3 +32,8 @@ def test_new_tsukuba():
         frame.position_right,
         [4.98282112e+00, 3.48797408e-05, -4.56549033e-01]
     )
+
+    assert_array_almost_equal(
+        frame.rotation.as_euler('xyz'),
+        [-0.070745, 0.082921, 0.000007]
+    )
