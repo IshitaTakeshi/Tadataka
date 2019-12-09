@@ -9,7 +9,7 @@ from tadataka.optimization.updaters import GaussNewtonUpdater
 from tadataka.optimization.optimizers import Optimizer
 from tadataka.optimization.transformers import BaseTransformer
 from tadataka.optimization.errors import SumRobustifiedNormError
-
+from tadataka import irls
 # we handle point coordinates P in a format:
 # P[:, 0] contains x coordinates
 # P[:, 1] contains y coordinates
@@ -25,44 +25,14 @@ def theta_to_affine_params(theta):
     return A, b
 
 
-class AffineTransformer(Function):
-    def __init__(self, keypoints):
-        self.keypoints = keypoints
+def estimate_affine_transform(keypoints1, keypoints2):
+    keypoints1 = np.column_stack((keypoints1, np.ones(keypoints1.shape[0])))
+    params0 = irls.fit(keypoints1, keypoints2[:, 0])
+    params1 = irls.fit(keypoints1, keypoints2[:, 1])
 
-    def compute(self, theta):
-        A, b = theta_to_affine_params(theta)
-        return AffineTransform(A, b).transform(self.keypoints)
+    A0, b0 = params0[0:2], params0[2]
+    A1, b1 = params1[0:2], params1[2]
 
-
-def predict(keypoints1, keypoints2, initial_theta):
-    """
-    Predict affine transformatin by minimizing the cost function Eq. (2)
-    """
-
-    transformer = AffineTransformer(keypoints1)
-    residual = BaseResidual(keypoints2, transformer)
-    # TODO Geman-McClure is used in the original paper
-    robustifier = SquaredRobustifier()
-    updater = GaussNewtonUpdater(residual, robustifier)
-    error = SumRobustifiedNormError(robustifier)
-    optimizer = Optimizer(updater, residual, error)
-    return optimizer.optimize(initial_theta, max_iter=1000)
-
-
-def estimate_affine_transform(src, dst):
-    assert(src.shape == dst.shape)
-
-    initial_theta = initialize_theta()
-    theta_pred = predict(src, dst, initial_theta)
-    A, b = theta_to_affine_params(theta_pred)
+    A = np.vstack((A0, A1))
+    b = np.array([b0, b1])
     return AffineTransform(A, b)
-
-
-def initialize_theta(initial_A=None, initial_b=None):
-    if initial_A is None:
-        initial_A = np.identity(2)
-
-    if initial_b is None:
-        initial_b = np.zeros(2)
-
-    return affine_params_to_theta(initial_A, initial_b)
