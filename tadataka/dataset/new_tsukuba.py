@@ -25,7 +25,7 @@ def load_depth(path):
 def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
-    rotations = Rotation.from_euler('xyz', euler_angles)
+    rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
     return rotations, positions
 
 
