@@ -18,12 +18,12 @@ def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
 
 
 def linear_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
-    point, depth0, depth1 = TR.linear_triangulation(
+    point, depths = TR.linear_triangulation(
         pose0.R, pose1.R, pose0.t, pose1.t,
         keypoint0, keypoint1
     )
 
-    return point, TR.depths_are_valid(depth0, depth1, min_depth)
+    return point, TR.depths_are_valid(depths, min_depth)
 
 
 class Triangulation(object):

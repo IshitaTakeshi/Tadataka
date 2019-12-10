@@ -40,27 +40,11 @@ omegas = np.array([
 rotations = rodrigues(omegas)
 translations = generate_translations(rotations, points_true)
 
-# rotations = np.array([
-#     [[1, 0, 0],
-#      [0, 1, 0],
-#      [0, 0, 1]],
-# ])
-#
-# translations = np.array([
-#     [-8, 4, 8],
-#     [4, 8, 9],
-#     [4, 1, 7]
-# ])
-
 
 def test_linear_triangulation():
     projection = PerspectiveProjection(
         CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
     )
-
-    t0, t1 = translations[0:2]
-    R0, t0 = rotations[0], translations[0]
-    R1, t1 = rotations[1], translations[1]
 
     R0 = np.array([[1, 0, 0],
                    [0, 0, -1],
@@ -68,16 +52,28 @@ def test_linear_triangulation():
     R1 = np.array([[1, 0, 0],
                    [0, 1, 0],
                    [0, 0, 1]])
+    R2 = np.array([[0, 0, -1],
+                   [0, 1, 0],
+                   [1, 0, 0]])
+    [t0, t1, t2] = generate_translations(
+        np.array([R0, R1, R2]), points_true
+    )
+
     keypoints0 = projection.compute(transform(R0, t0, points_true))
     keypoints1 = projection.compute(transform(R1, t1, points_true))
+    keypoints2 = projection.compute(transform(R2, t2, points_true))
 
     for i in range(points_true.shape[0]):
         x_true = points_true[i]
-        x, depth0, depth1 = linear_triangulation(
-            R0, R1, t0, t1, keypoints0[i], keypoints1[i])
+        x, depths = linear_triangulation(
+            np.array([R0, R1, R2]),
+            np.array([t0, t1, t2]),
+            np.array([keypoints0[i], keypoints1[i], keypoints2[i]])
+        )
         assert_array_almost_equal(x, x_true)
-        assert_equal(depth0, x[1] + t0[2])
-        assert_equal(depth1, x[2] + t1[2])
+        assert_equal(depths[0], x[1] + t0[2])  # dot(R0, x)[2] + t0[2]
+        assert_equal(depths[1], x[2] + t1[2])  # dot(R1, x)[2] + t1[2]
+        assert_equal(depths[2], x[0] + t2[2])  # dot(R2, x)[2] + t2[2]
 
 
 def test_decompose_essential():

@@ -2,44 +2,58 @@ import numpy as np
 
 from tadataka.depth import depth_condition, warn_points_behind_cameras
 from tadataka.matrix import solve_linear, motion_matrix
-from tadataka.so3 import rodrigues
-
-# Equation numbers are the ones in Multiple View Geometry
 
 
-def calc_depth(P, x):
-    return np.dot(P[2], x)
+def linear_triangulation(rotations, translations, keypoints):
+    # estimate a 3D point coordinate from multiple projections
+    assert(rotations.shape[0] == translations.shape[0] == keypoints.shape[0])
+    assert(rotations.shape[1:3] == (3, 3))
+    assert(translations.shape[1] == 3)
+    assert(keypoints.shape[1] == 2)
 
+    def calc_depths(x):
+        return np.dot(rotations[:, 2], x) + translations[:, 2]
 
-def linear_triangulation(R0, R1, t0, t1, keypoints0, keypoints1):
-    P0 = motion_matrix(R0, t0)
-    P1 = motion_matrix(R1, t1)
+    # A = np.vstack([
+    #     x0 * P0[2] - P0[0],
+    #     y0 * P0[2] - P0[1],
+    #     x1 * P1[2] - P1[0],
+    #     y1 * P1[2] - P1[1],
+    #     x2 * P2[2] - P2[0],
+    #     y2 * P2[2] - P2[1],
+    #     ...
+    # ])
+    #
+    # See Multiple View Geometry section 12.2 for details
 
-    x0, y0 = keypoints0
-    x1, y1 = keypoints1
+    A = np.empty((2 * keypoints.shape[0], 4))
 
-    # See section 12.2 for details
-    A = np.vstack([
-        x0 * P0[2] - P0[0],
-        y0 * P0[2] - P0[1],
-        x1 * P1[2] - P1[0],
-        y1 * P1[2] - P1[1],
-    ])
+    A[0::2, 0:3] = keypoints[:, [0]] * rotations[:, 2] - rotations[:, 0]
+    A[1::2, 0:3] = keypoints[:, [1]] * rotations[:, 2] - rotations[:, 1]
+
+    A[0::2, 3] = keypoints[:, 0] * translations[:, 2] - translations[:, 0]
+    A[1::2, 3] = keypoints[:, 1] * translations[:, 2] - translations[:, 1]
+
     x = solve_linear(A)
 
-    # normalize so that x / x[3] be a homogeneous vector [x y z 1]
-    # and extract the first 3 elements
-    # assert(x[3] != 0)
     if np.isclose(x[3], 0):
         return np.inf * np.ones(3), np.nan, np.nan
 
-    x = x / x[3]
-    # calculate depths for utilities
-    return x[0:3], calc_depth(P0, x), calc_depth(P1, x)
+    x = x[0:3] / x[3]
+
+    return x, calc_depths(x)
 
 
-def depths_are_valid(depth0, depth1, min_depth):
-    return depth0 > min_depth and depth1 > min_depth
+def two_view_triangulation(R0, R1, t0, t1, keypoint0, keypoint1):
+    return linear_triangulation(
+        np.array([R0, R1]),
+        np.array([t0, t1]),
+        np.array([keypoint0, keypoint1])
+    )
+
+
+def depths_are_valid(depths, min_depth):
+    return np.all(depths > min_depth)
 
 
 def triangulation_(R0, R1, t0, t1, keypoints0, keypoints1, min_depth=0.0):
@@ -55,9 +69,9 @@ def triangulation_(R0, R1, t0, t1, keypoints0, keypoints1, min_depth=0.0):
     depth_mask = np.zeros(n_points, dtype=np.bool)
 
     for i in range(n_points):
-        points[i], depth0, depth1 = linear_triangulation(
+        points[i], depths = two_view_triangulation(
             R0, R1, t0, t1, keypoints0[i], keypoints1[i])
-        depth_mask[i] = depths_are_valid(depth0, depth1, min_depth)
+        depth_mask[i] = depths_are_valid(depths, min_depth)
     return points, depth_mask
 
 
