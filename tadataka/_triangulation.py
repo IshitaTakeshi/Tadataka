@@ -37,7 +37,7 @@ def linear_triangulation(rotations, translations, keypoints):
     x = solve_linear(A)
 
     if np.isclose(x[3], 0):
-        return np.inf * np.ones(3), np.nan, np.nan
+        return np.full(3, np.inf), np.full(keypoints.shape[0], np.nan)
 
     x = x[0:3] / x[3]
 
