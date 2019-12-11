@@ -19,6 +19,8 @@ def load_image_paths(dataset_root, filepath):
         reader = csv.reader(f, delimiter=' ')
 
         for row in reader:
+            if row[0].startswith('#'):
+                continue
             timestamps.append(float(row[0]))
             filepath = str(Path(dataset_root, row[1]))
             image_paths.append(filepath)
