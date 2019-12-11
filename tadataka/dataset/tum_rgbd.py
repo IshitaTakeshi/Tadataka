@@ -48,7 +48,7 @@ def load_ground_truth_poses(dataset_root):
     return load_poses(Path(dataset_root, "groundtruth.txt"))
 
 
-def syncronize(timestamps0, timestamps1, timestamps2, max_difference=0.02):
+def synchronize(timestamps0, timestamps1, timestamps2, max_difference=np.inf):
     matches01 = match_timestamps(timestamps0, timestamps1, max_difference)
     matches02 = match_timestamps(timestamps0, timestamps2, max_difference)
     indices0, indices1, indices2 = np.intersect1d(
@@ -70,7 +70,7 @@ class TumRgbdDataset(BaseDataset):
         timestamps_rgb, paths_rgb = load_rgb_image_paths(dataset_root)
         timestamps_depth, paths_depth = load_depth_image_paths(dataset_root)
 
-        matches = syncronize(timestamps_gt, timestamps_rgb, timestamps_depth)
+        matches = synchronize(timestamps_gt, timestamps_rgb, timestamps_depth)
         indices_gt = matches[:, 0]
         indices_rgb = matches[:, 1]
         indices_depth = matches[:, 2]
