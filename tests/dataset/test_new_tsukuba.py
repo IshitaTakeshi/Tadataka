@@ -26,14 +26,14 @@ def test_new_tsukuba():
     frame = dataset[4]
     assert_array_almost_equal(
         frame.position_left,
-        [-4.98281912e+00, -3.48797408e-05, 3.71711033e-01]
+        [-4.99999376e+00, -6.10864598e-07, -3.51827802e-02]
     )
     assert_array_almost_equal(
         frame.position_right,
-        [4.98282112e+00, 3.48797408e-05, -4.56549033e-01]
+        [4.99999576e+00,  6.10864598e-07, -4.96552198e-02]
     )
 
     assert_array_almost_equal(
-        frame.rotation.as_euler('xyz'),
+        frame.rotation.as_euler('xyz', degrees=True),
         [-0.070745, 0.082921, 0.000007]
     )
