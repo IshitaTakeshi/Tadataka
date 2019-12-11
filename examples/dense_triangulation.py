@@ -103,33 +103,44 @@ def vitamine(image0, image1, pose0, pose1):
 
     mask = is_in_image_range(dense_keypoints1, image1.shape)
 
-    et = ExtremaTracker(compute_image_curvature(rgb2gray(image1)), lambda_=0.0)
+    et = ExtremaTracker(compute_image_curvature(rgb2gray(image1)),
+                        lambda_=10.0)
     dense_keypoints1[mask] = et.optimize(dense_keypoints1[mask])
 
-    plot_matches(image0, image1, dense_keypoints0, dense_keypoints1,
-                 np.empty((0, 2), dtype=np.int64),
-                 keypoints_color='red')
+    fig = plt.figure()
+    ax = fig.add_subplot(121)
+    ax.imshow(image0)
+    ax.scatter(dense_keypoints0[mask, 0],
+               dense_keypoints0[mask, 1],
+               s=0.1, c='red')
+    ax = fig.add_subplot(122)
+    ax.imshow(image1)
+    ax.scatter(dense_keypoints1[mask, 0],
+               dense_keypoints1[mask, 1],
+               s=0.1, c='red')
+    plt.show()
 
     points, depth_mask = TwoViewTriangulation(pose0, pose1).triangulate(
-        camera_model.undistort(dense_keypoints0),
-        camera_model.undistort(dense_keypoints1)
+        camera_model.undistort(dense_keypoints0[mask]),
+        camera_model.undistort(dense_keypoints1[mask])
     )
 
     plot_map([pose0, pose1], points)
 
 
-dataset_root = Path("datasets", "NewTsukubaStereoDataset")
+from tadataka.dataset.tum_rgbd import TumRgbdDataset
 
-dataset = NewTsukubaDataset(dataset_root)
+dataset = TumRgbdDataset(Path("datasets", "rgbd_dataset_freiburg1_xyz"))
+# dataset = NewTsukubaDataset(dataset_root)
 
-frame0 = dataset[208]
-frame1 = dataset[209]
+frame0 = dataset[270]
+frame1 = dataset[271]
 
-image0 = frame0.image_left
-pose0 = Pose(frame0.rotation, frame0.position_left).world_to_local()
+image0 = frame0.image
+pose0 = Pose(frame0.rotation, frame0.position).world_to_local()
 
-image1 = frame1.image_right
-pose1 = Pose(frame1.rotation, frame1.position_right).world_to_local()
+image1 = frame1.image
+pose1 = Pose(frame1.rotation, frame1.position).world_to_local()
 
 sparse_triangulation(image0, image1, pose0, pose1)
 dense_triangulation(image0, image1, pose0, pose1)
