@@ -25,7 +25,7 @@ class Triangulation(object):
 
     def triangulate(self, keypoints):
         """
-        keypoints.shape == (n_poses, n_keypoints, 2)
+        keypoints.shape == (n_keypoints, n_poses, 2)
         """
         return TR.linear_triangulation(self.rotations, self.translations,
                                        keypoints)
