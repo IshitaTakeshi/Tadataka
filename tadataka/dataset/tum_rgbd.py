@@ -58,7 +58,7 @@ def syncronize(timestamps0, timestamps1, timestamps2, max_difference=0.02):
 
 
 # TODO download and set dataset_root automatically
-class TUMDataset(BaseDataset):
+class TumRgbdDataset(BaseDataset):
     def __init__(self, dataset_root, depth_factor=5000.):
         self.depth_factor = depth_factor
 

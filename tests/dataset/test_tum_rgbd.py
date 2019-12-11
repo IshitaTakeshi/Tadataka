@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal
 from scipy.spatial.transform import Rotation
 
-from tadataka.dataset.tum_rgbd import TUMDataset
+from tadataka.dataset.tum_rgbd import TumRgbdDataset
 
 
 dataset_root = Path(Path(__file__).parent, "tum_rgbd")
@@ -15,7 +15,7 @@ def test_tum_dataset():
     # the depth timestamp cannot match the corresponding pose timestamp
 
     valid_indices = [0, 1, 2, 4, 5, 6]
-    dataset = TUMDataset(dataset_root)
+    dataset = TumRgbdDataset(dataset_root)
     image_shape = (30, 40)
 
     # test index access
