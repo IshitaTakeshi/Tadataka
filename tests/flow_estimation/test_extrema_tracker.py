@@ -5,6 +5,7 @@ from skimage.data import astronaut
 
 from tadataka.flow_estimation.extrema_tracker import (
     ExtremaTracker, get_neighbors, energy, regularize, maximize_)
+from tadataka.flow_estimation.image_curvature import compute_image_curvature
 
 
 def test_get_neighbors():
@@ -102,8 +103,7 @@ def test_extrema_tracker():
         [1, -1], [1, 0], [1, 1]
     ])
 
-    # this is the image itself but use it as a curvature
-    curvature = rgb2gray(astronaut())
+    curvature = compute_image_curvature(rgb2gray(astronaut()))
 
     # coordinates are represented in [xs, ys] format
     initial_coordinates = np.array([
@@ -119,12 +119,13 @@ def test_extrema_tracker():
     extrema_tracker = ExtremaTracker(curvature, lambda_)
     coordinates = extrema_tracker.optimize(initial_coordinates)
 
-    # the resulting points should have the maxium energies
+    # the resulting point should have the maxium energy
+    # among its neighbors
     for p in coordinates:
         neighbors = get_neighbors(p, curvature.shape)
         E0 = energy(curvature, p, np.atleast_2d(p), lambda_)[0]
         E = energy(curvature, p, neighbors, lambda_)
-        assert((E >= E).all())
+        assert((E0 >= E).all())
 
     # apply very strong regularization
     extrema_tracker = ExtremaTracker(curvature, lambda_=1e2)
