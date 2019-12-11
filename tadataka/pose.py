@@ -10,7 +10,7 @@ from tadataka.coordinates import local_to_world, world_to_local
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
-from tadataka._triangulation import triangulation_
+from tadataka._triangulation import linear_triangulation, compute_depth_mask
 from tadataka.depth import depth_condition, warn_points_behind_cameras
 
 
@@ -29,6 +29,7 @@ def convert_coordinates(pose, f):
 
 class Pose(object):
     def __init__(self, rotation, translation):
+        assert(isinstance(rotation, Rotation))
         self.rotation = rotation  # SciPy's Rotation object
         self.t = translation
 
@@ -90,6 +91,8 @@ def solve_pnp(points, keypoints):
     return Pose(Rotation.from_rotvec(omega.flatten()), t.flatten())
 
 
+# We triangulate only subset of keypoints to determine valid
+# (rotation, translation) pair
 def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):
     n = int(n_keypoints * triangulation_ratio)
     # at least use 'n_min_triangulation' points
@@ -113,10 +116,18 @@ def select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1):
 
     # not necessary to triangulate all points to validate depths
     indices = triangulation_indices(len(keypoints0))
+    keypoints = np.empty((len(indices), 2, 2))  # (n_keypoints, n_poses, 2)
     for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        _, depth_mask = triangulation_(
-            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices]
+        keypoints[:, 0] = keypoints0[indices]
+        keypoints[:, 1] = keypoints1[indices]
+
+        _, depths = linear_triangulation(
+            np.array([R0, R_]),
+            np.array([t0, t_]),
+            keypoints
         )
+
+        depth_mask = compute_depth_mask(depths)
         n_valid_depth = np.sum(depth_mask)
 
         # only 1 pair (R, t) among the candidates has to be

@@ -7,47 +7,25 @@ from tadataka.exceptions import InvalidDepthException
 from tadataka.feature import empty_match
 
 
-def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
-    points, depth_mask = TR.points_from_known_poses(
-        pose0.R, pose1.R, pose0.t, pose1.t,
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
-
-    return points[depth_mask], matches01[depth_mask]
-
-
-def two_view_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
-    point, depths = TR.two_view_triangulation(
-        pose0.R, pose1.R, pose0.t, pose1.t,
-        keypoint0, keypoint1
-    )
-
-    return point, TR.depths_are_valid(depths, min_depth)
-
-
 class TwoViewTriangulation(object):
     def __init__(self, pose0, pose1):
-        self.pose0, self.pose1 = pose0, pose1
-
-    def triangulate_(self, keypoint0, keypoint1):
-        return two_view_triangulation(self.pose0, self.pose1, keypoint0, keypoint1)
+        self.triangulator = Triangulation([pose0, pose1])
 
     def triangulate(self, keypoints0, keypoints1):
         assert(keypoints0.shape == keypoints1.shape)
-        points = []
-        depth_mask = []
-        for keypoint0, keypoint1 in zip(keypoints0, keypoints1):
-            point, depth_is_positive = self.triangulate_(keypoint0, keypoint1)
-            points.append(point)
-            depth_mask.append(depth_is_positive)
-        return np.array(points), np.array(depth_mask)
+        return self.triangulator.triangulate(keypoints0, keypoints1)
 
 
-def triangulate(pose0, pose1, keypoints0, keypoints1, matches01):
-    keypoints0 = keypoints0[matches01[:, 0]]
-    keypoints1 = keypoints1[matches01[:, 1]]
-    t = Triangulation(pose0, pose1)
-    point_array, depth_mask = t.triangulate(keypoints0, keypoints1)
-    # preserve points that have positive depths
-    return point_array[depth_mask], matches01[depth_mask]
+class Triangulation(object):
+    def __init__(self, poses, min_depth=0.0):
+        self.n_poses = len(poses)
+        self.rotations = np.array([pose.rotation.as_dcm() for pose in poses])
+        self.translations = np.array([pose.t for pose in poses])
+        self.min_depth = min_depth
+
+    def triangulate(self, keypoints):
+        """
+        keypoints.shape == (n_poses, n_keypoints, 2)
+        """
+        return TR.linear_triangulation(self.rotations, self.translations,
+                                       keypoints)
