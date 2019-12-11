@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from skimage.color import rgb2gray
@@ -15,7 +17,7 @@ from tadataka.flow_estimation.image_curvature import compute_image_curvature
 from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.plot import plot_map, plot_matches
 from tadataka.pose import Pose
-from tadataka.triangulation import Triangulation
+from tadataka.triangulation import TwoViewTriangulation
 from tadataka.utils import is_in_image_range
 from matplotlib import rcParams
 # rcParams["savefig.dpi"] = 800
@@ -59,7 +61,7 @@ def sparse_triangulation(image0, image1, pose0, pose1):
 
     undistorted_keypoints0 = camera_model.undistort(features0.keypoints)
     undistorted_keypoints1 = camera_model.undistort(features1.keypoints)
-    points, depth_mask = Triangulation(pose0, pose1).triangulate(
+    points, depth_mask = TwoViewTriangulation(pose0, pose1).triangulate(
         undistorted_keypoints0[matches01[:, 0]],
         undistorted_keypoints1[matches01[:, 1]]
     )
@@ -78,7 +80,7 @@ def dense_triangulation(image0, image1, pose0, pose1):
 
     undistorted_keypoints0 = camera_model.undistort(features0.keypoints)
     undistorted_keypoints1 = camera_model.undistort(features1.keypoints)
-    points, depth_mask = Triangulation(pose0, pose1).triangulate(
+    points, depth_mask = TwoViewTriangulation(pose0, pose1).triangulate(
         undistorted_keypoints0[matches01[:, 0]],
         undistorted_keypoints1[matches01[:, 1]]
     )
@@ -108,7 +110,7 @@ def vitamine(image0, image1, pose0, pose1):
                  np.empty((0, 2), dtype=np.int64),
                  keypoints_color='red')
 
-    points, depth_mask = Triangulation(pose0, pose1).triangulate(
+    points, depth_mask = TwoViewTriangulation(pose0, pose1).triangulate(
         camera_model.undistort(dense_keypoints0),
         camera_model.undistort(dense_keypoints1)
     )
@@ -116,7 +118,7 @@ def vitamine(image0, image1, pose0, pose1):
     plot_map([pose0, pose1], points)
 
 
-dataset_root = "NewTsukubaStereoDataset"
+dataset_root = Path("datasets", "NewTsukubaStereoDataset")
 
 dataset = NewTsukubaDataset(dataset_root)
 

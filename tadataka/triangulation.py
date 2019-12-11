@@ -17,8 +17,8 @@ def points_from_known_poses(pose0, pose1, keypoints0, keypoints1, matches01):
     return points[depth_mask], matches01[depth_mask]
 
 
-def linear_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
-    point, depths = TR.linear_triangulation(
+def two_view_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
+    point, depths = TR.two_view_triangulation(
         pose0.R, pose1.R, pose0.t, pose1.t,
         keypoint0, keypoint1
     )
@@ -26,12 +26,12 @@ def linear_triangulation(pose0, pose1, keypoint0, keypoint1, min_depth=0.0):
     return point, TR.depths_are_valid(depths, min_depth)
 
 
-class Triangulation(object):
+class TwoViewTriangulation(object):
     def __init__(self, pose0, pose1):
         self.pose0, self.pose1 = pose0, pose1
 
     def triangulate_(self, keypoint0, keypoint1):
-        return linear_triangulation(self.pose0, self.pose1, keypoint0, keypoint1)
+        return two_view_triangulation(self.pose0, self.pose1, keypoint0, keypoint1)
 
     def triangulate(self, keypoints0, keypoints1):
         assert(keypoints0.shape == keypoints1.shape)
