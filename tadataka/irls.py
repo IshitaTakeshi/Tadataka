@@ -219,5 +219,4 @@ def fit(X, y, max_iter=100, M=HuberT()):
         # if _check_convergence():
         #     break
 
-    print("params", params)
     return params
