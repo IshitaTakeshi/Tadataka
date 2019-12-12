@@ -7,10 +7,11 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraParameters
 from tadataka.dataset.observations import generate_translations
+from tadataka.depth import compute_depth_mask
 from tadataka.pose import Pose
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
-from tadataka._triangulation import linear_triangulation, compute_depth_mask
+from tadataka._triangulation import linear_triangulation
 from tadataka.triangulation import Triangulation, TwoViewTriangulation
 
 # TODO add the case such that x[3] = 0
