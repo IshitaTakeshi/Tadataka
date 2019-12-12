@@ -1,7 +1,6 @@
 import numpy as np
 
-from tadataka.depth import depth_condition, warn_points_behind_cameras
-from tadataka.matrix import solve_linear, motion_matrix
+from tadataka.matrix import solve_linear
 
 
 def linear_triangulation_(rotations, translations, keypoints):
@@ -74,7 +73,3 @@ def linear_triangulation(rotations, translations, keypoints):
             rotations, translations, keypoints[i]
         )
     return points, depths
-
-
-def compute_depth_mask(depths, min_depth=0.0):
-    return np.all(depths > min_depth, axis=1)
