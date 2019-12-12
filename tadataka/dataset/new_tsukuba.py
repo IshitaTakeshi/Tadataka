@@ -42,6 +42,11 @@ def calc_baseline_offset(rotation, baseline_length):
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
     def __init__(self, dataset_root, condition="daylight"):
+
+        self.camera_model = CameraModel(
+            CameraParameters(focal_length=[615, 615], offset=[320, 240]),
+            FOV(0.0)
+        )
         groundtruth_dir = Path(dataset_root, "groundtruth")
         illumination_dir = Path(dataset_root, "illumination")
 
@@ -76,6 +81,7 @@ class NewTsukubaDataset(BaseDataset):
         offset = calc_baseline_offset(rotation, self.baseline_length)
 
         return StereoFrame(
+            self.camera_model,
             image_left, image_right,
             depth_left, depth_right,
             position_center - offset / 2.0,

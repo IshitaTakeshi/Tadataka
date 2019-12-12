@@ -5,6 +5,7 @@ import numpy as np
 from skimage.io import imread
 from scipy.spatial.transform import Rotation
 
+from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.dataset.frame import MonoFrame
 from tadataka.dataset.base import BaseDataset
 from tadataka.dataset.match import match_timestamps
@@ -63,6 +64,10 @@ def synchronize(timestamps0, timestamps1, timestamps2, max_difference=np.inf):
 class TumRgbdDataset(BaseDataset):
     def __init__(self, dataset_root, depth_factor=5000.):
         self.depth_factor = depth_factor
+        self.camera_model = CameraModel(
+            CameraParameters(focal_length=[525., 525.], offset=[319.5, 239.5]),
+            FOV(0.0)
+        )
 
         timestamps_gt, rotations, positions =\
             load_ground_truth_poses(dataset_root)
@@ -87,4 +92,5 @@ class TumRgbdDataset(BaseDataset):
         D = D / self.depth_factor
 
         # TODO load ground truth
-        return MonoFrame(I, D, self.positions[index], self.rotations[index])
+        return MonoFrame(self.camera_model,
+                         I, D, self.positions[index], self.rotations[index])
