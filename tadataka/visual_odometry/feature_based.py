@@ -75,12 +75,11 @@ def get_ba_indices(correspondences, kds, point_hashes):
 def filter_matches(matches, viewpoints, min_matches):
     assert(len(viewpoints) == len(matches))
 
-    def f(args):
-        matches01, viewpoint = args
-        return len(matches01) >= min_matches
-
-    Z = filter(f, zip(matches, viewpoints))
-    return zip(*Z)
+    Z = zip(matches, viewpoints)
+    Y = [[matches01, v] for matches01, v in Z if len(matches01) >= min_matches]
+    if len(Y) == 0:
+        raise ValueError("Not enough matches found")
+    return zip(*Y)
 
 
 class FeatureBasedVO(BaseVO):
@@ -125,8 +124,6 @@ class FeatureBasedVO(BaseVO):
         kd0 = self.kds[viewpoint0]
 
         matches, viewpoints = self.match(kd1, viewpoints=[viewpoint0])
-        if len(matches) == 0:
-            raise ValueError("Not enough matches found")
 
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
