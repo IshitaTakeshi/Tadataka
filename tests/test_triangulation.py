@@ -11,7 +11,7 @@ from tadataka.pose import Pose
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation, compute_depth_mask
-from tadataka.triangulation import Triangulation
+from tadataka.triangulation import Triangulation, TwoViewTriangulation
 
 # TODO add the case such that x[3] = 0
 
@@ -85,7 +85,7 @@ def test_compute_depth_mask():
     assert_array_equal(mask, [False, False, False, True])
 
 
-def test_triangulation():
+def test_two_view_triangulation():
     triangulator = TwoViewTriangulation(
         Pose(Rotation.from_dcm(R0), t0),
         Pose(Rotation.from_dcm(R1), t1)
@@ -102,8 +102,7 @@ def test_triangulation():
         assert_array_almost_equal(
             depths_,
             [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
-             x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
-             x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]
+             x[2] + t1[2]]  # dot(R1, x)[2] + t1[2]
         )
 
 

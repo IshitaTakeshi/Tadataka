@@ -13,7 +13,10 @@ class TwoViewTriangulation(object):
 
     def triangulate(self, keypoints0, keypoints1):
         assert(keypoints0.shape == keypoints1.shape)
-        return self.triangulator.triangulate(keypoints0, keypoints1)
+        keypoints = np.empty((keypoints0.shape[0], 2, 2))
+        keypoints[:, 0] = keypoints0
+        keypoints[:, 1] = keypoints1
+        return self.triangulator.triangulate(keypoints)
 
 
 class Triangulation(object):
