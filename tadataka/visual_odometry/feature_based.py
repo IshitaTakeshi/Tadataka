@@ -139,18 +139,15 @@ class FeatureBasedVO(BaseVO):
         return pose1, point_dict, correspondence0, correspondence1
 
     def estimate_pose_points(self, features1):
-        # TODO swap if condition. this should be
-        # if len(self.active_viewpoints) > 1
-        #   return self.estimate_pose_points_(features1, self.active_viewpoints)
-        # ...
-        if len(self.active_viewpoints) == 1:
-            viewpoint0 = self.active_viewpoints[0]
-            pose1, point_dict, correspondence0, correspondence1 = self.init_first_two(
-                features1, viewpoint0
-            )
-            correspondence0s = {viewpoint0: correspondence0}
-            return pose1, point_dict, correspondence0s, correspondence1
-        return self.estimate_pose_points_(features1, self.active_viewpoints)
+        if len(self.active_viewpoints) > 1:
+            return self.estimate_pose_points_(features1, self.active_viewpoints)
+
+        viewpoint0 = self.active_viewpoints[0]
+        pose1, point_dict, correspondence0, correspondence1 = self.init_first_two(
+            features1, viewpoint0
+        )
+        correspondence0s = {viewpoint0: correspondence0}
+        return pose1, point_dict, correspondence0s, correspondence1
 
     def estimate_pose_points_(self, features1, viewpoints):
         matches, viewpoints = self.match(features1, viewpoints)
