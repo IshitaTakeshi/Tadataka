@@ -11,13 +11,21 @@ from tadataka.correspondence import (
     get_indices, get_point_hashes, init_correspondence, is_triangulated,
     merge_correspondences, subscribe
 )
+from tadataka.depth import compute_depth_mask
 from tadataka.utils import merge_dicts, value_list
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
-from tadataka.triangulation import triangulate
+from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.so3 import rodrigues
 from tadataka.local_ba import try_run_ba
 from tadataka.visual_odometry.base import BaseVO
+
+
+def triangulate(pose0, pose1, keypoints0, keypoints1):
+    t = TwoViewTriangulation(pose0, pose1)
+    points, depths = t.triangulate(keypoints0, keypoints1)
+    mask = compute_depth_mask(depths)
+    return points, mask
 
 
 def get_new_viewpoint(viewpoints):
@@ -67,12 +75,11 @@ def get_ba_indices(correspondences, kds, point_hashes):
 def filter_matches(matches, viewpoints, min_matches):
     assert(len(viewpoints) == len(matches))
 
-    def f(args):
-        matches01, viewpoint = args
-        return len(matches01) >= min_matches
-
-    Z = filter(f, zip(matches, viewpoints))
-    return zip(*Z)
+    Z = zip(matches, viewpoints)
+    Y = [[matches01, v] for matches01, v in Z if len(matches01) >= min_matches]
+    if len(Y) == 0:
+        raise ValueError("Not enough matches found")
+    return zip(*Y)
 
 
 class FeatureBasedVO(BaseVO):
@@ -117,15 +124,16 @@ class FeatureBasedVO(BaseVO):
         kd0 = self.kds[viewpoint0]
 
         matches, viewpoints = self.match(kd1, viewpoints=[viewpoint0])
-        if len(matches) == 0:
-            raise ValueError("Not enough matches found")
 
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
         pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
-        point_array, matches01 = triangulate(pose0, pose1,
-                                             kd0.keypoints, kd1.keypoints, matches01)
-        point_dict, map0, map1 = subscribe(point_array, matches01)
+
+        point_array, mask = triangulate(pose0, pose1,
+                                        kd0.keypoints[matches01[:, 0]],
+                                        kd1.keypoints[matches01[:, 1]])
+
+        point_dict, map0, map1 = subscribe(point_array[mask], matches01[mask])
         return pose1, point_dict, map0, map1
 
     def estimate_pose_points(self, kd1):
@@ -252,11 +260,13 @@ class FeatureBasedVO(BaseVO):
             return dict(), init_correspondence(), init_correspondence()
 
         # if point doesn't exist, create it by triangulation
-        point_array, triangulated_ = triangulate(
-            pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
+        point_array, mask = triangulate(
+            pose0, pose1,
+            kd0.keypoints[untriangulated[:, 0]],
+            kd1.keypoints[untriangulated[:, 1]]
         )
         point_dict, map0_created, map1_created = subscribe(
-            point_array, triangulated_
+            point_array[mask], untriangulated[mask]
         )
         map1 = merge_correspondences(map1_copied, map1_created)
         return point_dict, map0_created, map1

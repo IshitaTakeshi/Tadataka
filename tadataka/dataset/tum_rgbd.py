@@ -5,6 +5,7 @@ import numpy as np
 from skimage.io import imread
 from scipy.spatial.transform import Rotation
 
+from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.dataset.frame import MonoFrame
 from tadataka.dataset.base import BaseDataset
 from tadataka.dataset.match import match_timestamps
@@ -19,6 +20,8 @@ def load_image_paths(dataset_root, filepath):
         reader = csv.reader(f, delimiter=' ')
 
         for row in reader:
+            if row[0].startswith('#'):
+                continue
             timestamps.append(float(row[0]))
             filepath = str(Path(dataset_root, row[1]))
             image_paths.append(filepath)
@@ -46,7 +49,7 @@ def load_ground_truth_poses(dataset_root):
     return load_poses(Path(dataset_root, "groundtruth.txt"))
 
 
-def syncronize(timestamps0, timestamps1, timestamps2, max_difference=0.02):
+def synchronize(timestamps0, timestamps1, timestamps2, max_difference=np.inf):
     matches01 = match_timestamps(timestamps0, timestamps1, max_difference)
     matches02 = match_timestamps(timestamps0, timestamps2, max_difference)
     indices0, indices1, indices2 = np.intersect1d(
@@ -58,9 +61,13 @@ def syncronize(timestamps0, timestamps1, timestamps2, max_difference=0.02):
 
 
 # TODO download and set dataset_root automatically
-class TUMDataset(BaseDataset):
+class TumRgbdDataset(BaseDataset):
     def __init__(self, dataset_root, depth_factor=5000.):
         self.depth_factor = depth_factor
+        self.camera_model = CameraModel(
+            CameraParameters(focal_length=[525., 525.], offset=[319.5, 239.5]),
+            FOV(0.0)
+        )
 
         timestamps_gt, rotations, positions =\
             load_ground_truth_poses(dataset_root)
@@ -68,7 +75,7 @@ class TUMDataset(BaseDataset):
         timestamps_rgb, paths_rgb = load_rgb_image_paths(dataset_root)
         timestamps_depth, paths_depth = load_depth_image_paths(dataset_root)
 
-        matches = syncronize(timestamps_gt, timestamps_rgb, timestamps_depth)
+        matches = synchronize(timestamps_gt, timestamps_rgb, timestamps_depth)
         indices_gt = matches[:, 0]
         indices_rgb = matches[:, 1]
         indices_depth = matches[:, 2]
@@ -85,4 +92,5 @@ class TUMDataset(BaseDataset):
         D = D / self.depth_factor
 
         # TODO load ground truth
-        return MonoFrame(I, D, self.positions[index], self.rotations[index])
+        return MonoFrame(self.camera_model,
+                         I, D, self.positions[index], self.rotations[index])
