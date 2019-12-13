@@ -157,12 +157,9 @@ def pose_change_from_stereo(keypoints0, keypoints1):
     return select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1)
 
 
-def estimate_pose_change(keypoints0, keypoints1, matches01):
+def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
     # regarding viewpoint 0 as identity (world origin)
-    R, t = pose_change_from_stereo(
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
+    R, t = pose_change_from_stereo(keypoints0, keypoints1)
 
     return Pose(Rotation.from_dcm(R), t)

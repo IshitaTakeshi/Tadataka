@@ -82,6 +82,7 @@ def filter_matches(matches, viewpoints, min_matches):
     return zip(*Y)
 
 
+
 class FeatureBasedVO(BaseVO):
     def __init__(self, camera_model,
                  matcher=Matcher(enable_ransac=True,
@@ -127,11 +128,11 @@ class FeatureBasedVO(BaseVO):
 
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
-        pose1 = estimate_pose_change(features0.keypoints, features1.keypoints, matches01)
+        keypoints0 = features0.keypoints[matches01[:, 0]]
+        keypoints1 = features1.keypoints[matches01[:, 1]]
 
-        point_array, mask = triangulate(pose0, pose1,
-                                        features0.keypoints[matches01[:, 0]],
-                                        features1.keypoints[matches01[:, 1]])
+        pose1 = estimate_pose_change(keypoints0, keypoints1)
+        point_array, mask = triangulate(pose0, pose1, keypoints0, keypoints1)
 
         point_dict, correspondence0, correspondence1 = subscribe(
             point_array[mask], matches01[mask]
@@ -165,10 +166,9 @@ class FeatureBasedVO(BaseVO):
             return -1
 
         viewpoint1 = get_new_viewpoint(self.active_viewpoints)
-        features1 = Features(
-            self.camera_model.undistort(keypoints),
-            descriptors
-        )
+
+        features1 = Features(self.camera_model.undistort(keypoints),
+                             descriptors)
 
         if len(self.active_viewpoints) == 0:
             correspondence1 = init_correspondence()
@@ -258,10 +258,7 @@ class FeatureBasedVO(BaseVO):
         mask = is_triangulated(correspondence0, matches01[:, 0])
         triangulated, untriangulated = matches01[mask], matches01[~mask]
 
-        correspondence1_copied = associate_triangulated(
-            correspondence0,
-            triangulated
-        )
+        copied1 = associate_triangulated(correspondence0, triangulated)
 
         if len(untriangulated) == 0:
             return dict(), init_correspondence(), init_correspondence()
@@ -272,12 +269,13 @@ class FeatureBasedVO(BaseVO):
             features0.keypoints[untriangulated[:, 0]],
             features1.keypoints[untriangulated[:, 1]]
         )
-        point_dict, correspondence0_created, correspondence1_created = subscribe(
-            point_array[mask], untriangulated[mask]
-        )
-        correspondence1 = merge_correspondences(correspondence1_copied,
-                                                correspondence1_created)
-        return point_dict, correspondence0_created, correspondence1
+
+        point_dict, created0, created1 = subscribe(point_array[mask],
+                                                   untriangulated[mask])
+
+        correspondence1 = merge_correspondences(copied1, created1)
+
+        return point_dict, created0, correspondence1
 
     def triangulate(self, viewpoints, matches, pose1, features1):
         # filter keypoints so that one keypoint has only one corresponding
