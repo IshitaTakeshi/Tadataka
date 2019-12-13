@@ -119,7 +119,8 @@ def test_extrema_tracker():
     extrema_tracker = ExtremaTracker(curvature, lambda_)
     coordinates = extrema_tracker.optimize(initial_coordinates)
 
-    # the resulting points should have the maxium energies
+    # the resulting point should have the maxium energy
+    # among its neighbors
     for p in coordinates:
         neighbors = get_neighbors(p, curvature.shape)
         E0 = energy(curvature, p, np.atleast_2d(p), lambda_)[0]
