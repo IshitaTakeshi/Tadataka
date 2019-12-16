@@ -140,7 +140,7 @@ class Tracker(object):
         self.image_shape = image1.shape
 
     def __call__(self, dense_keypoints0):
-        dense_keypoints1 = self.affine.transform(dense_keypoints0)
+        dense_keypoints1 = self.affine(dense_keypoints0)
 
         mask = is_in_image_range(dense_keypoints1, self.image_shape)
 
