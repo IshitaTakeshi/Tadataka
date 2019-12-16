@@ -11,7 +11,8 @@ def test_estimate_affine_transform():
         Y = np.dot(A_true, X.T).T + b_true
         transform = estimate_affine_transform(X, Y)
 
-        A_pred, b_pred = transform.A, transform.b
+        A_pred = transform.params[0:2, 0:2]
+        b_pred = transform.params[0:2, 2]
 
         assert(relative_error(A_true.flatten(), A_pred.flatten()) < 2e-2)
         assert(relative_error(b_true, b_pred) < 2e-2)
