@@ -175,7 +175,7 @@ def dense_mvs(frames):
         tracker = Tracker(
             features0.keypoints[matches01[:, 0]],
             features1.keypoints[matches01[:, 1]],
-            frames[i].image
+            frames[i+1].image
         )
         trackers.append(tracker)
 
