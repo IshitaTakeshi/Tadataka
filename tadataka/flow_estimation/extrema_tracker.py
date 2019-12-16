@@ -90,6 +90,9 @@ class ExtremaTracker(object):
         Return corrected point coordinates
         """
 
+        assert(np.ndim(initial_coordinates) == 2)
+        assert(initial_coordinates.shape[1] == 2)
+
         coordinates = initial_coordinates.astype(np.int64)
         image_shape = self.curvature.shape
         assert(is_in_image_range(coordinates, image_shape).all())
