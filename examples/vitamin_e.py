@@ -31,37 +31,11 @@ def track(keypoints0, image1, flow01):
     return tracker.optimize(flow01(keypoints0))
 
 
-def triangulate(keypoint_node0, keypoint_node1):
-    tringulator = TwoViewTriangulation(pose0, pose1)
-    points, depths = triangulator.triangulate(
-        keypoint_node0.keypoints[keypoint_node1.tracked_indices],
-        keypoint_node1.tracked_keypoints
-    )
-
-    # TODO check if depths are positive
-    return points
-
-
-def grow(keypoints, keypoints_tracked, keypoints_new):
-    nans = np.full((keypoints.shape[0], keypoints_new.shape[0], 2), np.nan)
-    # [existing keypoints             nan]
-    # [ tracked keypoints   new keypoints]
-    upper = np.concatenate((keypoints, nans), axis=1)
-    bottom = np.concatenate((keypoints_tracked, keypoints_new), axis=0)
-    lower = bottom.reshape(1, *bottom.shape)
-    return np.concatenate((upper, lower), axis=0)
-
-
 def estimate_flow(features0, features1):
     matches01 = match(features0, features1)
     keypoints0 = features0.keypoints[matches01[:, 0]]
     keypoints1 = features1.keypoints[matches01[:, 1]]
     return estimate_affine_transform(keypoints0, keypoints1)
-
-
-def allocate(points, n_keypoints):
-    nans = np.full((n_keypoints, 3), np.nan)
-    return np.vstack((points, nans))
 
 
 def plot_track():
