@@ -86,6 +86,9 @@ def solve_pnp(points, keypoints):
         flags=cv2.SOLVEPNP_EPNP
     )
 
+    if not retval:
+        raise RuntimeError("Pose estimation failed")
+
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")
 
