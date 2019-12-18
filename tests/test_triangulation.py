@@ -54,10 +54,11 @@ keypoints2 = projection.compute(transform(R2, t2, points_true))
 def test_linear_triangulation():
     rotations = np.array([R0, R1, R2])
     translations = np.array([t0, t1, t2])
-    keypoints = np.empty((3, points_true.shape[0], 2))
-    keypoints[0] = keypoints0
-    keypoints[1] = keypoints1
-    keypoints[2] = keypoints2
+    keypoints = np.stack((
+        keypoints0,
+        keypoints1,
+        keypoints2
+    ))
 
     points, depths = linear_triangulation(rotations, translations, keypoints)
 
@@ -113,10 +114,11 @@ def test_triangulation():
          Pose(Rotation.from_dcm(R2), t2)]
     )
 
-    keypoints = np.empty((3, points_true.shape[0], 2))
-    keypoints[0] = keypoints0
-    keypoints[1] = keypoints1
-    keypoints[2] = keypoints2
+    keypoints = np.stack((
+        keypoints0,
+        keypoints1,
+        keypoints2
+    ))
 
     points, depths = triangulator.triangulate(keypoints)
 
