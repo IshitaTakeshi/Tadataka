@@ -7,7 +7,6 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraParameters
 from tadataka.dataset.observations import generate_translations
-from tadataka.depth import compute_depth_mask
 from tadataka.pose import Pose
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
@@ -72,19 +71,6 @@ def test_linear_triangulation():
              x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
              x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]
         )
-
-
-def test_compute_depth_mask():
-    mask = compute_depth_mask(
-        np.array([
-            [0, 0],
-            [-1, -1],
-            [1, -1],
-            [1, 1]
-        ])
-    )
-
-    assert_array_equal(mask, [False, False, False, True])
 
 
 def test_two_view_triangulation():
