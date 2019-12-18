@@ -112,19 +112,17 @@ def triangulation_indices(n_keypoints):
     return indices[:N]
 
 
-def select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1):
+def select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1):
     R0, t0 = np.identity(3), np.zeros(3)
 
     n_max_valid_depth = -1
     argmax_R, argmax_t, argmax_depth_mask = None, None, None
 
     # not necessary to triangulate all points to validate depths
-    indices = triangulation_indices(len(keypoints0))
-    keypoints = np.empty((len(indices), 2, 2))  # (n_keypoints, n_poses, 2)
-    for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        keypoints[:, 0] = keypoints0[indices]
-        keypoints[:, 1] = keypoints1[indices]
-
+    N = max(int(0.2 * len(keypoints0)), 10)
+    indices = triangulation_indices(N)
+    keypoints = np.stack((keypoints0[indices], keypoints1[indices]))
+    for i, (R_, t_) in enumerate(itertools.product((R1A, R1B), (t1a, t1b))):
         _, depths = linear_triangulation(
             np.array([R0, R_]),
             np.array([t0, t_]),
@@ -156,8 +154,8 @@ def pose_change_from_stereo(keypoints0, keypoints1):
 
     # R <- {R1, R2}, t <- {t1, t2} satisfy
     # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
-    R1, R2, t1, t2 = decompose_essential(E)
-    return select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1)
+    R1A, R1B, t1a, t1b = decompose_essential(E)
+    return select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1)
 
 
 def estimate_pose_change(keypoints0, keypoints1):
