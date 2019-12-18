@@ -54,19 +54,19 @@ keypoints2 = projection.compute(transform(R2, t2, points_true))
 def test_linear_triangulation():
     rotations = np.array([R0, R1, R2])
     translations = np.array([t0, t1, t2])
-    keypoints = np.empty((points_true.shape[0], 3, 2))
-    keypoints[:, 0] = keypoints0
-    keypoints[:, 1] = keypoints1
-    keypoints[:, 2] = keypoints2
+    keypoints = np.empty((3, points_true.shape[0], 2))
+    keypoints[0] = keypoints0
+    keypoints[1] = keypoints1
+    keypoints[2] = keypoints2
 
     points, depths = linear_triangulation(rotations, translations, keypoints)
 
     assert_array_almost_equal(points, points_true)
 
-    assert(depths.shape[0] == points_true.shape[0])
-    for x, depths_ in zip(points_true, depths):
+    assert(depths.shape == (3, points_true.shape[0]))
+    for i, x in enumerate(points_true):
         assert_array_almost_equal(
-            depths_,
+            depths[:, i],
             [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
              x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
              x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]
@@ -96,12 +96,11 @@ def test_two_view_triangulation():
 
     assert_array_almost_equal(points, points_true)
 
-    assert(depths.shape[0] == points_true.shape[0])
-    assert(depths.shape[1] == 2)
+    assert(depths.shape == (2, points_true.shape[0]))
 
-    for x, depths_ in zip(points_true, depths):
+    for i, x in enumerate(points_true):
         assert_array_almost_equal(
-            depths_,
+            depths[:, i],
             [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
              x[2] + t1[2]]  # dot(R1, x)[2] + t1[2]
         )
@@ -111,25 +110,23 @@ def test_triangulation():
     triangulator = Triangulation(
         [Pose(Rotation.from_dcm(R0), t0),
          Pose(Rotation.from_dcm(R1), t1),
-         Pose(Rotation.from_dcm(R2), t2)],
-        min_depth=0.0
+         Pose(Rotation.from_dcm(R2), t2)]
     )
 
-    keypoints = np.empty((points_true.shape[0], 3, 2))
-    keypoints[:, 0] = keypoints0
-    keypoints[:, 1] = keypoints1
-    keypoints[:, 2] = keypoints2
+    keypoints = np.empty((3, points_true.shape[0], 2))
+    keypoints[0] = keypoints0
+    keypoints[1] = keypoints1
+    keypoints[2] = keypoints2
 
     points, depths = triangulator.triangulate(keypoints)
 
     assert_array_almost_equal(points, points_true)
 
-    assert(depths.shape[0] == points_true.shape[0])
-    assert(depths.shape[1] == 3)
+    assert(depths.shape == (3, points_true.shape[0]))
 
-    for x, depths_ in zip(points_true, depths):
+    for i, x in enumerate(points_true):
         assert_array_almost_equal(
-            depths_,
+            depths[:, i],
             [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
              x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
              x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]

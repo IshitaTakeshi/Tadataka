@@ -4,11 +4,15 @@ from tadataka.matrix import solve_linear
 
 
 def linear_triangulation_(rotations, translations, keypoints):
+    # keypoints.shape == (n_poses, 2)
+    # rotations.shape == (n_poses, 3, 3)
+    # translations.shape == (n_poses, 3)
     assert(rotations.shape[0] == translations.shape[0] == keypoints.shape[0])
 
     def calc_depths(x):
         return np.dot(rotations[:, 2], x) + translations[:, 2]
 
+    # let
     # A = np.vstack([
     #     x0 * P0[2] - P0[0],
     #     y0 * P0[2] - P0[1],
@@ -18,6 +22,7 @@ def linear_triangulation_(rotations, translations, keypoints):
     #     y2 * P2[2] - P2[1],
     #     ...
     # ])
+    # and compute argmin_x ||Ax||
     #
     # See Multiple View Geometry section 12.2 for details
 
@@ -60,16 +65,16 @@ def linear_triangulation(rotations, translations, keypoints):
     """
 
     # estimate a 3D point coordinate from multiple projections
-    assert(rotations.shape[0] == translations.shape[0] == keypoints.shape[1])
+    assert(rotations.shape[0] == translations.shape[0] == keypoints.shape[0])
     assert(rotations.shape[1:3] == (3, 3))
     assert(translations.shape[1] == 3)
     assert(keypoints.shape[2] == 2)
 
-    n_keypoints, n_poses = keypoints.shape[0:2]
-    points = np.empty((n_keypoints, 3))
-    depths = np.empty((n_keypoints, n_poses))
-    for i in range(n_keypoints):
-        points[i], depths[i] = linear_triangulation_(
-            rotations, translations, keypoints[i]
+    n_poses, n_points = keypoints.shape[0:2]
+    points = np.empty((n_points, 3))
+    depths = np.empty((n_poses, n_points))
+    for i in range(n_points):
+        points[i], depths[:, i] = linear_triangulation_(
+            rotations, translations, keypoints[:, i]
         )
     return points, depths

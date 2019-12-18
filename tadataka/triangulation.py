@@ -13,22 +13,18 @@ class TwoViewTriangulation(object):
 
     def triangulate(self, keypoints0, keypoints1):
         assert(keypoints0.shape == keypoints1.shape)
-        keypoints = np.empty((keypoints0.shape[0], 2, 2))
-        keypoints[:, 0] = keypoints0
-        keypoints[:, 1] = keypoints1
+        keypoints = np.stack((keypoints0, keypoints1))
         return self.triangulator.triangulate(keypoints)
 
 
 class Triangulation(object):
-    def __init__(self, poses, min_depth=0.0):
-        self.n_poses = len(poses)
+    def __init__(self, poses):
         self.rotations = np.array([pose.rotation.as_dcm() for pose in poses])
         self.translations = np.array([pose.t for pose in poses])
-        self.min_depth = min_depth
 
     def triangulate(self, keypoints):
         """
-        keypoints.shape == (n_keypoints, n_poses, 2)
+        keypoints.shape == (n_poses, n_keypoints, 2)
         """
         return TR.linear_triangulation(self.rotations, self.translations,
                                        keypoints)
