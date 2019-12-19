@@ -91,21 +91,23 @@ class ExtremaTracker(object):
 
         self.lambda_ = lambda_
 
-    def optimize(self, coordinates):
+    def optimize(self, initial_coordinates):
         """
         Return corrected point coordinates
         """
 
-        assert(np.ndim(coordinates) == 2)
-        assert(coordinates.shape[1] == 2)
+        assert(np.ndim(initial_coordinates) == 2)
+        assert(initial_coordinates.shape[1] == 2)
+
+        coordinates = np.trunc(initial_coordinates)
+        after_decimal = initial_coordinates - coordinates
+
+        coordinates = coordinates.astype(np.int64)
 
         mask = is_in_image_range(coordinates, self.curvature.shape)
-        image_shape = self.curvature.shape
-
-        coordinates[mask] = maximize(
-            self.curvature,
-            coordinates[mask].astype(np.int64),
-            self.lambda_
-        )
+        coordinates[mask] = maximize(self.curvature, coordinates[mask],
+                                     self.lambda_)
+        coordinates = coordinates.astype(np.float64)
+        coordinates = coordinates + after_decimal
 
         return coordinates
