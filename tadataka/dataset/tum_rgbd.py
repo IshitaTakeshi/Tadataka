@@ -1,63 +1,28 @@
+
 from pathlib import Path
-import csv
 
 import numpy as np
 from skimage.io import imread
-from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.dataset.frame import MonoFrame
 from tadataka.dataset.base import BaseDataset
-from tadataka.dataset.match import match_timestamps
+from tadataka.dataset.tum import load_poses, load_image_paths, synchronize
 from tadataka.utils import value_list
 
 
-def load_image_paths(dataset_root, filepath):
-    timestamps = []
-    image_paths = []
-
-    with open(str(filepath), "r") as f:
-        reader = csv.reader(f, delimiter=' ')
-
-        for row in reader:
-            if row[0].startswith('#'):
-                continue
-            timestamps.append(float(row[0]))
-            filepath = str(Path(dataset_root, row[1]))
-            image_paths.append(filepath)
-    return np.array(timestamps), image_paths
-
-
 def load_depth_image_paths(dataset_root):
-    return load_image_paths(dataset_root, Path(dataset_root, "depth.txt"))
+    path = Path(dataset_root, "depth.txt")
+    return load_image_paths(path, prefix=dataset_root)
 
 
 def load_rgb_image_paths(dataset_root):
-    return load_image_paths(dataset_root, Path(dataset_root, "rgb.txt"))
-
-
-def load_poses(path):
-    array = np.loadtxt(path)
-    timestamps = array[:, 0]
-    positions = array[:, 1:4]
-    quaternions = array[:, 4:8]
-    rotations = Rotation.from_quat(quaternions)
-    return timestamps, rotations, positions
+    path = Path(dataset_root, "rgb.txt")
+    return load_image_paths(path, prefix=dataset_root)
 
 
 def load_ground_truth_poses(dataset_root):
     return load_poses(Path(dataset_root, "groundtruth.txt"))
-
-
-def synchronize(timestamps0, timestamps1, timestamps2, max_difference=np.inf):
-    matches01 = match_timestamps(timestamps0, timestamps1, max_difference)
-    matches02 = match_timestamps(timestamps0, timestamps2, max_difference)
-    indices0, indices1, indices2 = np.intersect1d(
-        matches01[:, 0], matches02[:, 0], return_indices=True
-    )
-    return np.column_stack((indices0,
-                            matches01[indices1, 1],
-                            matches02[indices2, 1]))
 
 
 # TODO download and set dataset_root automatically
@@ -91,6 +56,5 @@ class TumRgbdDataset(BaseDataset):
         D = imread(self.paths_depth[index])
         D = D / self.depth_factor
 
-        # TODO load ground truth
-        return MonoFrame(self.camera_model,
-                         I, D, self.positions[index], self.rotations[index])
+        return MonoFrame(self.camera_model, I, D,
+                         self.positions[index], self.rotations[index])
