@@ -36,8 +36,14 @@ def is_in_image_range(P, image_shape):
 
 
 @njit
+def geman_mcclure(x, sigma):
+    y = np.sum(np.power(x, 2))
+    return y / (y + sigma)
+
+
+@njit
 def regularize(p, p0):
-    return 1. - np.sum(np.power(p - p0, 2))
+    return 1. - geman_mcclure(p - p0, sigma=10.0)
 
 
 @njit
