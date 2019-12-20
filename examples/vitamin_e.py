@@ -83,11 +83,21 @@ def estimate_flow(features0, features1):
 def plot_track(image1, image2, keypoints1, keypoints2):
     fig = plt.figure()
     ax = fig.add_subplot(121)
-    ax.imshow(image1)
     ax.scatter(keypoints1[:, 0], keypoints1[:, 1], s=0.1, c='red')
+    ax.imshow(image1)
+
+    h, w = image1.shape[0:2]
+    ax.set_xlim(0, w)
+    ax.set_ylim(h, 0)
+
     ax = fig.add_subplot(122)
-    ax.imshow(image2)
     ax.scatter(keypoints2[:, 0], keypoints2[:, 1], s=0.1, c='red')
+    ax.imshow(image2)
+
+    h, w = image2.shape[0:2]
+    ax.set_xlim(0, w)
+    ax.set_ylim(h, 0)
+
     plt.show()
 
 
