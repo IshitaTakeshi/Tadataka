@@ -17,7 +17,7 @@ from tadataka.triangulation import Triangulation, TwoViewTriangulation
 from tadataka.flow_estimation.extrema_tracker import ExtremaTracker
 from tadataka.dataset.tum_rgbd import TumRgbdDataset
 from tadataka.utils import is_in_image_range
-from tadataka.plot import plot_map
+from tadataka.plot import plot_map, plot_matches
 
 
 match = Matcher(enable_ransac=False, enable_homography_filter=False)
@@ -31,7 +31,7 @@ class DenseKeypointExtractor(object):
         return extract_curvature_extrema(image, self.percentile)
 
 
-extract_dense_keypoints = DenseKeypointExtractor(percentile=90)
+extract_dense_keypoints = DenseKeypointExtractor(percentile=80)
 
 
 def keypoints_from_new_area(image1, flow01):
@@ -65,9 +65,10 @@ def track_(keypoints0, image1, flow01):
     image1 = exposure.equalize_adapthist(image1)
     curvature = compute_image_curvature(image1)
 
-    tracker = ExtremaTracker(curvature, lambda_=10.0)
+    tracker = ExtremaTracker(curvature, lambda_=1e2)
     keypoints1_ = flow01(keypoints0)
     keypoints1 = tracker.optimize(keypoints1_)
+    # plot_distance_hist(keypoints1_, keypoints1)
 
     return keypoints1
 
@@ -93,15 +94,22 @@ def plot_track(image1, image2, keypoints1, keypoints2):
 np.random.seed(3939)
 
 
-def triangulate(pose0, pose1, frame0, frame1):
-    keypoints0 = get_keypoints(frame0)
-    keypoints1 = get_keypoints(frame1)
-    _, indices0, indices1 = np.intersect1d(get_ids(frame0), get_ids(frame1),
-                                           return_indices=True)
+def match_keypoints(keypoint0, keypoint1):
+    _, indices0, indices1 = np.intersect1d(
+        get_ids(keypoint0), get_ids(keypoint1),
+        return_indices=True
+    )
+    return np.column_stack((indices0, indices1))
+
+
+def triangulate(pose0, pose1, keypoints0, keypoints1):
+    matches01 = match_keypoints(keypoints0, keypoints1)
     triangulator = TwoViewTriangulation(pose0, pose1)
+    keypoints0_ = get_array(keypoints0)[matches01[:, 0]]
+    keypoints1_ = get_array(keypoints1)[matches01[:, 1]]
     return triangulator.triangulate(
-        camera_model.undistort(keypoints0[indices0]),
-        camera_model.undistort(keypoints1[indices1])
+        camera_model.undistort(keypoints0_),
+        camera_model.undistort(keypoints1_)
     )
 
 
@@ -129,12 +137,18 @@ def plot_depth_hist(depths, n_bins=100):
 test_choose_nonoverlap()
 
 
-def create_first_frame(image):
+def create_keypoint_frame(start_id, keypoints):
+    N = keypoints.shape[0]
+    ids = np.arange(start_id, start_id + N)
+    return create_keypoint_frame_(ids, keypoints)
+
+
+def create_first_keypoints(image):
     keypoints = extract_dense_keypoints(image)
     return create_keypoint_frame(0, keypoints)
 
 
-def get_keypoints(frame):
+def get_array(frame):
     return frame[['x', 'y']].to_numpy()
 
 
@@ -149,12 +163,6 @@ def create_keypoint_frame_(ids, keypoints):
                          'y': keypoints[:, 1]})
 
 
-def create_keypoint_frame(start_id, keypoints):
-    N = keypoints.shape[0]
-    ids = np.arange(start_id, start_id + N)
-    return create_keypoint_frame_(ids, keypoints)
-
-
 class Tracker(object):
     def __init__(self, features0, features1, image1):
         matches01 = match(features0, features1)
@@ -164,18 +172,18 @@ class Tracker(object):
         )
         self.image1 = image1
 
-    def __call__(self, frame0):
-        keypoints0 = get_keypoints(frame0)
-        keypoints1 = track_(keypoints0, self.image1, self.flow01)
-        mask1 = is_in_image_range(keypoints1, self.image1.shape)
-        ids0 = get_ids(frame0)
-        frame1 = create_keypoint_frame_(ids0[mask1], keypoints1[mask1])
+    def __call__(self, keypoints0):
+        keypoints0_ = get_array(keypoints0)
+        keypoints1_ = track_(keypoints0_, self.image1, self.flow01)
+        mask1 = is_in_image_range(keypoints1_, self.image1.shape)
+        ids0 = get_ids(keypoints0)
+        keypoints1 = create_keypoint_frame_(ids0[mask1], keypoints1_[mask1])
 
         id_start = ids0[-1] + 1
         new_keypoints1 = keypoints_from_new_area(self.image1, self.flow01)
         new_rows = create_keypoint_frame(id_start, new_keypoints1)
 
-        return pd.concat([frame1, new_rows])
+        return pd.concat([keypoints1, new_rows])
 
 
 def test_create_keypoint_frame():
@@ -198,28 +206,33 @@ test_create_keypoint_frame()
 
 dataset = TumRgbdDataset(Path("datasets", "rgbd_dataset_freiburg1_xyz"))
 camera_model = dataset.camera_model
-frames = dataset[480:490]
+frames = dataset[660:670]
 poses = [Pose(f.rotation, f.position).world_to_local() for f in frames]
 images = [f.image for f in frames]
 features = [extract_features(image) for image in images]
 
 # HACK is it better to drop keypoints0 that are out of the next image range ?
 
-frames = [None] * len(frames)
+keypoints = [None] * len(frames)
 
-frames[0] = create_first_frame(images[0])
+keypoints[0] = create_first_keypoints(images[0])
 
-for i in range(len(frames)-1):
-    frames[i+1] = Tracker(features[i], features[i+1], images[i+1])(frames[i])
+for i in range(len(keypoints)-1):
+    keypoints[i+1] = Tracker(features[i], features[i+1], images[i+1])(keypoints[i])
 
 index0, index1 = 0, -1
-plot_track(images[index0], images[index1],
-           get_keypoints(frames[index0]), get_keypoints(frames[index1]))
+# plot_matches(
+#     images[index0], images[index1],
+#     get_array(keypoints[index0]), get_array(keypoints[index1]),
+#     match_keypoints(keypoints[index0], keypoints[index1])
+# )
 
+plot_track(images[index0], images[index1],
+           get_array(keypoints[index0]), get_array(keypoints[index1]))
 
 points01, depths = triangulate(
     poses[index0], poses[index1],
-    frames[index0], frames[index1]
+    keypoints[index0], keypoints[index1]
 )
 plot_map([poses[index0], poses[index1]], points01)
 
