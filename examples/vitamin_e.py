@@ -4,6 +4,7 @@ from skimage.io import imread
 import numpy as np
 from matplotlib import pyplot as plt
 from skimage.color import rgb2gray
+import pandas as pd
 
 from skimage import exposure
 from tadataka.camera.io import load
@@ -19,36 +20,54 @@ from tadataka.utils import is_in_image_range
 from tadataka.plot import plot_map
 
 
+match = Matcher(enable_ransac=False, enable_homography_filter=False)
+
+
+class DenseKeypointExtractor(object):
+    def __init__(self, percentile):
+        self.percentile = percentile
+
+    def __call__(self, image):
+        return extract_curvature_extrema(image, self.percentile)
+
+
+extract_dense_keypoints = DenseKeypointExtractor(percentile=90)
+
+
 def keypoints_from_new_area(image1, flow01):
     """Extract keypoints from newly observed image rea"""
-    keypoints1 = extract_curvature_extrema(image1)
+    keypoints1 = extract_dense_keypoints(image1)
     # out of image range after transforming from frame1 to frame0
     # we assume image1.shape == image0.shape
     mask = ~is_in_image_range(flow01.inverse(keypoints1), image1.shape)
     return keypoints1[mask]
 
 
-def track(keypoints0, image1, flow01):
+def plot_curvature(image, curvature):
+    plt.subplot(121)
+    plt.imshow(image, cmap="gray")
+    plt.subplot(122)
+    plt.imshow(curvature, cmap="gray")
+    plt.show()
+
+
+def plot_distance_hist(origin, moved):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_title("moved distance")
+    ax.hist(np.sum(np.power(moved - origin, 2), axis=1), bins=20)
+    plt.show()
+
+
+def track_(keypoints0, image1, flow01):
     image1 = rgb2gray(image1)
     image1 = image1 - np.mean(image1)
     image1 = exposure.equalize_adapthist(image1)
     curvature = compute_image_curvature(image1)
 
-    plt.subplot(121)
-    plt.imshow(image1, cmap="gray")
-    plt.subplot(122)
-    plt.imshow(curvature, cmap="gray")
-    plt.show()
-
-    tracker = ExtremaTracker(curvature, lambda_=0.01)
+    tracker = ExtremaTracker(curvature, lambda_=10.0)
     keypoints1_ = flow01(keypoints0)
     keypoints1 = tracker.optimize(keypoints1_)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_title("moved distance")
-    ax.hist(np.sum(np.power(keypoints1 - keypoints1_, 2), axis=1), bins=20)
-    plt.show()
 
     return keypoints1
 
@@ -73,6 +92,19 @@ def plot_track(image1, image2, keypoints1, keypoints2):
 
 np.random.seed(3939)
 
+
+def triangulate(pose0, pose1, frame0, frame1):
+    keypoints0 = get_keypoints(frame0)
+    keypoints1 = get_keypoints(frame1)
+    _, indices0, indices1 = np.intersect1d(get_ids(frame0), get_ids(frame1),
+                                           return_indices=True)
+    triangulator = TwoViewTriangulation(pose0, pose1)
+    return triangulator.triangulate(
+        camera_model.undistort(keypoints0[indices0]),
+        camera_model.undistort(keypoints1[indices1])
+    )
+
+
 def choose_nonoverlap(size, ratio):
     N = int(size * ratio)
     indices_ = np.arange(0, size)
@@ -96,40 +128,108 @@ def plot_depth_hist(depths, n_bins=100):
 
 test_choose_nonoverlap()
 
-match = Matcher(enable_ransac=False, enable_homography_filter=False)
 
-camera_model = load("./datasets/saba/cameras.txt")[1]
-filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
+def create_first_frame(image):
+    keypoints = extract_dense_keypoints(image)
+    return create_keypoint_frame(0, keypoints)
 
-image0, image1, image2 = [imread(f) for f in filenames[189:192]]
 
-# dataset = TumRgbdDataset(Path("datasets", "rgbd_dataset_freiburg1_xyz"))
-# camera_model = dataset.camera_model
-# frames = dataset[270:273]
-# poses = [Pose(f.rotation, f.position).world_to_local() for f in frames]
-# image0, image1, image2 = [f.image for f in frames]
+def get_keypoints(frame):
+    return frame[['x', 'y']].to_numpy()
 
-features0 = extract_features(image0)
-features1 = extract_features(image1)
-features2 = extract_features(image2)
+
+def get_ids(frame):
+    return frame['id'].to_numpy()
+
+
+def create_keypoint_frame_(ids, keypoints):
+    assert(keypoints.shape == (ids.shape[0], 2))
+    return pd.DataFrame({'id': ids,
+                         'x': keypoints[:, 0],
+                         'y': keypoints[:, 1]})
+
+
+def create_keypoint_frame(start_id, keypoints):
+    N = keypoints.shape[0]
+    ids = np.arange(start_id, start_id + N)
+    return create_keypoint_frame_(ids, keypoints)
+
+
+class Tracker(object):
+    def __init__(self, features0, features1, image1):
+        matches01 = match(features0, features1)
+        self.flow01 = estimate_affine_transform(
+            features0.keypoints[matches01[:, 0]],
+            features1.keypoints[matches01[:, 1]]
+        )
+        self.image1 = image1
+
+    def __call__(self, frame0):
+        keypoints0 = get_keypoints(frame0)
+        keypoints1 = track_(keypoints0, self.image1, self.flow01)
+        mask1 = is_in_image_range(keypoints1, self.image1.shape)
+        ids0 = get_ids(frame0)
+        frame1 = create_keypoint_frame_(ids0[mask1], keypoints1[mask1])
+
+        id_start = ids0[-1] + 1
+        new_keypoints1 = keypoints_from_new_area(self.image1, self.flow01)
+        new_rows = create_keypoint_frame(id_start, new_keypoints1)
+
+        return pd.concat([frame1, new_rows])
+
+
+def test_create_keypoint_frame():
+    keypoints = np.arange(10).reshape(5, 2)
+    frame = create_keypoint_frame(0, keypoints)
+    np.testing.assert_array_equal(frame['id'].to_numpy(), np.arange(5))
+    np.testing.assert_array_equal(frame[['x', 'y']].to_numpy(), keypoints)
+
+    frame = create_keypoint_frame(2, keypoints)
+    np.testing.assert_array_equal(frame['id'].to_numpy(), np.arange(2, 7))
+    np.testing.assert_array_equal(frame[['x', 'y']].to_numpy(), keypoints)
+
+
+test_create_keypoint_frame()
+
+# camera_model = load("./datasets/saba/cameras.txt")[1]
+# filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
+#
+# image0, image1, image2 = [imread(f) for f in filenames[189:192]]
+
+dataset = TumRgbdDataset(Path("datasets", "rgbd_dataset_freiburg1_xyz"))
+camera_model = dataset.camera_model
+frames = dataset[480:490]
+poses = [Pose(f.rotation, f.position).world_to_local() for f in frames]
+images = [f.image for f in frames]
+features = [extract_features(image) for image in images]
+
+# HACK is it better to drop keypoints0 that are out of the next image range ?
+
+frames = [None] * len(frames)
+
+frames[0] = create_first_frame(images[0])
+
+for i in range(len(frames)-1):
+    frames[i+1] = Tracker(features[i], features[i+1], images[i+1])(frames[i])
+
+index0, index1 = 0, -1
+plot_track(images[index0], images[index1],
+           get_keypoints(frames[index0]), get_keypoints(frames[index1]))
+
+
+points01, depths = triangulate(
+    poses[index0], poses[index1],
+    frames[index0], frames[index1]
+)
+plot_map([poses[index0], poses[index1]], points01)
+
+exit(0)
+
 
 DO_PNP = True
 if DO_PNP:
     poses = [None] * 3
     poses[0] = Pose.identity()
-
-# HACK is it better to drop keypoints0 that are out of the next image range ?
-tracked_keypoints0 = extract_curvature_extrema(image0, percentile=99)
-
-matches01 = match(features0, features1)
-flow01 = estimate_affine_transform(
-    features0.keypoints[matches01[:, 0]],
-    features1.keypoints[matches01[:, 1]]
-)
-
-tracked_keypoints1 = track(tracked_keypoints0, image1, flow01)
-tracked_mask1 = is_in_image_range(tracked_keypoints1, image1.shape)
-new_keypoints1 = keypoints_from_new_area(image1, flow01)
 
 if DO_PNP:
     poses[1] = estimate_pose_change(
@@ -149,8 +249,6 @@ points01, depths = triangulator.triangulate(
 
 plot_map([poses[0], poses[1]], points01)
 plot_depth_hist(depths)
-
-exit(0)
 
 tracked_keypoints1 = tracked_keypoints1[tracked_mask1]
 
