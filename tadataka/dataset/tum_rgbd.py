@@ -40,10 +40,10 @@ class TumRgbdDataset(BaseDataset):
         timestamps_rgb, paths_rgb = load_rgb_image_paths(dataset_root)
         timestamps_depth, paths_depth = load_depth_image_paths(dataset_root)
 
-        matches = synchronize(timestamps_gt, timestamps_rgb, timestamps_depth)
-        indices_gt = matches[:, 0]
+        matches = synchronize(timestamps_depth, timestamps_rgb, timestamps_gt)
+        indices_depth = matches[:, 0]
         indices_rgb = matches[:, 1]
-        indices_depth = matches[:, 2]
+        indices_gt = matches[:, 2]
 
         self.rotations = rotations[indices_gt]
         self.positions = positions[indices_gt]
@@ -57,4 +57,5 @@ class TumRgbdDataset(BaseDataset):
         D = D / self.depth_factor
 
         return MonoFrame(self.camera_model, I, D,
-                         self.positions[index], self.rotations[index])
+                         self.positions[index],
+                         self.rotations[index])

@@ -76,8 +76,8 @@ class NewTsukubaDataset(BaseDataset):
 
         depth_left = load_depth(self.depth_left_paths[index])
         depth_right = load_depth(self.depth_right_paths[index])
-        position_center = self.positions[index]
 
+        position_center = self.positions[index]
         rotation = self.rotations[index]
         offset = calc_baseline_offset(rotation, self.baseline_length)
 
