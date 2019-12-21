@@ -7,7 +7,7 @@ from skimage.io import imread
 import numpy as np
 
 from tadataka.camera import CameraModel, CameraParameters, FOV
-from tadataka.dataset.frame import StereoFrame
+from tadataka.dataset.frame import Frame
 from tadataka.dataset.base import BaseDataset
 
 
@@ -59,33 +59,35 @@ class NewTsukubaDataset(BaseDataset):
         depth_dir = Path(groundtruth_dir, "depth_maps")
         image_dir = Path(illumination_dir, condition)
 
-        self.depth_left_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
-        self.depth_right_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
-        self.image_left_paths = sorted(Path(image_dir, "left").glob("*.png"))
-        self.image_right_paths = sorted(Path(image_dir, "right").glob("*.png"))
+        self.depth_L_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
+        self.depth_R_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
+        self.image_L_paths = sorted(Path(image_dir, "left").glob("*.png"))
+        self.image_R_paths = sorted(Path(image_dir, "right").glob("*.png"))
 
-        assert((len(self.depth_left_paths) == len(self.depth_right_paths) ==
-                len(self.image_left_paths) == len(self.image_right_paths)))
+        assert((len(self.depth_L_paths) == len(self.depth_R_paths) ==
+                len(self.image_L_paths) == len(self.image_R_paths)))
+
+        print(self.depth_L_paths)
+        self.length = len(self.depth_L_paths)
 
     def load(self, index):
-        image_left = imread(self.image_left_paths[index])
-        image_right = imread(self.image_right_paths[index])
+        image_l = imread(self.image_L_paths[index])
+        image_r = imread(self.image_R_paths[index])
 
-        image_left = discard_alpha(image_left)
-        image_right = discard_alpha(image_right)
+        image_l = discard_alpha(image_l)
+        image_r = discard_alpha(image_r)
 
-        depth_left = load_depth(self.depth_left_paths[index])
-        depth_right = load_depth(self.depth_right_paths[index])
+        depth_l = load_depth(self.depth_L_paths[index])
+        depth_r = load_depth(self.depth_R_paths[index])
 
         position_center = self.positions[index]
+        print("position_center", position_center)
         rotation = self.rotations[index]
         offset = calc_baseline_offset(rotation, self.baseline_length)
 
-        return StereoFrame(
-            self.camera_model,
-            image_left, image_right,
-            depth_left, depth_right,
-            position_center - offset / 2.0,
-            position_center + offset / 2.0,
-            rotation
+        return (
+            Frame(self.camera_model, image_l, depth_l,
+                  rotation, position_center - offset / 2.0),
+            Frame(self.camera_model, image_r, depth_r,
+                  rotation, position_center + offset / 2.0)
         )
