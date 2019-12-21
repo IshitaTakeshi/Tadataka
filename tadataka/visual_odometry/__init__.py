@@ -1,2 +1,1 @@
-from tadataka.visual_odometry.vitamin_e import VitaminE
 from tadataka.visual_odometry.feature_based import FeatureBasedVO

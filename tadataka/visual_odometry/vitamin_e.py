@@ -1,165 +1,108 @@
 import numpy as np
-from collections import deque
-
+from skimage import exposure
 from skimage.color import rgb2gray
+import pandas as pd
 
+from tadataka.feature import Matcher
 from tadataka.flow_estimation.image_curvature import (
-    compute_image_curvature, extract_curvature_extrema
-)
+    extract_curvature_extrema, compute_image_curvature)
 from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.flow_estimation.extrema_tracker import ExtremaTracker
-from tadataka.triangulation import Triangulation
+from tadataka.triangulation import TwoViewTriangulation
 from tadataka.utils import is_in_image_range
-from tadataka.visual_odometry.feature_based import FeatureBasedVO
 
 
-def keypoint_correction(keypoints, image):
-    curvature = compute_image_curvature(rgb2gray(image))
-    tracker = ExtremaTracker(curvature, lambda_=1e-3)
-    mask = is_in_image_range(keypoints, image.shape)
-    keypoints[mask] = tracker.optimize(keypoints[mask])
-    return keypoints
+match = Matcher(enable_ransac=False, enable_homography_filter=False)
+
+
+class DenseKeypointExtractor(object):
+    def __init__(self, percentile):
+        self.percentile = percentile
+
+    def __call__(self, image):
+        return extract_curvature_extrema(image, self.percentile)
+
+
+extract_dense_keypoints = DenseKeypointExtractor(percentile=99)
+
+
+def keypoints_from_new_area(image1, flow01):
+    """Extract keypoints from newly observed image area"""
+    keypoints1 = extract_dense_keypoints(image1)
+    # out of image range after transforming from frame1 to frame0
+    # we assume image1.shape == image0.shape
+    mask = ~is_in_image_range(flow01.inverse(keypoints1), image1.shape)
+    return keypoints1[mask]
+
+
+def normalize_image(image):
+    image = rgb2gray(image)
+    image = image - np.mean(image)
+    image = exposure.equalize_adapthist(image)
+    return image
+
+
+def track_(keypoints0, image1, flow01, lambda_):
+    image1 = normalize_image(image1)
+    curvature = compute_image_curvature(image1)
+
+    tracker = ExtremaTracker(curvature, lambda_)
+    return tracker.optimize(flow01(keypoints0))
+
+
+def estimate_flow(features0, features1):
+    matches01 = match(features0, features1)
+    keypoints0 = features0.keypoints[matches01[:, 0]]
+    keypoints1 = features1.keypoints[matches01[:, 1]]
+    return estimate_affine_transform(keypoints0, keypoints1)
 
 
 class Tracker(object):
-    def __init__(self, matcher, kd0, kd1, image1):
-        self.kd0, self.kd1 = kd0, kd1
+    def __init__(self, features0, features1, image1, lambda_):
+        matches01 = match(features0, features1)
+        self.flow01 = estimate_affine_transform(
+            features0.keypoints[matches01[:, 0]],
+            features1.keypoints[matches01[:, 1]]
+        )
         self.image1 = image1
-        matches01 = matcher(kd0, kd1)
-        self.flow = estimate_affine_transform(kd0.keypoints[matches01[:, 0]],
-                                              kd1.keypoints[matches01[:, 1]])
+        self.lambda_ = lambda_
 
-    def __call__(self, dense_keypoints0):
-        dense_keypoints1 = self.flow.transform(dense_keypoints0)
-        dense_keypoints1 = keypoint_correction(dense_keypoints1, self.image1)
-        return dense_keypoints1
+    def __call__(self, keypoints0):
+        keypoints0_ = get_array(keypoints0)
+        keypoints1_ = track_(keypoints0_,
+                             self.image1, self.flow01, self.lambda_)
+        mask1 = is_in_image_range(keypoints1_, self.image1.shape)
+        ids0 = get_ids(keypoints0)
+        keypoints1 = create_keypoint_frame_(ids0[mask1], keypoints1_[mask1])
 
-@property
-def viewpoints(self):
-    v = self.start_viewpoint
-    return np.arange(v, v + self.window_size)
+        id_start = ids0[-1] + 1
+        new_keypoints1 = keypoints_from_new_area(self.image1, self.flow01)
+        new_rows = create_keypoint_frame(id_start, new_keypoints1)
 
-
-def compute_range_mask(keypoints, image_shape):
-    mask = is_in_image_range(keypoints.reshape(-1, 2), image_shape)
-    return mask.reshape(keypoints.shape[0:2])
+        return pd.concat([keypoints1, new_rows])
 
 
-def triangulate(poses, keypoints, keypoint_mask):
-    assert(keypoints.shape[0:2] == keypoint_mask.shape[0:2])
-    window_size, n_keypoints = keypoints.shape[0:2]
-    points = np.empty((n_keypoints, 3))
-    depth_mask = np.empty(n_keypoints, np.bool)
-    for i in range(n_keypoints):
-        viewpoint_indices = np.where(keypoint_mask[:, i])[0]
-
-        # make two viewpoints different as possible
-        # to get a larger parallax
-        v1, v2 = np.min(viewpoint_indices), np.max(viewpoint_indices)
-
-        t = Triangulation(poses[v1], poses[v2])
-        keypoint1, keypoint2 = keypoints[v1, i], keypoints[v2, i]
-        points[i], depth_mask[i] = t.triangulate_(keypoint1, keypoint2)
-    return points, depth_mask
+def init_keypoint_frame(image):
+    keypoints = extract_dense_keypoints(image)
+    return create_keypoint_frame(0, keypoints)
 
 
-def compute_point_mask(keypoint_mask):
-    # to perform triangulation,
-    # we need to observe a 3D point from at least two viewpoints
-    return np.sum(keypoint_mask, axis=0) >= 2
+def create_keypoint_frame(start_id, keypoints):
+    N = keypoints.shape[0]
+    ids = np.arange(start_id, start_id + N)
+    return create_keypoint_frame_(ids, keypoints)
 
 
-def compute_viewpoint_mask(keypoint_mask):
-    return np.sum(keypoint_mask, axis=1) >= 1
+def create_keypoint_frame_(ids, keypoints):
+    assert(keypoints.shape == (ids.shape[0], 2))
+    return pd.DataFrame({'id': ids,
+                         'x': keypoints[:, 0],
+                         'y': keypoints[:, 1]})
 
 
-def next_generator_id(ids):
-    if len(ids) == 0:
-        return 0
-    return max(ids)
+def get_array(frame):
+    return frame[['x', 'y']].to_numpy()
 
 
-class KeypointFlow(object):
-    def __init__(self, size):
-        self.list = [None] * size
-        self.size = size
-
-    def flow(self, tracker):
-        # shift values
-        # [item0, item1, ..., itemN] -> [None, item0, ..., itemN-1]
-        # return itemN
-
-        out = self.list[-1]
-
-        for i in reversed(range(1, self.size)):
-            keypoints = self.list[i-1]
-            if keypoints is None:
-                continue
-            keypoints[i] = tracker(keypoints[i-1])
-            self.list[i] = keypoints
-
-        return out
-
-    def set(self, new_keypoints):
-        # new_keypoints.shape == (n_keypoints, 2)
-        keypoints = np.empty((self.size, new_keypoints.shape[0], 2))
-        keypoints[0] = new_keypoints
-        self.list[0] = keypoints
-
-
-class VitaminE(FeatureBasedVO):
-    def __init__(self, camera_model, window_size):
-        super().__init__(camera_model)
-        self.window_size = window_size
-        self.keypoint_flow = KeypointFlow(self.window_size)
-        self.points = np.empty((0, 3), np.float64)
-
-    def get_tracker(self, image1):
-        viewpoint0 = self.active_viewpoints[-2]
-        viewpoint1 = self.active_viewpoints[-1]
-        kd0, kd1 = self.kds[viewpoint0], self.kds[viewpoint1]
-        return Tracker(self.matcher, kd0, kd1, image1)
-
-    def add(self, image1):
-        super().add(image1)
-
-        keypoints = None
-        if len(self.active_viewpoints) >= 2:
-            tracker = self.get_tracker(image1)
-            keypoints = self.keypoint_flow.flow(tracker)
-
-        new_keypoints = extract_curvature_extrema(image1)
-        self.keypoint_flow.set(new_keypoints)
-
-        if keypoints is None:
-            return self.active_viewpoints[-1]
-
-        from tadataka.plot.visualizers import plot3d
-        from tadataka.plot.common import axis3d
-        from matplotlib import pyplot as plt
-        fig, ax = plt.subplots()
-        ax.imshow(image1)
-        keypoints_ = keypoints[-1]
-        ax.scatter(keypoints_[:, 0], keypoints_[:, 1], s=0.1, c='red')
-        plt.show()
-
-        viewpoints = self.active_viewpoints[-self.window_size:]
-        poses = [self.poses[v] for v in viewpoints]
-        points = triangulate_(keypoints, poses, image1.shape)
-
-        print("points shape", points.shape)
-        ax = axis3d()
-        plot3d(ax, points)
-        plt.show()
-        self.points = np.vstack((self.points, points))
-        return self.active_viewpoints[-1]
-
-
-def triangulate_(keypoints, poses, image_shape):
-    keypoint_mask = compute_range_mask(keypoints, image_shape)
-    point_mask = compute_point_mask(keypoint_mask)
-    keypoints = keypoints[:, point_mask]
-    keypoint_mask = keypoint_mask[:, point_mask]
-
-    points, depth_mask = triangulate(poses, keypoints, keypoint_mask)
-    return points # [depth_mask]
+def get_ids(frame):
+    return frame['id'].to_numpy()
