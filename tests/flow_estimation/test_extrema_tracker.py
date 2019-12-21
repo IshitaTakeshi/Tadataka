@@ -4,131 +4,140 @@ from skimage.color import rgb2gray
 from skimage.data import astronaut
 
 from tadataka.flow_estimation.extrema_tracker import (
-    ExtremaTracker, get_neighbors, energy, regularize, maximize_)
+    ExtremaTracker, maximize_one, step, compute_regularizer_map)
 from tadataka.flow_estimation.image_curvature import compute_image_curvature
 
 
-def test_get_neighbors():
-    # 'get_neighbors' reuqires image shape in the (height, width) order,
-    # whereras the points and their neighbors below are in (x, y)
-    width, height = 5, 4
-    image_shape = (height, width)
+def test_compute_regularizer_map():
+    def f(x):
+        return np.dot(x, x)
 
-    # the case all neighbors fit in the image range
-    expected = np.array([
-        [0, 1], [1, 1], [2, 1],
-        [0, 2], [1, 2], [2, 2],
-        [0, 3], [1, 3], [2, 3],
+    assert_array_equal(
+        compute_regularizer_map(f),
+        1 - np.array([
+            [2, 1, 2],
+            [1, 0, 1],
+            [2, 1, 2]
+        ])
+    )
+
+
+def test_step():
+    M = np.array([
+    # x -1  0  1    # y
+        [3, 0, 0],  # -1
+        [0, 0, 0],  #  0
+        [0, 0, 0],  #  1
     ])
-    assert_array_equal(get_neighbors(np.array([1, 2]), image_shape), expected)
+    assert_array_equal(step(M), [-1, -1])
 
-    # [x, 4] are removed because they are out of the image range
-    expected = np.array([
-        [0, 2], [1, 2], [2, 2],
-        [0, 3], [1, 3], [2, 3],
-        # [0, 4], [1, 4], [2, 4]
+    M = np.array([
+    # x -1  0  1    # y
+        [0, 0, 0],  # -1
+        [0, 0, 4],  #  0
+        [0, 0, 0],  #  1
     ])
-    assert_array_equal(get_neighbors(np.array([1, 3]), image_shape), expected)
+    assert_array_equal(step(M), [1, 0])
 
-    # [5, y] are removed because they are out of the image range
-    expected = np.array([
-        [3, 1], [4, 1], # [5, 1],
-        [3, 2], [4, 2], # [5, 2],
-        [3, 3], [4, 3], # [5, 3]
+    M = np.array([
+    # x -1  0  1    # y
+        [0, 8, 7],  # -1
+        [1, 3, 0],  #  0
+        [4, -1, 0],  #  1
     ])
-    assert_array_equal(get_neighbors(np.array([4, 2]), image_shape), expected)
+    assert_array_equal(step(M), [0, -1])
 
 
-def test_regularizer():
-    p0 = np.array([40, 50])
-    image_shape = (100, 100)
-    neighbors = get_neighbors(p0, image_shape)
-
-    squared_norms = np.array([
-        2, 1, 2,
-        1, 0, 1,
-        2, 1, 2
-    ])
-
-    assert(len(squared_norms) == len(neighbors))
-    for squared_norm, neighbor in zip(squared_norms, neighbors):
-        assert_array_almost_equal(regularize(neighbor, p0), 1 - squared_norm)
-
-
-def test_energy():
-    curvature = np.array([[4, -2, -7],
-                          [-1, 3, 9],
-                          [8, 5, -1]])
-
-    R = np.array([[-1, 0, -1],
-                  [0, 1, 0],
-                  [-1, 0, -1]])
-
-    lambda_ = 2
-    image_shape = (100, 100)
-
-    p0 = np.array([1, 1])
-
-    # compute errors at p0 and its 8 neighbors
-    neighbors = get_neighbors(p0, image_shape)
-    energy_pred = energy(curvature, p0, neighbors, lambda_)
-
-    energy_true = (curvature + lambda_ * R).flatten()
-    assert_array_almost_equal(energy_pred, energy_true)
-
-
-def test_maximize_():
+def test_maximize_one():
+    M = -np.inf
     curvature = np.array([
-        [0, 0, 0, 0, 0],
-        [0, 2, 2, 2, 0],
-        [0, 2, 4, 2, 0],
-        [0, 2, 2, 2, 0],
-        [0, 0, 0, 0, 0]
+    # x  0  1  2  3  4  5  6    # y
+        [M, M, M, M, M, M, M],  # 0
+        [M, 0, 0, 0, 0, 0, M],  # 1
+        [M, 0, 2, 2, 2, 0, M],  # 2
+        [M, 0, 2, 4, 2, 0, M],  # 3
+        [M, 0, 2, 2, 2, 0, M],  # 4
+        [M, 0, 0, 0, 0, 0, M],  # 5
+        [M, M, M, M, M, M, M]   # 6
+    ], dtype=np.float64)
+
+    R = np.zeros((3, 3))
+
+    initial_coordinates = np.array([
+        [3, 3],
+        [2, 2],
+        [3, 2],
+        [5, 1]
     ])
+    for p0 in initial_coordinates:
+        p = maximize_one(curvature, R, p0)
+        assert_array_equal(p, [3, 3])
 
-    p0 = np.array([2, 2])
-    p = maximize_(curvature, p0, lambda_=0.0, max_iter=20)
-    assert_array_equal(p0, p)
+    M = -np.inf
+    curvature = np.array([
+    # x  0  1  2  3  4  5  6    # y
+        [M, M, M, M, M, M, M],  # 0
+        [M, 0, 0, 0, 0, 0, M],  # 1
+        [M, 0, 2, 2, 2, 0, M],  # 2
+        [M, 0, 2, 1, 2, 0, M],  # 3
+        [M, 0, 2, 2, 4, 0, M],  # 4
+        [M, 0, 0, 0, 0, 0, M],  # 5
+        [M, M, M, M, M, M, M]   # 6
+    ], dtype=np.float64)
 
-    # p0 = np.array([2, 2])
-    # p = maximize_(curvature, p0, lambda_=0.0, max_iter=20)
-    # assert_array_equal(p0, p)
+    R = np.array([
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0]
+    ])
+    p = maximize_one(curvature, R, [3, 2])
+    assert_array_equal(p, [4, 4])
 
 
 def test_extrema_tracker():
-    # diff to 8 neighbors
-    diffs = np.array([
-        [-1, -1], [-1, 0], [-1, 1],
-        [0, -1], [0, 1],
-        [1, -1], [1, 0], [1, 1]
-    ])
-
     curvature = compute_image_curvature(rgb2gray(astronaut()))
 
     # coordinates are represented in [xs, ys] format
     initial_coordinates = np.array([
-        [10, 20],
-        [30, 40],
-        [60, 50],
-        [40, 30]
+        [10.4, 20.5],
+        [30.2, 40.3],
+        [60.0, 50.2],
+        [40.1, 30.8],
+        [80.1, 60.5]
     ])
 
-    lambda_ = 0.0
+    R = 1 - np.array([
+        [2, 1, 2],
+        [1, 0, 1],
+        [2, 1, 2]
+    ])
 
-    # disable regularization
-    extrema_tracker = ExtremaTracker(curvature, lambda_)
-    coordinates = extrema_tracker.optimize(initial_coordinates)
+    def regularizer(x):
+        return 1 - np.dot(x, x)
 
-    # the resulting point should have the maxium energy
-    # among its neighbors
-    for p in coordinates:
-        neighbors = get_neighbors(p, curvature.shape)
-        E0 = energy(curvature, p, np.atleast_2d(p), lambda_)[0]
-        E = energy(curvature, p, neighbors, lambda_)
-        assert((E0 >= E).all())
+    def run(lambda_):
+        # disable regularization
+        extrema_tracker = ExtremaTracker(curvature, lambda_=lambda_,
+                                         regularizer=regularizer)
+        coordinates = extrema_tracker.optimize(initial_coordinates)
 
-    # apply very strong regularization
-    extrema_tracker = ExtremaTracker(curvature, lambda_=1e2)
-    coordinates = extrema_tracker.optimize(initial_coordinates)
-    # the points should not move from the initial values
-    assert_array_equal(coordinates, initial_coordinates)
+        # the resulting point should have the maxium energy
+        # among its neighbors
+        # regularizer term can be omitted because lambda_ = 0.0
+        for px, py in coordinates.astype(np.int64):
+            E = curvature[py, px] + R[1+0, 1+0]
+
+            # E is maximum among its neighbors
+            assert(curvature[py-1, px-1] + lambda_ * R[1-1, 1-1] < E)
+            assert(curvature[py-1, px-0] + lambda_ * R[1-1, 1-0] < E)
+            assert(curvature[py-1, px+1] + lambda_ * R[1-1, 1+1] < E)
+            assert(curvature[py+0, px-1] + lambda_ * R[1+0, 1-1] < E)
+
+            assert(curvature[py+0, px+1] + lambda_ * R[1+0, 1+1] < E)
+            assert(curvature[py+1, px-1] + lambda_ * R[1+1, 1-1] < E)
+            assert(curvature[py+1, px-0] + lambda_ * R[1+1, 1-0] < E)
+            assert(curvature[py+1, px+1] + lambda_ * R[1+1, 1+1] < E)
+
+    run(lambda_=0.0)
+    run(lambda_=1.0)
+    run(lambda_=1e10)

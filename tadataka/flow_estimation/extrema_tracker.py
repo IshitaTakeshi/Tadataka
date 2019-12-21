@@ -1,95 +1,75 @@
 import numpy as np
 
 import numba
-from numba import jitclass, njit
+from numba import njit
 
 
-def diff_to_neighbors():
-    # return the coordinate differences from the center, that is
-    #     [[-1, -1], [ 0, -1], [ 1, -1],
-    #      [-1,  0], [ 0,  0], [ 1,  0],
-    #      [-1,  1], [ 0,  1], [ 1,  1]]
-    xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-    return np.vstack((xs.flatten(), ys.flatten())).T
+from tadataka.flow_estimation.regularizer import get_geman_mcclure
+from tadataka.utils import is_in_image_range
 
 
-diff_to_neighbors_ = diff_to_neighbors()
+diff_to_neighbors_ = np.array([
+    [-1, -1], [0, -1], [1, -1],
+    [-1, 0], [0, 0], [1, 0],
+    [-1, 1], [0, 1], [1, 1]
+])
 
 
-@njit
-def get_neighbors(p, image_shape):
-    """
-    Return 8 neighbors of a point `p` along with `p` itself
-    """
-    neighbors = p + diff_to_neighbors_
-    mask = is_in_image_range(neighbors, image_shape)
-    return neighbors[mask]
-
-
-@njit
-def is_in_image_range(P, image_shape):
-    height, width = image_shape[0:2]
-    xs, ys = P[:, 0], P[:, 1]
-    mask_x = np.logical_and(0 <= xs, xs < width)
-    mask_y = np.logical_and(0 <= ys, ys < height)
-    return np.logical_and(mask_x, mask_y)
+# regularizer term 'w'
+def compute_regularizer_map(regularizer):
+    D = np.empty((3, 3))
+    for y in range(3):
+        for x in range(3):
+            D[y, x] = regularizer(diff_to_neighbors_[y * 3 + x])
+    return 1 - D
 
 
 @njit
-def geman_mcclure(x, sigma):
-    y = np.sum(np.power(x, 2))
-    return y / (y + sigma)
+def step(energy_map):
+    return diff_to_neighbors_[np.argmax(energy_map)]
 
 
-@njit
-def regularize(p, p0):
-    return 1. - geman_mcclure(p - p0, sigma=10.0)
-
-
-@njit
-def energy(curvature, p0, P, lambda_):
-    N = len(P)
-    E = np.empty(N, dtype=np.float64)
-    for i in range(N):
-        p = P[i]
-        x, y = p
-        E[i] = curvature[y, x] + lambda_ * regularize(p, p0)
-    return E
-
-
-@njit
-def search_neighbors(curvature, p0, p, lambda_):
-    neighbors = get_neighbors(p, curvature.shape)
-    E = energy(curvature, p0, neighbors, lambda_)
-    return neighbors[np.argmax(E)]
-
-
-@njit
-def maximize_(curvature, p0, lambda_, max_iter=20):
-    p = np.copy(p0)
+def maximize_one(curvature, regularizer_map, p0, max_iter=20):
+    px, py = p0
     for i in range(max_iter):
-        p_new = search_neighbors(curvature, p0, p, lambda_)
-        if (p_new == p).all():
-            # converged
-            return p
-        p = p_new
-    return p
+        C = curvature[py-1:py+2, px-1:px+2]
+
+        dpx, dpy = step(C + regularizer_map)
+
+        if dpx == 0 and dpy == 0:
+            return [px, py]
+
+        px, py = px + dpx, py + dpy
+    return [px, py]
 
 
-@njit
-def maximize(curvature, coordinates, lambda_):
+def maximize_(curvature, regularizer_map, coordinates):
     for i in range(coordinates.shape[0]):
-        coordinates[i] = maximize_(curvature, coordinates[i], lambda_)
+        coordinates[i] = maximize_one(curvature, regularizer_map,
+                                      coordinates[i])
     return coordinates
+
+
+def maximize(curvature, regularizer_map, coordinates):
+    C = np.pad(curvature, ((1, 1), (1, 1)),
+               mode="constant", constant_values=-np.inf)
+    offset = np.array([1, 1])
+    P = coordinates + offset
+
+    P = maximize_(C, regularizer_map, P)
+
+    return P - offset
 
 
 # FIXME rename to 'LocalExtremaCorrection'
 class ExtremaTracker(object):
     """ Optimize equation (5) """
-    def __init__(self, image_curvature, lambda_):
+    def __init__(self, image_curvature, lambda_,
+                 regularizer=get_geman_mcclure(1.0)):
         self.curvature = image_curvature
 
-        self.lambda_ = lambda_
+        R = compute_regularizer_map(regularizer)
+        self.regularizer_map = lambda_ * R
 
     def optimize(self, initial_coordinates):
         """
@@ -99,15 +79,14 @@ class ExtremaTracker(object):
         assert(np.ndim(initial_coordinates) == 2)
         assert(initial_coordinates.shape[1] == 2)
 
-        coordinates = np.trunc(initial_coordinates)
+        coordinates = np.round(initial_coordinates)
         after_decimal = initial_coordinates - coordinates
 
         coordinates = coordinates.astype(np.int64)
 
         mask = is_in_image_range(coordinates, self.curvature.shape)
-        coordinates[mask] = maximize(self.curvature, coordinates[mask],
-                                     self.lambda_)
-        coordinates = coordinates.astype(np.float64)
-        coordinates = coordinates + after_decimal
 
-        return coordinates
+        coordinates[mask] = maximize(self.curvature, self.regularizer_map,
+                                     coordinates[mask])
+
+        return coordinates.astype(np.float64) + after_decimal
