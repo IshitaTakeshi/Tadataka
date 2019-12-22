@@ -14,26 +14,30 @@ def test_new_tsukuba():
 
     assert_equal(len(dataset), 5)
 
-    frame = dataset[0]
-    assert_equal(frame.image_left.shape, image_shape)
-    assert_equal(frame.image_right.shape, image_shape)
-    assert_equal(frame.depth_map_left.shape, image_shape[0:2])
-    assert_equal(frame.depth_map_right.shape, image_shape[0:2])
+    L, R = dataset[0]
+    assert_equal(L.image.shape, image_shape)
+    assert_equal(R.image.shape, image_shape)
+    assert_equal(L.depth_map.shape, image_shape[0:2])
+    assert_equal(R.depth_map.shape, image_shape[0:2])
 
-    assert_array_equal(frame.position_left, [-5, 0, 0])
-    assert_array_equal(frame.position_right, [5, 0, 0])
+    assert_array_equal(L.position, [-5, 0, 0])
+    assert_array_equal(R.position, [5, 0, 0])
 
-    frame = dataset[4]
+    L, R = dataset[4]
     assert_array_almost_equal(
-        frame.position_left,
+        L.position,
         [-4.99999376e+00, -6.10864598e-07, -3.51827802e-02]
     )
     assert_array_almost_equal(
-        frame.position_right,
+        R.position,
         [4.99999576e+00,  6.10864598e-07, -4.96552198e-02]
     )
 
     assert_array_almost_equal(
-        frame.rotation.as_euler('xyz', degrees=True),
+        L.rotation.as_euler('xyz', degrees=True),
+        [-0.070745, 0.082921, 0.000007]
+    )
+    assert_array_almost_equal(
+        R.rotation.as_euler('xyz', degrees=True),
         [-0.070745, 0.082921, 0.000007]
     )
