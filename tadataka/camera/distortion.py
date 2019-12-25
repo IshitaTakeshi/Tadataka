@@ -78,10 +78,22 @@ class RadTan(object):
         raise NotImplementedError()
 
     def undistort(self, distorted_keypoints):
-        import cv2
-        K = np.identity(3)
-        keypoints = cv2.undistortPoints(distorted_keypoints, K, np.zeros(4))
-        return keypoints.reshape(distorted_keypoints.shape)
+        X = distorted_keypoints
+
+        k1, k2, p1, p2 = self.dist_coeffs
+
+        r2 = np.sum(np.power(X, 2), axis=1)
+        r4 = np.power(r2, 2)
+        kr = 1.0 + k1 * r2 + k2 * r4
+
+        X00 = X[:, 0] * X[:, 0]
+        X01 = X[:, 0] * X[:, 1]
+        X11 = X[:, 1] * X[:, 1]
+
+        Y = np.empty(X.shape)
+        Y[:, 0] = X[:, 0] * kr + 2.0 * p1 * X01 + p2 * (r2 + 2.0 * X00)
+        Y[:, 1] = X[:, 1] * kr + 2.0 * p2 * X01 + p1 * (r2 + 2.0 * X11)
+        return Y
 
     @staticmethod
     def from_params(params):
