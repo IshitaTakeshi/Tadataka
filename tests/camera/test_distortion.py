@@ -1,9 +1,9 @@
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 from tadataka.camera.distortion import (
-    FOV, distort_factors, compute_fov_factors)
+    FOV, fov_distort_factors, fov_undistort_factors, RadTan)
 from tadataka.camera.model import CameraModel
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
@@ -79,9 +79,9 @@ def test_fov_undistort():
         -np.sqrt(3) / (2 * 2 * np.sqrt(3) / 3)
     ])
 
-    # test 'calc_compute_fov_factors' separately because
+    # test 'calc_fov_undistort_factors' separately because
     # we cannot test factors for X[0] using FOV.undistort
-    assert_array_almost_equal(compute_fov_factors(X, omega=np.pi/3), expected)
+    assert_array_almost_equal(fov_undistort_factors(X, omega=np.pi/3), expected)
     assert_array_almost_equal(
         FOV(omega=np.pi/3).undistort(X),
         expected.reshape(-1, 1) * X
@@ -101,7 +101,7 @@ def test_fov_distort():
         np.arctan(2 * 2 * np.sqrt(3) / 3) / (np.pi / 3)
     ])
 
-    assert_array_almost_equal(distort_factors(X, omega=np.pi/3), expected)
+    assert_array_almost_equal(fov_distort_factors(X, omega=np.pi/3), expected)
     assert_array_almost_equal(
         FOV(omega=np.pi/3).distort(X),
         expected.reshape(-1, 1) * X

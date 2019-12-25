@@ -7,7 +7,7 @@ import numpy as np
 EPSILON = 1e-4
 
 
-def distort_factors(X, omega):
+def fov_distort_factors(X, omega):
     def f(r):
         return np.arctan(2 * r * np.tan(omega / 2)) / omega
 
@@ -21,7 +21,7 @@ def distort_factors(X, omega):
     return factors
 
 
-def compute_fov_factors(X, omega):
+def fov_undistort_factors(X, omega):
     def f(r):
         return np.tan(r * omega) / (2 * r * np.tan(omega / 2))
 
@@ -50,14 +50,14 @@ class FOV(object):
         if np.isclose(self.omega, 0):
             return undistorted_keypoints
 
-        factors = distort_factors(undistorted_keypoints, self.omega)
+        factors = fov_distort_factors(undistorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * undistorted_keypoints
 
     def undistort(self, distorted_keypoints):
         if np.isclose(self.omega, 0):
             return distorted_keypoints  # all factors = 1
 
-        factors = compute_fov_factors(distorted_keypoints, self.omega)
+        factors = fov_undistort_factors(distorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * distorted_keypoints
 
     @staticmethod
