@@ -102,11 +102,11 @@ class EurocDataset(BaseDataset):
         R0, position0 = get_rotation_translation(np.dot(T, self.T0))
         R1, position1 = get_rotation_translation(np.dot(T, self.T1))
 
+        pose0 = Pose(Rotation.from_dcm(R0), position0)
+        pose1 = Pose(Rotation.from_dcm(R1), position1)
+
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])
-        return (
-            Frame(self.camera_model0, I0, None,
-                  Rotation.from_dcm(R0), position0),
-            Frame(self.camera_model1, I1, None,
-                  Rotation.from_dcm(R1), position1)
-        )
+
+        return (Frame(self.camera_model0, pose0, I0, None),
+                Frame(self.camera_model1, pose1, I1, None))
