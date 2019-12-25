@@ -147,6 +147,7 @@ class Tracker(object):
         dense_keypoints1[mask] = self._tracker.optimize(dense_keypoints1[mask])
         return dense_keypoints1
 
+
 def undistort(camera_models, dense_keypoints):
     assert(len(camera_models) == dense_keypoints.shape[1])
     for i in range(len(camera_models)):
