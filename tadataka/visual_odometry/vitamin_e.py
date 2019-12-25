@@ -68,6 +68,7 @@ class Tracker(object):
         self.lambda_ = lambda_
 
     def __call__(self, keypoints0):
+        # track keypoints
         keypoints0_ = get_array(keypoints0)
         keypoints1_ = track_(keypoints0_,
                              self.image1, self.flow01, self.lambda_)
@@ -75,7 +76,8 @@ class Tracker(object):
         ids0 = get_ids(keypoints0)
         keypoints1 = create_keypoint_frame_(ids0[mask1], keypoints1_[mask1])
 
-        id_start = ids0[-1] + 1
+        # keypoints extracted from the newly observed image area
+        id_start = ids0[-1] + 1  # assign new indices
         new_keypoints1 = keypoints_from_new_area(self.image1, self.flow01)
         new_rows = create_keypoint_frame(id_start, new_keypoints1)
 
