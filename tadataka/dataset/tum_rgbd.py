@@ -7,8 +7,9 @@ from skimage.io import imread
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.dataset.frame import Frame
 from tadataka.dataset.base import BaseDataset
-from tadataka.dataset.tum import load_poses, load_image_paths, synchronize
+from tadataka.dataset.tum import load_image_paths, synchronize
 from tadataka.utils import value_list
+from tadataka.pose import Pose
 
 
 def load_depth_image_paths(dataset_root):
@@ -19,6 +20,15 @@ def load_depth_image_paths(dataset_root):
 def load_rgb_image_paths(dataset_root):
     path = Path(dataset_root, "rgb.txt")
     return load_image_paths(path, prefix=dataset_root)
+
+
+def load_poses(path, delimiter=' '):
+    array = np.loadtxt(path, delimiter=delimiter)
+    timestamps = array[:, 0]
+    positions = array[:, 1:4]
+    quaternions = array[:, 4:8]
+    rotations = Rotation.from_quat(quaternions)
+    return timestamps, rotations, positions
 
 
 def load_ground_truth_poses(dataset_root):

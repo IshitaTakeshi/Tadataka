@@ -7,15 +7,6 @@ from scipy.spatial.transform import Rotation
 from tadataka.dataset.match import match_timestamps
 
 
-def load_poses(path, delimiter=' '):
-    array = np.loadtxt(path, delimiter=delimiter)
-    timestamps = array[:, 0]
-    positions = array[:, 1:4]
-    quaternions = array[:, 4:8]
-    rotations = Rotation.from_quat(quaternions)
-    return timestamps, rotations, positions
-
-
 def load_image_paths(filepath, prefix, delimiter=' '):
     # prefix: only subpath of the data file is written in 'filepath'
     # prefix is for concatenating it with the subpath and generate the abs path
