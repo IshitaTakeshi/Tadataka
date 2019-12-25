@@ -21,7 +21,7 @@ def distort_factors(X, omega):
     return factors
 
 
-def undistort_factors(X, omega):
+def compute_fov_factors(X, omega):
     def f(r):
         return np.tan(r * omega) / (2 * r * np.tan(omega / 2))
 
@@ -57,7 +57,7 @@ class FOV(object):
         if np.isclose(self.omega, 0):
             return distorted_keypoints  # all factors = 1
 
-        factors = undistort_factors(distorted_keypoints, self.omega)
+        factors = compute_fov_factors(distorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * distorted_keypoints
 
     @staticmethod

@@ -2,7 +2,8 @@ from numpy.testing import assert_array_almost_equal
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from tadataka.camera.distortion import FOV, distort_factors, undistort_factors
+from tadataka.camera.distortion import (
+    FOV, distort_factors, compute_fov_factors)
 from tadataka.camera.model import CameraModel
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
@@ -78,9 +79,9 @@ def test_fov_undistort():
         -np.sqrt(3) / (2 * 2 * np.sqrt(3) / 3)
     ])
 
-    # test 'calc_undistort_factors' separately because
+    # test 'calc_compute_fov_factors' separately because
     # we cannot test factors for X[0] using FOV.undistort
-    assert_array_almost_equal(undistort_factors(X, omega=np.pi/3), expected)
+    assert_array_almost_equal(compute_fov_factors(X, omega=np.pi/3), expected)
     assert_array_almost_equal(
         FOV(omega=np.pi/3).undistort(X),
         expected.reshape(-1, 1) * X
