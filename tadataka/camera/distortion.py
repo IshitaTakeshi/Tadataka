@@ -68,3 +68,25 @@ class FOV(object):
     @property
     def params(self):
         return [self.omega]
+
+
+class RadTan(object):
+    def __init__(self, dist_coeffs):
+        self.dist_coeffs = dist_coeffs
+
+    def dostort(self):
+        raise NotImplementedError()
+
+    def undistort(self, distorted_keypoints):
+        import cv2
+        K = np.identity(3)
+        keypoints = cv2.undistortPoints(distorted_keypoints, K, np.zeros(4))
+        return keypoints.reshape(distorted_keypoints.shape)
+
+    @staticmethod
+    def from_params(params):
+        return RadTan(params)
+
+    @property
+    def params(self):
+        return self.dist_coeffs
