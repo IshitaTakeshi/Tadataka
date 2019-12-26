@@ -32,3 +32,9 @@ class CameraParameters(object):
         return CameraParameters(image_shape=params[0:2],
                                 focal_length=params[2:4],
                                 offset=params[4:6])
+
+    def __eq__(self, another):
+        C1 = np.array_equal(self.image_shape, another.image_shape)
+        C2 = np.array_equal(self.focal_length, another.focal_length)
+        C3 = np.array_equal(self.offset, another.offset)
+        return C1 and C2 and C3

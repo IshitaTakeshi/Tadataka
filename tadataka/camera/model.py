@@ -43,3 +43,7 @@ class CameraModel(object):
     @staticmethod
     def fromstring(string):
         return parse_(string)
+
+    def __eq__(self, another):
+        return (self.camera_parameters == another.camera_parameters and
+                self.distortion_model == another.distortion_model)
