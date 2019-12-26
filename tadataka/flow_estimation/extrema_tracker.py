@@ -29,6 +29,7 @@ def step(energy_map):
     return diff_to_neighbors_[np.argmax(energy_map)]
 
 
+@njit
 def maximize_one(curvature, regularizer_map, p0, max_iter=20):
     px, py = p0
     for i in range(max_iter):
@@ -43,6 +44,7 @@ def maximize_one(curvature, regularizer_map, p0, max_iter=20):
     return [px, py]
 
 
+@njit
 def maximize_(curvature, regularizer_map, coordinates):
     for i in range(coordinates.shape[0]):
         coordinates[i] = maximize_one(curvature, regularizer_map,
