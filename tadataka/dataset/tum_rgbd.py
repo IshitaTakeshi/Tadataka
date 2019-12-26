@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 from skimage.io import imread
 
 from tadataka.camera import CameraModel, CameraParameters, FOV

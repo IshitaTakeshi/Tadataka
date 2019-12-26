@@ -2,7 +2,6 @@ import csv
 from pathlib import Path
 
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.match import match_timestamps
 
