@@ -1,8 +1,9 @@
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from tadataka.camera.distortion import FOV, distort_factors, undistort_factors
+from tadataka.camera.distortion import (
+    FOV, fov_distort_factors, fov_undistort_factors, RadTan)
 from tadataka.camera.model import CameraModel
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
@@ -78,9 +79,9 @@ def test_fov_undistort():
         -np.sqrt(3) / (2 * 2 * np.sqrt(3) / 3)
     ])
 
-    # test 'calc_undistort_factors' separately because
+    # test 'calc_fov_undistort_factors' separately because
     # we cannot test factors for X[0] using FOV.undistort
-    assert_array_almost_equal(undistort_factors(X, omega=np.pi/3), expected)
+    assert_array_almost_equal(fov_undistort_factors(X, omega=np.pi/3), expected)
     assert_array_almost_equal(
         FOV(omega=np.pi/3).undistort(X),
         expected.reshape(-1, 1) * X
@@ -100,10 +101,62 @@ def test_fov_distort():
         np.arctan(2 * 2 * np.sqrt(3) / 3) / (np.pi / 3)
     ])
 
-    assert_array_almost_equal(distort_factors(X, omega=np.pi/3), expected)
+    assert_array_almost_equal(fov_distort_factors(X, omega=np.pi/3), expected)
     assert_array_almost_equal(
         FOV(omega=np.pi/3).distort(X),
         expected.reshape(-1, 1) * X
     )
 
     assert_array_almost_equal(FOV(omega=0).distort(X), X)
+
+
+def test_radtan_undistort():
+    X = np.array([
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [2, 0],
+        [1, 2]
+    ])
+    r2 = np.array([1, 4, 1, 4, 5]).reshape(-1, 1)
+    r4 = np.array([1, 16, 1, 16, 25]).reshape(-1, 1)
+
+    assert_array_equal(RadTan([2, 0, 0, 0]).undistort(X),
+                       X * (1 + 2 * r2))
+
+    assert_array_equal(RadTan([0, 3, 0, 0]).undistort(X),
+                       X * (1 + 3 * r4))
+
+    Y = RadTan([0, 0, 3, 0]).undistort(X)
+    # X[:, 0] + 2 * p1 * X[:, 0] * X[:, 1]
+    assert_array_equal(Y[:, 0],
+                       [0 + 0,
+                        0 + 0,
+                        1 + 0,
+                        2 + 0,
+                        1 + 2 * 3 * 1 * 2])
+    # X[:, 1] + p1 * (r2 + 2 * X[:, 1] * X[:, 1])
+    assert_array_equal(Y[:, 1],
+                       [1 + 3 * (1 + 2 * 1 * 1),
+                        2 + 3 * (4 + 2 * 2 * 2),
+                        0 + 3 * (1 + 2 * 0 * 0),
+                        0 + 3 * (4 + 2 * 0 * 0),
+                        2 + 3 * (5 + 2 * 2 * 2)])
+
+    Y = RadTan([0, 0, 0, 4]).undistort(X)
+    # X[:, 0] + p2 * (r2 + 2 * X[:, 0] * X[:, 0])
+    assert_array_equal(Y[:, 0],
+                       [0 + 4 * (1 + 2 * 0 * 0),
+                        0 + 4 * (4 + 2 * 0 * 0),
+                        1 + 4 * (1 + 2 * 1 * 1),
+                        2 + 4 * (4 + 2 * 2 * 2),
+                        1 + 4 * (5 + 2 * 1 * 1)])
+    # X[:, 1] + 2 * p2 * X[:, 0] * X[:, 1]
+    assert_array_equal(Y[:, 1],
+                       [1 + 0,
+                        2 + 0,
+                        0 + 0,
+                        0 + 0,
+                        2 + 2 * 4 * 1 * 2])
+
+    assert_array_equal(RadTan([0, 0, 0, 0]).undistort(X), X)

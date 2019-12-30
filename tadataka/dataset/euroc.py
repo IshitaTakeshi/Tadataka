@@ -12,6 +12,7 @@ from tadataka.camera.distortion import RadTan
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.model import CameraModel
 from tadataka.matrix import get_rotation_translation, motion_matrix
+from tadataka.pose import Pose
 
 
 def camera_dir(dataset_root, camera_index):
@@ -43,10 +44,22 @@ def load_camera_params(dataset_root, camera_index):
     return resolution, intrinsics, dist_coeffs, T
 
 
+def wxyz_to_xyzw(wxyz):
+    return wxyz[:, [1, 2, 3, 0]]
+
+
+def load_poses(path, delimiter=','):
+    array = np.loadtxt(path, delimiter=delimiter)
+    timestamps = array[:, 0]
+    positions = array[:, 1:4]
+    quaternions = wxyz_to_xyzw(array[:, 4:8])
+    rotations = Rotation.from_quat(quaternions)
+    return timestamps, rotations, positions
+
 
 def load_ground_truth(dataset_root):
     path = Path(dataset_root, "state_groundtruth_estimate0", "data.csv")
-    return tum.load_poses(path, delimiter=',')
+    return load_poses(path)
 
 
 class EurocDataset(BaseDataset):
@@ -89,11 +102,11 @@ class EurocDataset(BaseDataset):
         R0, position0 = get_rotation_translation(np.dot(T, self.T0))
         R1, position1 = get_rotation_translation(np.dot(T, self.T1))
 
+        pose0 = Pose(Rotation.from_dcm(R0), position0)
+        pose1 = Pose(Rotation.from_dcm(R1), position1)
+
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])
-        return (
-            Frame(self.camera_model0, I0, None,
-                  Rotation.from_dcm(R0), position0),
-            Frame(self.camera_model1, I1, None,
-                  Rotation.from_dcm(R1), position1)
-        )
+
+        return (Frame(self.camera_model0, pose0, I0, None),
+                Frame(self.camera_model1, pose1, I1, None))

@@ -12,6 +12,7 @@ from tadataka.triangulation import TwoViewTriangulation
 from tadataka.visual_odometry.vitamin_e import (
     Tracker, init_keypoint_frame, get_ids, get_array)
 from tadataka.dataset.tum_rgbd import TumRgbdDataset
+from tadataka.dataset.euroc import EurocDataset
 from tadataka.utils import is_in_image_range
 from tadataka.plot import plot_map, plot_matches
 
@@ -36,7 +37,7 @@ def plot_track(image1, image2, keypoints1, keypoints2):
     fig = plt.figure()
     ax = fig.add_subplot(121)
     ax.scatter(keypoints1[:, 0], keypoints1[:, 1], s=0.1, c='red')
-    ax.imshow(image1)
+    ax.imshow(image1, cmap="gray")
 
     h, w = image1.shape[0:2]
     ax.set_xlim(0, w)
@@ -44,7 +45,7 @@ def plot_track(image1, image2, keypoints1, keypoints2):
 
     ax = fig.add_subplot(122)
     ax.scatter(keypoints2[:, 0], keypoints2[:, 1], s=0.1, c='red')
-    ax.imshow(image2)
+    ax.imshow(image2, cmap="gray")
 
     h, w = image2.shape[0:2]
     ax.set_xlim(0, w)
@@ -85,69 +86,100 @@ def match_keypoints(keypoint0, keypoint1):
     return np.column_stack((indices0, indices1))
 
 
-def triangulate(camera_model, pose0, pose1, keypoints0, keypoints1):
+def triangulate(camera_model0, camera_model1,
+                pose0, pose1, keypoints0, keypoints1):
     matches01 = match_keypoints(keypoints0, keypoints1)
     keypoints0_ = get_array(keypoints0)[matches01[:, 0]]
     keypoints1_ = get_array(keypoints1)[matches01[:, 1]]
     triangulator = TwoViewTriangulation(pose0, pose1)
     points01, depths = triangulator.triangulate(
-        camera_model.undistort(keypoints0_),
-        camera_model.undistort(keypoints1_)
+        camera_model0.undistort(keypoints0_),
+        camera_model1.undistort(keypoints1_)
     )
     return points01, depths
 
 
-# camera_model = load("./datasets/saba/cameras.txt")[1]
-# filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
-#
-# images = [imread(f) for f in filenames[189:192]]
-
-dataset = TumRgbdDataset(Path("datasets", "rgbd_dataset_freiburg1_desk"))
-camera_model = dataset.camera_model
-print("len(dataset)", len(dataset))
-frames = dataset[520:530]
-poses = [Pose(f.rotation, f.position).world_to_local() for f in frames]
-images = [f.image for f in frames]
-
-features = [extract_features(image) for image in images]
-
-# HACK is it better to drop keypoints0 that are out of the next image range ?
-
-keypoints = [None] * len(images)
-keypoints[0] = init_keypoint_frame(images[0])
-
-for i in range(len(keypoints)-1):
-    tracker = Tracker(features[i], features[i+1], images[i+1], lambda_=1e8)
-    keypoints[i+1] = tracker(keypoints[i])
-
-index0, index1 = 0, -1
-# plot_matches(
-#     images[index0], images[index1],
-#     get_array(keypoints[index0]), get_array(keypoints[index1]),
-#     match_keypoints(keypoints[index0], keypoints[index1])
-# )
-
-plot_track(images[index0], images[index1],
-           get_array(keypoints[index0]), get_array(keypoints[index1]))
-
-DO_PNP = False
-
-if DO_PNP:
-    poses = []
+def run_vo():
     pose0 = Pose.identity()
-    poses.append(pose0)
 
-if DO_PNP:
     match = Matcher(enable_ransac=False, enable_homography_filter=False)
     matches01 = match(features[index0], features[index1])
     pose1 = estimate_pose_change(
         camera_model.undistort(features[index0].keypoints[matches01[:, 0]]),
         camera_model.undistort(features[index1].keypoints[matches01[:, 1]])
     )
-    poses.append(pose1)
+
+    points01, depths = triangulate(
+        camera_model,
+        poses[index0], poses[index1],
+        keypoints[index0], keypoints[index1]
+    )
+
+
+def extract_features(image):
+    from skimage.feature import BRIEF
+    from tadataka.feature import Features
+    from tadataka.flow_estimation.image_curvature import extract_curvature_extrema
+    from tadataka.coordinates import yx_to_xy, xy_to_yx
+
+    brief = BRIEF()
+    keypoints = extract_curvature_extrema(image, percentile=90)
+    keypoints = xy_to_yx(keypoints)
+    brief.extract(image, keypoints)
+    keypoints = keypoints[brief.mask]
+    keypoints = yx_to_xy(keypoints)
+
+    return Features(keypoints, brief.descriptors)
+
+
+def triangulate_plot(camera_model0, camera_model1,
+                     pose0, pose1, image0, image1):
+    features0 = extract_features(image0)
+    features1 = extract_features(image1)
+
+    match = Matcher(enable_ransac=False, enable_homography_filter=True)
+    matches01 = match(features0, features1)
+
+    plot_matches(image0, image1,
+                 features0.keypoints, features1.keypoints, matches01)
+
+    triangulator = TwoViewTriangulation(pose0, pose1)
+    points, depths = triangulator.triangulate(
+        camera_model0.undistort(features0.keypoints[matches01[:, 0]]),
+        camera_model1.undistort(features1.keypoints[matches01[:, 1]])
+    )
+    plot_map([pose0, pose1], points)
+
+# camera_model = load("./datasets/saba/cameras.txt")[1]
+# filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
+#
+# images = [imread(f) for f in filenames[189:192]]
+
+dataset = EurocDataset(Path("datasets", "V1_01_easy", "mav0"))
+frames = dataset[120] # [fl for fl, fr in dataset[120:130]]
+images = [f.image for f in frames]
+camera_models = [f.camera_model for f in frames]
+poses = [f.pose.world_to_local() for f in frames]
+features = [extract_features(image) for image in images]
+
+# triangulate_plot(camera_models[0], camera_models[-1],
+#                  poses[0], poses[-1], images[0], images[-1])
+
+# HACK is it better to drop keypoints0 that are out of the next image range ?
+
+keypoints = [None] * len(images)
+keypoints[0] = init_keypoint_frame(images[0])
+for i in range(len(keypoints)-1):
+    tracker = Tracker(features[i], features[i+1], images[i+1], lambda_=1e8)
+    keypoints[i+1] = tracker(keypoints[i])
+
+index0, index1 = 0, -1
+
+plot_track(images[index0], images[index1],
+           get_array(keypoints[index0]), get_array(keypoints[index1]))
 
 points01, depths = triangulate(
-    camera_model,
+    camera_models[index0], camera_models[index1],
     poses[index0], poses[index1],
     keypoints[index0], keypoints[index1]
 )

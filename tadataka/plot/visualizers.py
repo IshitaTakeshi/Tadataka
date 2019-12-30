@@ -9,6 +9,8 @@ from tadataka.plot.common import axis3d
 
 
 def object_color(X):
+    if X.shape[0] == 0:
+        return None
     color = np.mean(np.abs(X), axis=1)
     return color / np.max(color)
 

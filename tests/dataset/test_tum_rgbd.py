@@ -33,7 +33,7 @@ def test_tum_dataset():
     angles_expected = angles_gt[indices]
     positions_expected = positions_gt[indices]
     for i, frame in enumerate(dataset):
-        assert_array_almost_equal(frame.rotation.as_euler('xyz'),
+        pose = frame.pose
+        assert_array_almost_equal(pose.rotation.as_euler('xyz'),
                                   angles_expected[i])
-        assert_array_almost_equal(frame.position,
-                                  positions_expected[i])
+        assert_array_almost_equal(pose.t, positions_expected[i])

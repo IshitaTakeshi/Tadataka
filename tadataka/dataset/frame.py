@@ -8,9 +8,8 @@ Frame = namedtuple(
     "Frame",
     [
         "camera_model",
+        "pose",
         "image",
         "depth_map",
-        "rotation",
-        "position"
     ]
 )
