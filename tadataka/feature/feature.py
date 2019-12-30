@@ -16,7 +16,6 @@ from tadataka.cost import symmetric_transfer_filter
 from tadataka.match import match_descriptors
 
 
-
 Features = namedtuple("Features", ["keypoints", "descriptors"])
 
 
