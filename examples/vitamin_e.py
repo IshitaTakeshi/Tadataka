@@ -86,16 +86,25 @@ def match_keypoints(keypoint0, keypoint1):
     return np.column_stack((indices0, indices1))
 
 
+import cv2
+
 def triangulate(camera_model0, camera_model1,
                 pose0, pose1, keypoints0, keypoints1):
     matches01 = match_keypoints(keypoints0, keypoints1)
     keypoints0_ = get_array(keypoints0)[matches01[:, 0]]
     keypoints1_ = get_array(keypoints1)[matches01[:, 1]]
     triangulator = TwoViewTriangulation(pose0, pose1)
-    points01, depths = triangulator.triangulate(
-        camera_model0.undistort(keypoints0_),
-        camera_model1.undistort(keypoints1_)
-    )
+    keypoints0_ = cv2.undistortPoints(
+        np.array(keypoints0_, dtype=np.float32),
+        camera_model0.camera_parameters.matrix.astype(np.float32),
+        np.array(camera_model0.distortion_model.params, dtype=np.float32)
+    ).reshape(keypoints0_.shape)
+    keypoints1_ = cv2.undistortPoints(
+        np.array(keypoints1_, dtype=np.float32),
+        camera_model1.camera_parameters.matrix.astype(np.float32),
+        np.array(camera_model1.distortion_model.params, dtype=np.float32)
+    ).reshape(keypoints1_.shape)
+    points01, depths = triangulator.triangulate(keypoints0_, keypoints1_)
     return points01, depths
 
 
@@ -114,22 +123,6 @@ def run_vo():
         poses[index0], poses[index1],
         keypoints[index0], keypoints[index1]
     )
-
-
-def extract_features(image):
-    from skimage.feature import BRIEF
-    from tadataka.feature import Features
-    from tadataka.flow_estimation.image_curvature import extract_curvature_extrema
-    from tadataka.coordinates import yx_to_xy, xy_to_yx
-
-    brief = BRIEF()
-    keypoints = extract_curvature_extrema(image, percentile=90)
-    keypoints = xy_to_yx(keypoints)
-    brief.extract(image, keypoints)
-    keypoints = keypoints[brief.mask]
-    keypoints = yx_to_xy(keypoints)
-
-    return Features(keypoints, brief.descriptors)
 
 
 def triangulate_plot(camera_model0, camera_model1,
@@ -156,7 +149,7 @@ def triangulate_plot(camera_model0, camera_model1,
 # images = [imread(f) for f in filenames[189:192]]
 
 dataset = EurocDataset(Path("datasets", "V1_01_easy", "mav0"))
-frames = dataset[120] # [fl for fl, fr in dataset[120:130]]
+frames = [fl for fl, fr in dataset[120:124]]
 images = [f.image for f in frames]
 camera_models = [f.camera_model for f in frames]
 poses = [f.pose.world_to_local() for f in frames]
@@ -170,7 +163,7 @@ features = [extract_features(image) for image in images]
 keypoints = [None] * len(images)
 keypoints[0] = init_keypoint_frame(images[0])
 for i in range(len(keypoints)-1):
-    tracker = Tracker(features[i], features[i+1], images[i+1], lambda_=1e8)
+    tracker = Tracker(features[i], features[i+1], images[i+1], lambda_=0.02)
     keypoints[i+1] = tracker(keypoints[i])
 
 index0, index1 = 0, -1

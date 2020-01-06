@@ -8,31 +8,6 @@ from tadataka.flow_estimation.extrema_tracker import (
 from tadataka.flow_estimation.image_curvature import compute_image_curvature
 
 
-def test_compute_regularizer_map():
-    def f(x):
-        return np.dot(x, x)
-
-    dx, dy = 0, 0
-    assert_array_equal(
-        compute_regularizer_map(f, np.array([dx, dy])),
-        1 - np.array([
-            [2, 1, 2],
-            [1, 0, 1],
-            [2, 1, 2]
-        ])
-    )
-
-    dx, dy = -1, 0
-    assert_array_equal(
-        compute_regularizer_map(f, np.array([dx, dy])),
-        1 - np.array([
-            [5, 2, 1],  # x, y = [-1 -1], [ 0 -1], [ 1 -1]
-            [4, 1, 0],  # x, y = [-1  0], [ 0  0], [ 1  0]
-            [5, 2, 1]   # x, y = [-1  1], [ 0  1], [ 1  1]
-        ])
-    )
-
-
 def test_step():
     M = np.array([
     # x -1  0  1    # y
@@ -60,8 +35,9 @@ def test_step():
 
 
 def test_maximizer():
-    def regularizer(x):
-        return np.dot(x, x)
+    def regularizer(P):
+        y = np.sum(np.power(P, 2), axis=1)
+        return y / (y + 10)
 
     M = -np.inf
     curvature = np.array([
@@ -103,9 +79,23 @@ def test_maximizer():
     p = maximize([2, 1])
     assert_array_equal(p, [4, 4])
 
-    maximize = Maximizer(curvature, regularizer, lambda_=3.0)
+    maximize = Maximizer(curvature, regularizer, lambda_=30.0)
     p = maximize([2, 1])
     assert_array_equal(p, [2, 1])
+
+
+def test_compute_regularizer_map():
+    def regularizer(P):
+        y = np.sum(np.power(P, 2), axis=1)
+        return y / (y + 10)
+
+    width, height = 60, 40
+    x0, y0 = 10, 20
+    R = compute_regularizer_map(regularizer, (height, width), (x0, y0))
+    x, y = 40, 10
+    assert(R[y, x] == (1 - 1000 / 1010))
+    x, y = 20, 15
+    assert(R[y, x] == (1 - 125 / 135))
 
 
 def test_extrema_tracker():
@@ -120,8 +110,9 @@ def test_extrema_tracker():
         [80, 60]
     ])
 
-    def regularizer(x):
-        return np.dot(x, x)
+    def regularizer(P):
+        y = np.sum(np.power(P, 2), axis=1)
+        return y / (y + 10)
 
     def run(lambda_):
         # disable regularization
@@ -133,26 +124,26 @@ def test_extrema_tracker():
         # among its neighbors
         # regularizer term can be omitted because lambda_ = 0.0
         for p0, p in zip(initial_coordinates, coordinates):
+            R = compute_regularizer_map(regularizer, curvature.shape, p0)
+
             x, y = p
 
-            R = compute_regularizer_map(regularizer, p - p0)
-            E = curvature[y+0, x+0] + lambda_ * R[1+0, 1+0]
+            E = curvature[y+0, x+0] + lambda_ * R[y+0, x+0]
 
             # E is maximum among its neighbors
-            assert(curvature[y-1, x-1] + lambda_ * R[1-1, 1-1] < E)
-            assert(curvature[y-1, x-0] + lambda_ * R[1-1, 1-0] < E)
-            assert(curvature[y-1, x+1] + lambda_ * R[1-1, 1+1] < E)
-            assert(curvature[y+0, x-1] + lambda_ * R[1+0, 1-1] < E)
+            assert(curvature[y-1, x-1] + lambda_ * R[y-1, x-1] < E)
+            assert(curvature[y-1, x-0] + lambda_ * R[y-1, x-0] < E)
+            assert(curvature[y-1, x+1] + lambda_ * R[y-1, x+1] < E)
+            assert(curvature[y+0, x-1] + lambda_ * R[y+0, x-1] < E)
 
-            assert(curvature[y+0, x+1] + lambda_ * R[1+0, 1+1] < E)
-            assert(curvature[y+1, x-1] + lambda_ * R[1+1, 1-1] < E)
-            assert(curvature[y+1, x-0] + lambda_ * R[1+1, 1-0] < E)
-            assert(curvature[y+1, x+1] + lambda_ * R[1+1, 1+1] < E)
+            assert(curvature[y+0, x+1] + lambda_ * R[y+0, x+1] < E)
+            assert(curvature[y+1, x-1] + lambda_ * R[y+1, x-1] < E)
+            assert(curvature[y+1, x-0] + lambda_ * R[y+1, x-0] < E)
+            assert(curvature[y+1, x+1] + lambda_ * R[y+1, x+1] < E)
 
     run(lambda_=0.0)
     run(lambda_=1.0)
     run(lambda_=1e10)
-
 
     t = ExtremaTracker(curvature, lambda_=1e8, regularizer=regularizer)
     coordinates = t.optimize(initial_coordinates)
