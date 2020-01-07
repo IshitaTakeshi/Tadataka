@@ -21,7 +21,7 @@ setup(
         'opencv-contrib-python',
         'scikit-image',
         'scikit-learn',
-        'scipy',
+        'scipy>=1.4.1',
         'sympy',
         'sparseba',
         'pyyaml'
