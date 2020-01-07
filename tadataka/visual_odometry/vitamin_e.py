@@ -37,7 +37,6 @@ def keypoints_from_new_area(image1, flow01):
 
 def normalize_image(image):
     image = rgb2gray(image)
-    image = image - np.mean(image)
     image = exposure.equalize_adapthist(image)
     return image
 
