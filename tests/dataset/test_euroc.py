@@ -51,9 +51,8 @@ def test_euroc():
 
     for i, (frame_l, frame_r) in enumerate(dataset):
         R = rotations_gt[i].as_dcm()
-        assert_array_almost_equal(frame_l.rotation.as_dcm(), np.dot(R, R_l))
-        assert_array_almost_equal(frame_r.rotation.as_dcm(), np.dot(R, R_r))
-        assert_array_almost_equal(frame_l.position,
-                                  positions[i] + np.dot(R, p_l))
-        assert_array_almost_equal(frame_r.position,
-                                  positions[i] + np.dot(R, p_r))
+        pose_l, pose_r = frame_l.pose, frame_r.pose
+        assert_array_almost_equal(pose_l.rotation.as_dcm(), np.dot(R, R_l))
+        assert_array_almost_equal(pose_r.rotation.as_dcm(), np.dot(R, R_r))
+        assert_array_almost_equal(pose_l.t, positions[i] + np.dot(R, p_l))
+        assert_array_almost_equal(pose_r.t, positions[i] + np.dot(R, p_r))
