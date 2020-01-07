@@ -23,7 +23,7 @@ class DenseKeypointExtractor(object):
         return extract_curvature_extrema(image, self.percentile)
 
 
-extract_dense_keypoints = DenseKeypointExtractor(percentile=99)
+extract_dense_keypoints = DenseKeypointExtractor(percentile=98)
 
 
 def keypoints_from_new_area(image1, flow01):

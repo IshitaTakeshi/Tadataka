@@ -1,3 +1,4 @@
+from numba import jitclass
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from skimage.color import rgb2gray
@@ -8,13 +9,22 @@ from tadataka.flow_estimation.extrema_tracker import (
 from tadataka.flow_estimation.image_curvature import compute_image_curvature
 
 
+@jitclass([])
+class SquaredNorm(object):
+    def __init__(self):
+        pass
+
+    def compute(self, p):
+        x, y = p
+        return x * x + y * y
+
+
 def test_compute_regularizer_map():
-    def f(x):
-        return np.dot(x, x)
+    regularizer = SquaredNorm()
 
     dx, dy = 0, 0
     assert_array_equal(
-        compute_regularizer_map(f, np.array([dx, dy])),
+        compute_regularizer_map(regularizer, np.array([dx, dy])),
         1 - np.array([
             [2, 1, 2],
             [1, 0, 1],
@@ -24,7 +34,7 @@ def test_compute_regularizer_map():
 
     dx, dy = -1, 0
     assert_array_equal(
-        compute_regularizer_map(f, np.array([dx, dy])),
+        compute_regularizer_map(regularizer, np.array([dx, dy])),
         1 - np.array([
             [5, 2, 1],  # x, y = [-1 -1], [ 0 -1], [ 1 -1]
             [4, 1, 0],  # x, y = [-1  0], [ 0  0], [ 1  0]
@@ -60,9 +70,6 @@ def test_step():
 
 
 def test_maximizer():
-    def regularizer(x):
-        return np.dot(x, x)
-
     M = -np.inf
     curvature = np.array([
     # x  0  1  2  3  4  5  6    # y
@@ -75,6 +82,8 @@ def test_maximizer():
         [M, M, M, M, M, M, M]   # 6
     ], dtype=np.float64)
 
+    regularizer = SquaredNorm()
+
     initial_coordinates = np.array([
         [3, 3],
         [2, 2],
@@ -83,8 +92,8 @@ def test_maximizer():
     ])
 
     maximize = Maximizer(curvature, regularizer, lambda_=0.0)
-    for p0 in initial_coordinates:
-        p = maximize(p0)
+    P = maximize(initial_coordinates)
+    for p in P:
         assert_array_equal(p, [3, 3])
 
     M = -np.inf
@@ -100,16 +109,17 @@ def test_maximizer():
     ], dtype=np.float64)
 
     maximize = Maximizer(curvature, regularizer, lambda_=0.0)
-    p = maximize([2, 1])
-    assert_array_equal(p, [4, 4])
+    p = maximize([[2, 1]])
+    assert_array_equal(p, [[4, 4]])
 
     maximize = Maximizer(curvature, regularizer, lambda_=3.0)
-    p = maximize([2, 1])
-    assert_array_equal(p, [2, 1])
+    p = maximize([[2, 1]])
+    assert_array_equal(p, [[2, 1]])
 
 
 def test_extrema_tracker():
     curvature = compute_image_curvature(rgb2gray(astronaut()))
+    regularizer = SquaredNorm()
 
     # coordinates are represented in [xs, ys] format
     initial_coordinates = np.array([
@@ -119,9 +129,6 @@ def test_extrema_tracker():
         [40, 30],
         [80, 60]
     ])
-
-    def regularizer(x):
-        return np.dot(x, x)
 
     def run(lambda_):
         # disable regularization

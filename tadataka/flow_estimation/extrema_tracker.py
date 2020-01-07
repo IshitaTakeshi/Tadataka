@@ -3,7 +3,7 @@ import numpy as np
 import numba
 from numba import njit
 
-from tadataka.flow_estimation.regularizer import get_geman_mcclure
+from tadataka.flow_estimation.regularizer import GemanMcClure
 from tadataka.utils import is_in_image_range
 
 
@@ -14,23 +14,48 @@ diff_to_neighbors_ = np.array([
 ])
 
 
+@njit
 def step(energy_map):
     return diff_to_neighbors_[np.argmax(energy_map)]
 
 
 # regularizer term 'w'
+@njit
 def compute_regularizer_map(regularizer, dp):
-    xs, ys = np.meshgrid([-1, 0, 1], [-1, 0, 1])
-    DP = np.column_stack((xs.flatten(), ys.flatten()))
+    D = np.empty((3, 3))
+    for j, y in enumerate([-1, 0, 1]):
+        for i, x in enumerate([-1, 0, 1]):
+            ddp = np.array([x, y])
+            D[j, i] = 1 - regularizer.compute(dp + ddp)
+    return D
 
-    D = np.array([regularizer(dp + ddp) for ddp in DP])
-    D = D.reshape(3, 3)
-    return 1 - D
 
-
+@njit
 def get_patch(curvature, p):
     px, py = p
     return curvature[py-1:py+2, px-1:px+2]
+
+
+@njit
+def _maximize(p0, curvature, regularizer, lambda_, max_iter):
+    p = np.copy(p0)
+    for i in range(max_iter):
+        C = get_patch(curvature, p)
+        R = compute_regularizer_map(regularizer, p - p0)
+        dp = step(C + lambda_ * R)
+
+        if dp[0] == 0 and dp[1] == 0:
+            return p
+
+        p = p + dp
+    return p
+
+
+@njit
+def maximize(P, curvature, regularizer, lambda_, max_iter):
+    for i in range(len(P)):
+        P[i] = _maximize(P[i], curvature, regularizer, lambda_, max_iter)
+    return P
 
 
 class Maximizer(object):
@@ -42,23 +67,11 @@ class Maximizer(object):
         self.lambda_ = lambda_
         self.max_iter = max_iter
 
-    def _maximize(self, p0):
-        p = np.copy(p0)
-        for i in range(self.max_iter):
-            C = get_patch(self.curvature, p)
-            R = compute_regularizer_map(self.regularizer, p - p0)
-            dp = step(C + self.lambda_ * R)
-
-            if dp[0] == 0 and dp[1] == 0:
-                return p
-
-            p = p + dp
-        return p
-
-    def __call__(self, coordinates):
+    def __call__(self, P):
         offset = np.array([1, 1])
-        P = coordinates + offset
-        P = self._maximize(P)
+        P = P + offset
+        P = maximize(P, self.curvature, self.regularizer,
+                     self.lambda_, self.max_iter)
         return P - offset
 
 
@@ -66,7 +79,7 @@ class Maximizer(object):
 class ExtremaTracker(object):
     """ Optimize equation (5) """
     def __init__(self, image_curvature, lambda_,
-                 regularizer=get_geman_mcclure(10.0)):
+                 regularizer=GemanMcClure(3.0)):
         self.maximizer = Maximizer(image_curvature, regularizer, lambda_)
         self.image_shape = image_curvature.shape
 
@@ -87,8 +100,7 @@ class ExtremaTracker(object):
         mask = is_in_image_range(coordinates, self.image_shape)
 
         P = coordinates[mask]
-        for i in range(P.shape[0]):
-            P[i] = self.maximizer(P[i])
+        P = self.maximizer(P)
         coordinates[mask] = P
 
         return coordinates + after_decimal

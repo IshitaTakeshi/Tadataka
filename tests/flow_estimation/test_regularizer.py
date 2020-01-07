@@ -1,11 +1,11 @@
 import numpy as np
 
-from tadataka.flow_estimation.regularizer import get_geman_mcclure
+from tadataka.flow_estimation.regularizer import GemanMcClure
 
 
 def test_geman_mcclure():
-    geman_mcclure = get_geman_mcclure(1.)
-    assert(geman_mcclure([1., 2.]) == 5. / 6.)
+    geman_mcclure = GemanMcClure(1.)
+    assert(geman_mcclure.compute([1., 2.]) == 5. / 6.)
 
-    geman_mcclure = get_geman_mcclure(2.)
-    assert(geman_mcclure([1., 2.]) == 5. / 7.)
+    geman_mcclure = GemanMcClure(2.)
+    assert(geman_mcclure.compute([1., 2.]) == 5. / 9.)
