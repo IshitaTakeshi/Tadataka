@@ -35,7 +35,14 @@ def fov_undistort_factors(X, omega):
     return factors
 
 
-class FOV(object):
+class BaseDistortion(object):
+    def __eq__(self, other):
+        C1 = type(self) == type(other)
+        C2 = np.isclose(self.params, other.params).all()
+        return C1 and C2
+
+
+class FOV(BaseDistortion):
     """
     Devernay, Frederic, and Olivier D. Faugeras.
     "Automatic calibration and removal of distortion from
@@ -70,7 +77,7 @@ class FOV(object):
         return [self.omega]
 
 
-class RadTan(object):
+class RadTan(BaseDistortion):
     def __init__(self, dist_coeffs):
         self.dist_coeffs = dist_coeffs
 

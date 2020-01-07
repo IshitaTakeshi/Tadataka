@@ -160,3 +160,10 @@ def test_radtan_undistort():
                         2 + 2 * 4 * 1 * 2])
 
     assert_array_equal(RadTan([0, 0, 0, 0]).undistort(X), X)
+
+
+
+def test_eq():
+    assert(FOV(0.1) == FOV(0.1))
+    assert(FOV(0.1) != FOV(0.2))
+    assert(RadTan([0, 0, 0, 0]) != FOV(0))
