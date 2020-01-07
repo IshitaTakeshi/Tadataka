@@ -33,7 +33,7 @@ def load_camera_params(dataset_root, camera_index):
     path = Path(camera_dir(dataset_root, camera_index), "sensor.yaml")
 
     with open(path, 'r') as f:
-        d = yaml.load(f)
+        d = yaml.load(f, Loader=yaml.FullLoader)
 
     resolution = d['resolution']
     intrinsics = np.array(d['intrinsics'])
