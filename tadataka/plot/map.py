@@ -5,7 +5,6 @@ from tadataka.coordinates import local_to_world
 from tadataka.plot.common import axis3d
 from tadataka.plot.visualizers import plot3d_
 from tadataka.plot.cameras import plot_cameras_
-from tadataka.so3 import rodrigues
 
 
 def plot_map(poses, points, colors=None):
