@@ -23,6 +23,7 @@ setup(
         'scikit-learn',
         'scipy',
         'sympy',
-        'sparseba'
+        'sparseba',
+        'pyyaml'
     ]
 )
