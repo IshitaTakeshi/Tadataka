@@ -116,22 +116,6 @@ def run_vo():
     )
 
 
-def extract_features(image):
-    from skimage.feature import BRIEF
-    from tadataka.feature import Features
-    from tadataka.flow_estimation.image_curvature import extract_curvature_extrema
-    from tadataka.coordinates import yx_to_xy, xy_to_yx
-
-    brief = BRIEF()
-    keypoints = extract_curvature_extrema(image, percentile=90)
-    keypoints = xy_to_yx(keypoints)
-    brief.extract(image, keypoints)
-    keypoints = keypoints[brief.mask]
-    keypoints = yx_to_xy(keypoints)
-
-    return Features(keypoints, brief.descriptors)
-
-
 def triangulate_plot(camera_model0, camera_model1,
                      pose0, pose1, image0, image1):
     features0 = extract_features(image0)
