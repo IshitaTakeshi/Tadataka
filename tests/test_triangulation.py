@@ -32,15 +32,10 @@ projection = PerspectiveProjection(
     CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
 )
 
-R0 = np.array([[1, 0, 0],
-               [0, 0, -1],
-               [0, 1, 0]])
-R1 = np.array([[1, 0, 0],
-               [0, 1, 0],
-               [0, 0, 1]])
-R2 = np.array([[0, 0, -1],
-               [0, 1, 0],
-               [1, 0, 0]])
+R0 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
+R1 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
+R2 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
+
 [t0, t1, t2] = generate_translations(
     np.array([R0, R1, R2]), points_true
 )
@@ -67,9 +62,9 @@ def test_linear_triangulation():
     for i, x in enumerate(points_true):
         assert_array_almost_equal(
             depths[:, i],
-            [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
-             x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
-             x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]
+            [np.dot(R0, x)[2] + t0[2],
+             np.dot(R1, x)[2] + t1[2],
+             np.dot(R2, x)[2] + t2[2]]
         )
 
 
@@ -88,8 +83,8 @@ def test_two_view_triangulation():
     for i, x in enumerate(points_true):
         assert_array_almost_equal(
             depths[:, i],
-            [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
-             x[2] + t1[2]]  # dot(R1, x)[2] + t1[2]
+            [np.dot(R0, x)[2] + t0[2],
+             np.dot(R1, x)[2] + t1[2]]
         )
 
 
@@ -115,7 +110,7 @@ def test_triangulation():
     for i, x in enumerate(points_true):
         assert_array_almost_equal(
             depths[:, i],
-            [x[1] + t0[2],  # dot(R0, x)[2] + t0[2]
-             x[2] + t1[2],  # dot(R1, x)[2] + t1[2]
-             x[0] + t2[2]]  # dot(R2, x)[2] + t2[2]
+            [np.dot(R0, x)[2] + t0[2],  # dot(R0, x)[2] + t0[2]
+             np.dot(R1, x)[2] + t1[2],  # dot(R1, x)[2] + t1[2]
+             np.dot(R2, x)[2] + t2[2]]  # dot(R2, x)[2] + t2[2]
         )
