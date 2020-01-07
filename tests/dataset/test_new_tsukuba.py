@@ -14,21 +14,32 @@ def test_new_tsukuba():
 
     assert_equal(len(dataset), 5)
 
-    frame = dataset[0]
-    assert_equal(frame.image_left.shape, image_shape)
-    assert_equal(frame.image_right.shape, image_shape)
-    assert_equal(frame.depth_map_left.shape, image_shape[0:2])
-    assert_equal(frame.depth_map_right.shape, image_shape[0:2])
+    L, R = dataset[0]
+    assert_equal(L.image.shape, image_shape)
+    assert_equal(R.image.shape, image_shape)
+    assert_equal(L.depth_map.shape, image_shape[0:2])
+    assert_equal(R.depth_map.shape, image_shape[0:2])
 
-    assert_array_equal(frame.position_left, [-5, 0, 0])
-    assert_array_equal(frame.position_right, [5, 0, 0])
+    assert_array_equal(L.pose.t, [-5, 0, 0])
+    assert_array_equal(R.pose.t, [5, 0, 0])
 
-    frame = dataset[4]
+    L, R = dataset[4]
+    pose_l = L.pose
     assert_array_almost_equal(
-        frame.position_left,
-        [-4.98281912e+00, -3.48797408e-05, 3.71711033e-01]
+        pose_l.t,
+        [-4.99999376e+00, -6.10864598e-07, -3.51827802e-02]
     )
     assert_array_almost_equal(
-        frame.position_right,
-        [4.98282112e+00, 3.48797408e-05, -4.56549033e-01]
+        pose_l.rotation.as_euler('xyz', degrees=True),
+        [-0.070745, 0.082921, 0.000007]
+    )
+
+    pose_r = R.pose
+    assert_array_almost_equal(
+        pose_r.t,
+        [4.99999576e+00,  6.10864598e-07, -4.96552198e-02]
+    )
+    assert_array_almost_equal(
+        pose_r.rotation.as_euler('xyz', degrees=True),
+        [-0.070745, 0.082921, 0.000007]
     )

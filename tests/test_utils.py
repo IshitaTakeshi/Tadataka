@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from tadataka.utils import (
     merge_dicts, is_in_image_range, radian_to_degree, indices_other_than)
-from tadataka.features import match
+from tadataka.feature import match
 from tadataka.utils import add_noise, break_other_than, random_binary
 
 

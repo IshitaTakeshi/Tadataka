@@ -6,8 +6,10 @@ from scipy.spatial.transform import Rotation
 from skimage.io import imread
 import numpy as np
 
-from tadataka.dataset.frame import StereoFrame
+from tadataka.camera import CameraModel, CameraParameters, FOV
+from tadataka.dataset.frame import Frame
 from tadataka.dataset.base import BaseDataset
+from tadataka.pose import Pose
 
 
 def load_depth(path):
@@ -25,7 +27,7 @@ def load_depth(path):
 def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
-    rotations = Rotation.from_euler('xyz', euler_angles)
+    rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
     return rotations, positions
 
 
@@ -41,41 +43,51 @@ def calc_baseline_offset(rotation, baseline_length):
 
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
-    def __init__(self, dataset_root):
-        pose_path = Path(dataset_root, "camera_track.txt")
+    def __init__(self, dataset_root, condition="daylight"):
+
+        self.camera_model = CameraModel(
+            CameraParameters(focal_length=[615, 615], offset=[320, 240]),
+            FOV(0.0)
+        )
+        groundtruth_dir = Path(dataset_root, "groundtruth")
+        illumination_dir = Path(dataset_root, "illumination")
+
+        pose_path = Path(groundtruth_dir, "camera_track.txt")
 
         self.baseline_length = 10.0
         self.rotations, self.positions = load_poses(pose_path)
 
-        depth_dir = Path(dataset_root, "depth_maps")
-        image_dir = Path(dataset_root, "images")
+        depth_dir = Path(groundtruth_dir, "depth_maps")
+        image_dir = Path(illumination_dir, condition)
 
-        self.depth_left_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
-        self.depth_right_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
-        self.image_left_paths = sorted(Path(image_dir, "left").glob("*.png"))
-        self.image_right_paths = sorted(Path(image_dir, "right").glob("*.png"))
+        self.depth_L_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
+        self.depth_R_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
+        self.image_L_paths = sorted(Path(image_dir, "left").glob("*.png"))
+        self.image_R_paths = sorted(Path(image_dir, "right").glob("*.png"))
 
-        assert((len(self.depth_left_paths) == len(self.depth_right_paths) ==
-                len(self.image_left_paths) == len(self.image_right_paths)))
+        assert((len(self.depth_L_paths) == len(self.depth_R_paths) ==
+                len(self.image_L_paths) == len(self.image_R_paths)))
+
+        print(self.depth_L_paths)
+        self.length = len(self.depth_L_paths)
 
     def load(self, index):
-        image_left = imread(self.image_left_paths[index])
-        image_right = imread(self.image_right_paths[index])
+        image_l = imread(self.image_L_paths[index])
+        image_r = imread(self.image_R_paths[index])
 
-        image_left = discard_alpha(image_left)
-        image_right = discard_alpha(image_right)
+        image_l = discard_alpha(image_l)
+        image_r = discard_alpha(image_r)
 
-        depth_left = load_depth(self.depth_left_paths[index])
-        depth_right = load_depth(self.depth_right_paths[index])
+        depth_l = load_depth(self.depth_L_paths[index])
+        depth_r = load_depth(self.depth_R_paths[index])
+
         position_center = self.positions[index]
-
+        print("position_center", position_center)
         rotation = self.rotations[index]
         offset = calc_baseline_offset(rotation, self.baseline_length)
-
-        return StereoFrame(
-            image_left, image_right,
-            depth_left, depth_right,
-            position_center - offset / 2.0,
-            position_center + offset / 2.0,
-            rotation
+        pose_l = Pose(rotation, position_center - offset / 2.0)
+        pose_r = Pose(rotation, position_center + offset / 2.0)
+        return (
+            Frame(self.camera_model, pose_l, image_l, depth_l),
+            Frame(self.camera_model, pose_r, image_r, depth_r)
         )

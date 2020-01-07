@@ -7,7 +7,7 @@ import numpy as np
 EPSILON = 1e-4
 
 
-def distort_factors(X, omega):
+def fov_distort_factors(X, omega):
     def f(r):
         return np.arctan(2 * r * np.tan(omega / 2)) / omega
 
@@ -21,7 +21,7 @@ def distort_factors(X, omega):
     return factors
 
 
-def undistort_factors(X, omega):
+def fov_undistort_factors(X, omega):
     def f(r):
         return np.tan(r * omega) / (2 * r * np.tan(omega / 2))
 
@@ -50,14 +50,14 @@ class FOV(object):
         if np.isclose(self.omega, 0):
             return undistorted_keypoints
 
-        factors = distort_factors(undistorted_keypoints, self.omega)
+        factors = fov_distort_factors(undistorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * undistorted_keypoints
 
     def undistort(self, distorted_keypoints):
         if np.isclose(self.omega, 0):
             return distorted_keypoints  # all factors = 1
 
-        factors = undistort_factors(distorted_keypoints, self.omega)
+        factors = fov_undistort_factors(distorted_keypoints, self.omega)
         return factors.reshape(-1, 1) * distorted_keypoints
 
     @staticmethod
@@ -68,3 +68,37 @@ class FOV(object):
     @property
     def params(self):
         return [self.omega]
+
+
+class RadTan(object):
+    def __init__(self, dist_coeffs):
+        self.dist_coeffs = dist_coeffs
+
+    def dostort(self):
+        raise NotImplementedError()
+
+    def undistort(self, distorted_keypoints):
+        X = distorted_keypoints
+
+        k1, k2, p1, p2 = self.dist_coeffs
+
+        r2 = np.sum(np.power(X, 2), axis=1)
+        r4 = np.power(r2, 2)
+        kr = 1.0 + k1 * r2 + k2 * r4
+
+        X00 = X[:, 0] * X[:, 0]
+        X01 = X[:, 0] * X[:, 1]
+        X11 = X[:, 1] * X[:, 1]
+
+        Y = np.empty(X.shape)
+        Y[:, 0] = X[:, 0] * kr + 2.0 * p1 * X01 + p2 * (r2 + 2.0 * X00)
+        Y[:, 1] = X[:, 1] * kr + 2.0 * p2 * X01 + p1 * (r2 + 2.0 * X11)
+        return Y
+
+    @staticmethod
+    def from_params(params):
+        return RadTan(params)
+
+    @property
+    def params(self):
+        return self.dist_coeffs

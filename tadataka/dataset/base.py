@@ -13,4 +13,4 @@ class BaseDataset(object):
         raise NotImplementedError()
 
     def __len__(self):
-        return len(self.positions)
+        return self.length

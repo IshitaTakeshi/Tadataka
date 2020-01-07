@@ -3,21 +3,29 @@ import numpy as np
 
 from skimage.color import rgb2gray
 from tadataka.exceptions import NotEnoughInliersException, print_error
-from tadataka.features import extract_features, Matcher
-from tadataka.features import Features as KD
+from tadataka.feature import extract_features, Matcher
+from tadataka.feature import Features
 from tadataka.camera import CameraModel
-from tadataka.point_keypoint_map import (
+from tadataka.correspondence import (
     associate_triangulated,
     get_indices, get_point_hashes, init_correspondence, is_triangulated,
     merge_correspondences, subscribe
 )
+from tadataka.depth import compute_depth_mask
 from tadataka.utils import merge_dicts, value_list
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
-from tadataka.triangulation import triangulate
+from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.so3 import rodrigues
 from tadataka.local_ba import try_run_ba
 from tadataka.visual_odometry.base import BaseVO
+
+
+def triangulate(pose0, pose1, keypoints0, keypoints1):
+    t = TwoViewTriangulation(pose0, pose1)
+    points, depths = t.triangulate(keypoints0, keypoints1)
+    mask = compute_depth_mask(depths)
+    return points, mask
 
 
 def get_new_viewpoint(viewpoints):
@@ -43,13 +51,13 @@ def unique_point_hashes(correspondences):
     return list(point_hashes)
 
 
-def get_ba_indices(correspondences, kds, point_hashes):
-    assert(len(kds) == len(correspondences))
+def get_ba_indices(correspondences, features, point_hashes):
+    assert(len(features) == len(correspondences))
 
     viewpoint_indices = []
     point_indices = []
     keypoints = []
-    for j, (kd, map_) in enumerate(zip(kds, correspondences)):
+    for j, (kd, map_) in enumerate(zip(features, correspondences)):
         for i, point_hash in enumerate(point_hashes):
             try:
                 keypoint_index = map_[point_hash]
@@ -67,12 +75,12 @@ def get_ba_indices(correspondences, kds, point_hashes):
 def filter_matches(matches, viewpoints, min_matches):
     assert(len(viewpoints) == len(matches))
 
-    def f(args):
-        matches01, viewpoint = args
-        return len(matches01) >= min_matches
+    Z = zip(matches, viewpoints)
+    Y = [[matches01, v] for matches01, v in Z if len(matches01) >= min_matches]
+    if len(Y) == 0:
+        raise ValueError("Not enough matches found")
+    return zip(*Y)
 
-    Z = filter(f, zip(matches, viewpoints))
-    return zip(*Z)
 
 
 class FeatureBasedVO(BaseVO):
@@ -93,7 +101,7 @@ class FeatureBasedVO(BaseVO):
 
         self.point_colors = dict()
         self.point_dict = dict()
-        self.kds = dict()
+        self.features = dict()
         self.poses = dict()
         self.images = dict()
 
@@ -112,43 +120,43 @@ class FeatureBasedVO(BaseVO):
     def n_active_keyframes(self):
         return len(self.active_viewpoints)
 
-    def init_first_two(self, kd1, viewpoint0):
+    def init_first_two(self, features1, viewpoint0):
         pose0 = self.poses[viewpoint0]
-        kd0 = self.kds[viewpoint0]
+        features0 = self.features[viewpoint0]
 
-        matches, viewpoints = self.match(kd1, viewpoints=[viewpoint0])
-        if len(matches) == 0:
-            raise ValueError("Not enough matches found")
+        matches, viewpoints = self.match(features1, viewpoints=[viewpoint0])
 
         matches01, viewpoint0 = matches[0], viewpoints[0]
 
-        pose1 = estimate_pose_change(kd0.keypoints, kd1.keypoints, matches01)
-        point_array, matches01 = triangulate(pose0, pose1,
-                                             kd0.keypoints, kd1.keypoints, matches01)
-        point_dict, map0, map1 = subscribe(point_array, matches01)
-        return pose1, point_dict, map0, map1
+        keypoints0 = features0.keypoints[matches01[:, 0]]
+        keypoints1 = features1.keypoints[matches01[:, 1]]
 
-    def estimate_pose_points(self, kd1):
-        # TODO swap if condition. this should be
-        # if len(self.active_viewpoints) > 1
-        #   return self.estimate_pose_points_(kd1, self.active_viewpoints)
-        # ...
-        if len(self.active_viewpoints) == 1:
-            viewpoint0 = self.active_viewpoints[0]
-            pose1, point_dict, map0, map1 = self.init_first_two(
-                kd1, viewpoint0
-            )
-            map0s = {viewpoint0: map0}
-            return pose1, point_dict, map0s, map1
-        return self.estimate_pose_points_(kd1, self.active_viewpoints)
+        pose1 = estimate_pose_change(keypoints0, keypoints1)
+        point_array, mask = triangulate(pose0, pose1, keypoints0, keypoints1)
 
-    def estimate_pose_points_(self, kd1, viewpoints):
-        matches, viewpoints = self.match(kd1, viewpoints)
-        pose1 = self.estime_pose(kd1, viewpoints, matches)
-        point_dict, map0s, map1 = self.triangulate(
-            viewpoints, matches, pose1, kd1
+        point_dict, correspondence0, correspondence1 = subscribe(
+            point_array[mask], matches01[mask]
         )
-        return pose1, point_dict, map0s, map1
+        return pose1, point_dict, correspondence0, correspondence1
+
+    def estimate_pose_points(self, features1):
+        if len(self.active_viewpoints) > 1:
+            return self.estimate_pose_points_(features1, self.active_viewpoints)
+
+        viewpoint0 = self.active_viewpoints[0]
+        pose1, point_dict, correspondence0, correspondence1 = self.init_first_two(
+            features1, viewpoint0
+        )
+        correspondence0s = {viewpoint0: correspondence0}
+        return pose1, point_dict, correspondence0s, correspondence1
+
+    def estimate_pose_points_(self, features1, viewpoints):
+        matches, viewpoints = self.match(features1, viewpoints)
+        pose1 = self.estime_pose(features1, viewpoints, matches)
+        point_dict, correspondence0s, correspondence1 = self.triangulate(
+            viewpoints, matches, pose1, features1
+        )
+        return pose1, point_dict, correspondence0s, correspondence1
 
     def add(self, image, min_keypoints=8):
         keypoints, descriptors = extract_features(image)
@@ -158,33 +166,37 @@ class FeatureBasedVO(BaseVO):
             return -1
 
         viewpoint1 = get_new_viewpoint(self.active_viewpoints)
-        kd1 = KD(self.camera_model.undistort(keypoints), descriptors)
+
+        features1 = Features(self.camera_model.undistort(keypoints),
+                             descriptors)
 
         if len(self.active_viewpoints) == 0:
-            map1 = init_correspondence()
+            correspondence1 = init_correspondence()
             pose1 = Pose.identity()
             point_dict = dict()
         else:
             try:
-                pose1, point_dict, map0s, map1 = self.estimate_pose_points(kd1)
+                pose1, point_dict, correspondence0s, correspondence1 =\
+                    self.estimate_pose_points(features1)
             except NotEnoughInliersException as e:
                 print_error(e)
                 return -1
 
-            for viewpoint0, m0 in map0s.items():
+            for viewpoint0, m0 in correspondence0s.items():
                 self.correspondences[viewpoint0] = merge_correspondences(
                     self.correspondences[viewpoint0], m0
                 )
 
         self.poses[viewpoint1] = pose1
-        self.correspondences[viewpoint1] = map1
+        self.correspondences[viewpoint1] = correspondence1
 
         # use distorted (not normalized) keypoints
-        point_colors = extract_colors(map1, point_dict, keypoints, image)
+        point_colors = extract_colors(correspondence1,
+                                      point_dict, keypoints, image)
         self.point_colors.update(point_colors)
         self.point_dict.update(point_dict)
 
-        self.kds[viewpoint1] = kd1
+        self.features[viewpoint1] = features1
         self.images[viewpoint1] = image
         self.active_viewpoints = np.append(self.active_viewpoints, viewpoint1)
 
@@ -195,14 +207,14 @@ class FeatureBasedVO(BaseVO):
     def run_ba(self, viewpoints):
         correspondences = value_list(self.correspondences, viewpoints)
         poses = value_list(self.poses, viewpoints)
-        kds = value_list(self.kds, viewpoints)
+        features = value_list(self.features, viewpoints)
 
         point_hashes = unique_point_hashes(correspondences)
 
         point_array = np.array(value_list(self.point_dict, point_hashes))
 
         viewpoint_indices, point_indices, keypoints = get_ba_indices(
-            correspondences, kds, point_hashes
+            correspondences, features, point_hashes
         )
 
         poses, point_array = try_run_ba(viewpoint_indices, point_indices,
@@ -214,7 +226,7 @@ class FeatureBasedVO(BaseVO):
         for viewpoint, pose in zip(viewpoints, poses):
             self.poses[viewpoint] = pose
 
-    def estime_pose(self, kd1, viewpoints, matches):
+    def estime_pose(self, features1, viewpoints, matches):
         assert(len(viewpoints) == len(matches))
         correspondences = value_list(self.correspondences, viewpoints)
 
@@ -227,41 +239,45 @@ class FeatureBasedVO(BaseVO):
             keypoint_indices += indices_
         assert(len(point_hashes) == len(keypoint_indices))
         point_array = np.array(value_list(self.point_dict, point_hashes))
-        return solve_pnp(point_array, kd1.keypoints[keypoint_indices])
+        return solve_pnp(point_array, features1.keypoints[keypoint_indices])
 
-    def match_(self, kd1, viewpoints):
-        kds = value_list(self.kds, viewpoints)
-        return [self.matcher(kd0, kd1) for kd0 in kds]
+    def match_(self, features1, viewpoints):
+        features = value_list(self.features, viewpoints)
+        return [self.matcher(features0, features1) for features0 in features]
 
-    def match(self, kd1, viewpoints):
-        matches = self.match_(kd1, viewpoints)
+    def match(self, features1, viewpoints):
+        matches = self.match_(features1, viewpoints)
         # select matches that have enough inliers
         return filter_matches(matches, viewpoints, self.min_matches)
 
-    def triangulate_(self, matches01, viewpoint0, pose1, kd1):
+    def triangulate_(self, matches01, viewpoint0, pose1, features1):
         pose0 = self.poses[viewpoint0]
-        kd0 = self.kds[viewpoint0]
-        map0 = self.correspondences[viewpoint0]
+        features0 = self.features[viewpoint0]
+        correspondence0 = self.correspondences[viewpoint0]
 
-        mask = is_triangulated(map0, matches01[:, 0])
+        mask = is_triangulated(correspondence0, matches01[:, 0])
         triangulated, untriangulated = matches01[mask], matches01[~mask]
 
-        map1_copied = associate_triangulated(map0, triangulated)
+        copied1 = associate_triangulated(correspondence0, triangulated)
 
         if len(untriangulated) == 0:
             return dict(), init_correspondence(), init_correspondence()
 
         # if point doesn't exist, create it by triangulation
-        point_array, triangulated_ = triangulate(
-            pose0, pose1, kd0.keypoints, kd1.keypoints, untriangulated
+        point_array, mask = triangulate(
+            pose0, pose1,
+            features0.keypoints[untriangulated[:, 0]],
+            features1.keypoints[untriangulated[:, 1]]
         )
-        point_dict, map0_created, map1_created = subscribe(
-            point_array, triangulated_
-        )
-        map1 = merge_correspondences(map1_copied, map1_created)
-        return point_dict, map0_created, map1
 
-    def triangulate(self, viewpoints, matches, pose1, kd1):
+        point_dict, created0, created1 = subscribe(point_array[mask],
+                                                   untriangulated[mask])
+
+        correspondence1 = merge_correspondences(copied1, created1)
+
+        return point_dict, created0, correspondence1
+
+    def triangulate(self, viewpoints, matches, pose1, features1):
         # filter keypoints so that one keypoint has only one corresponding
         # 3D point
         used_indices1 = set()
@@ -274,22 +290,22 @@ class FeatureBasedVO(BaseVO):
             return np.array(matches01_)
 
         point_dict = dict()
-        map0s = dict()
-        map1 = init_correspondence()
+        correspondence0s = dict()
+        correspondence1 = init_correspondence()
         for viewpoint0, matches01 in zip(viewpoints, matches):
             matches01 = filter_unused(matches01)
 
             if len(matches01) == 0:
                 continue
 
-            point_dict_, map0_, map1_ = self.triangulate_(
-                matches01, viewpoint0, pose1, kd1
+            point_dict_, correspondence0_, correspondence1_ = self.triangulate_(
+                matches01, viewpoint0, pose1, features1
             )
-            map0s[viewpoint0] = map0_
-            map1 = merge_correspondences(map1, map1_)
+            correspondence0s[viewpoint0] = correspondence0_
+            correspondence1 = merge_correspondences(correspondence1, correspondence1_)
             point_dict.update(point_dict_)
 
-        return point_dict, map0s, map1
+        return point_dict, correspondence0s, correspondence1
 
     def try_remove(self):
         if self.n_active_keyframes <= self.__window_size:

@@ -7,11 +7,12 @@ from scipy.spatial.transform import Rotation
 import cv2
 
 from tadataka.coordinates import local_to_world, world_to_local
+from tadataka.depth import (depth_condition, warn_points_behind_cameras,
+                            compute_depth_mask)
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
-from tadataka._triangulation import triangulation_
-from tadataka.depth import depth_condition, warn_points_behind_cameras
+from tadataka._triangulation import linear_triangulation
 
 
 def convert_coordinates_(rotvec, t, f):
@@ -29,6 +30,7 @@ def convert_coordinates(pose, f):
 
 class Pose(object):
     def __init__(self, rotation, translation):
+        assert(isinstance(rotation, Rotation))
         self.rotation = rotation  # SciPy's Rotation object
         self.t = translation
 
@@ -84,12 +86,17 @@ def solve_pnp(points, keypoints):
         flags=cv2.SOLVEPNP_EPNP
     )
 
+    if not retval:
+        raise RuntimeError("Pose estimation failed")
+
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")
 
     return Pose(Rotation.from_rotvec(omega.flatten()), t.flatten())
 
 
+# We triangulate only subset of keypoints to determine valid
+# (rotation, translation) pair
 def n_triangulated(n_keypoints, triangulation_ratio=0.2, n_min_triangulation=40):
     n = int(n_keypoints * triangulation_ratio)
     # at least use 'n_min_triangulation' points
@@ -105,18 +112,24 @@ def triangulation_indices(n_keypoints):
     return indices[:N]
 
 
-def select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1):
+def select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1):
     R0, t0 = np.identity(3), np.zeros(3)
 
     n_max_valid_depth = -1
     argmax_R, argmax_t, argmax_depth_mask = None, None, None
 
     # not necessary to triangulate all points to validate depths
-    indices = triangulation_indices(len(keypoints0))
-    for i, (R_, t_) in enumerate(itertools.product((R1, R2), (t1, t2))):
-        _, depth_mask = triangulation_(
-            R0, R_, t0, t_, keypoints0[indices], keypoints1[indices]
+    N = max(int(0.2 * len(keypoints0)), 10)
+    indices = triangulation_indices(N)
+    keypoints = np.stack((keypoints0[indices], keypoints1[indices]))
+    for i, (R_, t_) in enumerate(itertools.product((R1A, R1B), (t1a, t1b))):
+        _, depths = linear_triangulation(
+            np.array([R0, R_]),
+            np.array([t0, t_]),
+            keypoints
         )
+
+        depth_mask = compute_depth_mask(depths)
         n_valid_depth = np.sum(depth_mask)
 
         # only 1 pair (R, t) among the candidates has to be
@@ -141,16 +154,12 @@ def pose_change_from_stereo(keypoints0, keypoints1):
 
     # R <- {R1, R2}, t <- {t1, t2} satisfy
     # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
-    R1, R2, t1, t2 = decompose_essential(E)
-    return select_valid_pose(R1, R2, t1, t2, keypoints0, keypoints1)
+    R1A, R1B, t1a, t1b = decompose_essential(E)
+    return select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1)
 
 
-def estimate_pose_change(keypoints0, keypoints1, matches01):
+def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
     # regarding viewpoint 0 as identity (world origin)
-    R, t = pose_change_from_stereo(
-        keypoints0[matches01[:, 0]],
-        keypoints1[matches01[:, 1]]
-    )
-
+    R, t = pose_change_from_stereo(keypoints0, keypoints1)
     return Pose(Rotation.from_dcm(R), t)

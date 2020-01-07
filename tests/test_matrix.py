@@ -1,14 +1,18 @@
+import itertools
+
 import numpy as np
-from autograd.numpy.linalg import inv
+from numpy.linalg import inv
 
 from numpy.testing import (
     assert_array_almost_equal, assert_almost_equal, assert_array_equal,
     assert_equal)
 
+from scipy.spatial.transform import Rotation
+
 from tadataka.camera import CameraParameters
 from tadataka.matrix import (
     solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
-    estimate_fundamental, fundamental_to_essential)
+    decompose_essential, estimate_fundamental, fundamental_to_essential)
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.so3 import tangent_so3
@@ -118,3 +122,34 @@ def test_fundamental_to_essential():
     F = inv(K1).T.dot(E_true).dot(inv(K0))
     E_pred = fundamental_to_essential(F, K0, K1)
     assert_array_almost_equal(E_true, E_pred)
+
+
+def test_decompose_essential():
+    def test(R_true, t_true):
+        # skew matrx corresponding to t
+        S_true = tangent_so3(t_true.reshape(1, *t_true.shape))[0]
+
+        E_true = np.dot(R_true, S_true)
+
+        R1, R2, t1, t2 = decompose_essential(E_true)
+
+        # t1 = -t2, R.T * t1 is parallel to t_true
+        assert_array_almost_equal(t1, -t2)
+        assert_array_almost_equal(np.cross(np.dot(R1.T, t1), t_true),
+                                  np.zeros(3))
+        assert_array_almost_equal(np.cross(np.dot(R2.T, t1), t_true),
+                                  np.zeros(3))
+
+        # make sure that both of R1 and R2 are rotation matrices
+        assert_array_almost_equal(np.dot(R1.T, R1), np.identity(3))
+        assert_array_almost_equal(np.dot(R2.T, R2), np.identity(3))
+        assert_almost_equal(np.linalg.det(R1), 1.)
+        assert_almost_equal(np.linalg.det(R2), 1.)
+
+    N = 10
+    angles = np.random.uniform(-np.pi, np.pi, (N, 3))
+    rotations = Rotation.from_euler('xyz', angles).as_dcm()
+    translations = np.random.uniform(-10, 10, (N, 3))
+
+    for R, t in itertools.product(rotations, translations):
+        test(R, t)

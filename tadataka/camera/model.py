@@ -8,8 +8,12 @@ def parse_(string):
     distortion_type = params[0]
     params = [float(v) for v in params[1:]]
     camera_parameters = CameraParameters.from_params(params[0:6])
+
+    dist_params = params[6:]
     if distortion_type == "FOV":
-        distortion_model = FOV.from_params(params[6:])
+        distortion_model = FOV.from_params(dist_params)
+    elif distortion_type == "RadTan":
+        distortion_model = RadTan.from_params(dist_params)
     else:
         ValueError("Unknown distortion model: " + distortion_type)
     return CameraModel(camera_parameters, distortion_model)
@@ -39,3 +43,7 @@ class CameraModel(object):
     @staticmethod
     def fromstring(string):
         return parse_(string)
+
+    def __eq__(self, another):
+        return (self.camera_parameters == another.camera_parameters and
+                self.distortion_model == another.distortion_model)

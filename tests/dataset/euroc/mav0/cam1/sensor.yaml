@@ -1,0 +1,18 @@
+sensor_type: camera
+comment: VI-Sensor cam0 (MT9M034)
+
+T_BS:
+    cols: 4
+    rows: 4
+    data:
+        # rotvec [0, 0, np.pi / 4]
+        [ 0.707106781, -0.707106781,  0.         , 0.2        ,
+          0.707106781,  0.707106781,  0.         , 0.4        ,
+          0.         ,  0.         ,  1.         , 0.6        ,
+          0.         ,  0.         ,  0.         , 1.         ]
+
+rate_hz: 20
+resolution: [30, 40]  # width, height
+intrinsics: [42, 44, 20, 14]
+distortion_model: radial-tangential
+distortion_coefficients: [-0.201, 0.001, -0.002, -0.001]
