@@ -79,7 +79,10 @@ class FOV(BaseDistortion):
 
 class RadTan(BaseDistortion):
     def __init__(self, dist_coeffs):
-        self.dist_coeffs = dist_coeffs
+        assert(len(dist_coeffs) <= 5)
+
+        self.dist_coeffs = [0] * 5
+        self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
     def dostort(self):
         raise NotImplementedError()
@@ -87,11 +90,12 @@ class RadTan(BaseDistortion):
     def undistort(self, distorted_keypoints):
         X = distorted_keypoints
 
-        k1, k2, p1, p2 = self.dist_coeffs
+        k1, k2, p1, p2, k3 = self.dist_coeffs
 
         r2 = np.sum(np.power(X, 2), axis=1)
         r4 = np.power(r2, 2)
-        kr = 1.0 + k1 * r2 + k2 * r4
+        r6 = np.power(r2, 3)
+        kr = 1.0 + k1 * r2 + k2 * r4 + k3 * r6
 
         X00 = X[:, 0] * X[:, 0]
         X01 = X[:, 0] * X[:, 1]

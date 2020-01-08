@@ -120,12 +120,16 @@ def test_radtan_undistort():
     ])
     r2 = np.array([1, 4, 1, 4, 5]).reshape(-1, 1)
     r4 = np.array([1, 16, 1, 16, 25]).reshape(-1, 1)
+    r6 = np.array([1, 64, 1, 64, 125]).reshape(-1, 1)
 
     assert_array_equal(RadTan([2, 0, 0, 0]).undistort(X),
                        X * (1 + 2 * r2))
 
     assert_array_equal(RadTan([0, 3, 0, 0]).undistort(X),
                        X * (1 + 3 * r4))
+
+    assert_array_equal(RadTan([0, 0, 0, 0, 2]).undistort(X),
+                       X * (1 + 2 * r6))
 
     Y = RadTan([0, 0, 3, 0]).undistort(X)
     # X[:, 0] + 2 * p1 * X[:, 0] * X[:, 1]
