@@ -4,13 +4,12 @@ from skimage.io import imread
 import numpy as np
 from matplotlib import pyplot as plt
 
-from tadataka.feature import Matcher
 from tadataka.camera.io import load
-from tadataka.feature import extract_features
+from tadataka.feature import extract_features, Matcher
 from tadataka.pose import Pose, estimate_pose_change, solve_pnp
 from tadataka.triangulation import TwoViewTriangulation
 from tadataka.visual_odometry.vitamin_e import (
-    Tracker, init_keypoint_frame, get_ids, get_array)
+    Tracker, init_keypoint_frame, get_ids, get_array, match_keypoints)
 from tadataka.dataset.tum_rgbd import TumRgbdDataset
 from tadataka.dataset.euroc import EurocDataset
 from tadataka.utils import is_in_image_range
@@ -76,14 +75,6 @@ def plot_depth_hist(depths, n_bins=100):
     for i, ax in enumerate(axs):
         ax.hist(depths[i], bins=n_bins)
     plt.show()
-
-
-def match_keypoints(keypoint0, keypoint1):
-    _, indices0, indices1 = np.intersect1d(
-        get_ids(keypoint0), get_ids(keypoint1),
-        return_indices=True
-    )
-    return np.column_stack((indices0, indices1))
 
 
 def triangulate(camera_model0, camera_model1,

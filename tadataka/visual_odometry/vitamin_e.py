@@ -12,7 +12,7 @@ from tadataka.triangulation import TwoViewTriangulation
 from tadataka.utils import is_in_image_range
 
 
-match = Matcher(enable_ransac=False, enable_homography_filter=False)
+match = Matcher(enable_ransac=True, enable_homography_filter=True)
 
 
 class DenseKeypointExtractor(object):
@@ -81,6 +81,14 @@ class Tracker(object):
         new_rows = create_keypoint_frame(id_start, new_keypoints1)
 
         return pd.concat([keypoints1, new_rows])
+
+
+def match_keypoints(keypoint0, keypoint1):
+    _, indices0, indices1 = np.intersect1d(
+        get_ids(keypoint0), get_ids(keypoint1),
+        return_indices=True
+    )
+    return np.column_stack((indices0, indices1))
 
 
 def init_keypoint_frame(image):
