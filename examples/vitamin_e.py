@@ -90,57 +90,13 @@ def triangulate(camera_model0, camera_model1,
     return points01, depths
 
 
-def run_vo():
-    pose0 = Pose.identity()
-
-    match = Matcher(enable_ransac=False, enable_homography_filter=False)
-    matches01 = match(features[index0], features[index1])
-    pose1 = estimate_pose_change(
-        camera_model.undistort(features[index0].keypoints[matches01[:, 0]]),
-        camera_model.undistort(features[index1].keypoints[matches01[:, 1]])
-    )
-
-    points01, depths = triangulate(
-        camera_model,
-        poses[index0], poses[index1],
-        keypoints[index0], keypoints[index1]
-    )
-
-
-def triangulate_plot(camera_model0, camera_model1,
-                     pose0, pose1, image0, image1):
-    features0 = extract_features(image0)
-    features1 = extract_features(image1)
-
-    match = Matcher(enable_ransac=False, enable_homography_filter=True)
-    matches01 = match(features0, features1)
-
-    plot_matches(image0, image1,
-                 features0.keypoints, features1.keypoints, matches01)
-
-    triangulator = TwoViewTriangulation(pose0, pose1)
-    points, depths = triangulator.triangulate(
-        camera_model0.undistort(features0.keypoints[matches01[:, 0]]),
-        camera_model1.undistort(features1.keypoints[matches01[:, 1]])
-    )
-    plot_map([pose0, pose1], points)
-
-# camera_model = load("./datasets/saba/cameras.txt")[1]
-# filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
-#
-# images = [imread(f) for f in filenames[189:192]]
-
 dataset = EurocDataset(Path("datasets", "V1_01_easy", "mav0"))
-frames = dataset[120] # [fl for fl, fr in dataset[120:130]]
+frames = [fl for fl, fr in dataset[120:130]]
 images = [f.image for f in frames]
+
 camera_models = [f.camera_model for f in frames]
 poses = [f.pose.world_to_local() for f in frames]
 features = [extract_features(image) for image in images]
-
-# triangulate_plot(camera_models[0], camera_models[-1],
-#                  poses[0], poses[-1], images[0], images[-1])
-
-# HACK is it better to drop keypoints0 that are out of the next image range ?
 
 keypoints = [None] * len(images)
 keypoints[0] = init_keypoint_frame(images[0])
