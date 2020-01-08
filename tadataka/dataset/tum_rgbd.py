@@ -71,4 +71,5 @@ class TumRgbdDataset(BaseDataset):
         D = imread(self.paths_depth[index])
         D = D / self.depth_factor
         pose = Pose(self.rotations[index], self.positions[index])
-        return Frame(self.camera_model, pose, I, D)
+        return Frame(self.camera_model, self.camera_model_depth,
+                     pose, I, D)

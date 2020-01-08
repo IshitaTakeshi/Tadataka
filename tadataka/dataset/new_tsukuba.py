@@ -88,6 +88,6 @@ class NewTsukubaDataset(BaseDataset):
         pose_l = Pose(rotation, position_center - offset / 2.0)
         pose_r = Pose(rotation, position_center + offset / 2.0)
         return (
-            Frame(self.camera_model, pose_l, image_l, depth_l),
-            Frame(self.camera_model, pose_r, image_r, depth_r)
+            Frame(self.camera_model, None, pose_l, image_l, depth_l),
+            Frame(self.camera_model, None, pose_r, image_r, depth_r)
         )

@@ -108,5 +108,5 @@ class EurocDataset(BaseDataset):
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])
 
-        return (Frame(self.camera_model0, pose0, I0, None),
-                Frame(self.camera_model1, pose1, I1, None))
+        return (Frame(self.camera_model0, None, pose0, I0, None),
+                Frame(self.camera_model1, None, pose1, I1, None))
