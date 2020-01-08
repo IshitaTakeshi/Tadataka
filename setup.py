@@ -24,6 +24,6 @@ setup(
         'scipy>=1.4.1',
         'sympy',
         'sparseba',
-        'pyyaml'
+        'pyyaml>=5.3'
     ]
 )
