@@ -1,8 +1,10 @@
+import re
 from configparser import ConfigParser
 from tadataka.camera.model import CameraModel
 
+
 def parse_(line):
-    camera_id, model_params = line.split(' ', maxsplit=1)
+    camera_id, model_params = re.split(r"\s+", line, maxsplit=1)
     try:
         camera_id = int(camera_id)
     except ValueError:
@@ -14,7 +16,7 @@ def load(filename):
     camera_models = dict()
     with open(filename, 'r') as f:
         for line in f:
-            camera_id, camera_model = parse_(line)
+            camera_id, camera_model = parse_(line.strip())
             camera_models[camera_id] = camera_model
     return camera_models
 

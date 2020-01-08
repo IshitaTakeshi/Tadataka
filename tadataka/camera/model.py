@@ -1,10 +1,13 @@
+import re
+
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.distortion import FOV
 
 
 def parse_(string):
-    params = string.split(' ')
+    # split by arbitrary number of whitespaces
+    params = re.split(r"\s+", string)
     distortion_type = params[0]
     params = [float(v) for v in params[1:]]
     camera_parameters = CameraParameters.from_params(params[0:6])
