@@ -57,12 +57,8 @@ def estimate_flow(features0, features1):
 
 
 class Tracker(object):
-    def __init__(self, features0, features1, image1, lambda_):
-        matches01 = match(features0, features1)
-        self.flow01 = estimate_affine_transform(
-            features0.keypoints[matches01[:, 0]],
-            features1.keypoints[matches01[:, 1]]
-        )
+    def __init__(self, flow01, image1, lambda_):
+        self.flow01 = flow01
         self.image1 = image1
         self.lambda_ = lambda_
 
