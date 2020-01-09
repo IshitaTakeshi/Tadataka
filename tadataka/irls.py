@@ -204,10 +204,6 @@ def fit(X, y, max_iter=100, M=HuberT()):
 
     for i in range(max_iter):
         if scale == 0.0:
-            warnings.warn(
-                'Estimated scale is 0.0 indicating that the most last '
-                'iteration produced a perfect fit of the weighted data.'
-            )
             break
 
         params = weighted_least_squares(X, y, weights=M.weights(r / scale))
