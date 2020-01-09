@@ -23,8 +23,5 @@ class Triangulation(object):
         self.translations = np.array([pose.t for pose in poses])
 
     def triangulate(self, keypoints):
-        """
-        keypoints.shape == (n_poses, n_keypoints, 2)
-        """
         return TR.linear_triangulation(self.rotations, self.translations,
                                        keypoints)
