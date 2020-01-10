@@ -57,12 +57,8 @@ def estimate_flow(features0, features1):
 
 
 class Tracker(object):
-    def __init__(self, features0, features1, image1, lambda_):
-        matches01 = match(features0, features1)
-        self.flow01 = estimate_affine_transform(
-            features0.keypoints[matches01[:, 0]],
-            features1.keypoints[matches01[:, 1]]
-        )
+    def __init__(self, flow01, image1, lambda_):
+        self.flow01 = flow01
         self.image1 = image1
         self.lambda_ = lambda_
 
@@ -83,12 +79,30 @@ class Tracker(object):
         return pd.concat([keypoints1, new_rows])
 
 
-def match_keypoints(keypoint0, keypoint1):
-    _, indices0, indices1 = np.intersect1d(
-        get_ids(keypoint0), get_ids(keypoint1),
-        return_indices=True
-    )
+def match_keypoint_ids(ids0, ids1):
+    _, indices0, indices1 = np.intersect1d(ids0, ids1, return_indices=True)
     return np.column_stack((indices0, indices1))
+
+
+def match_keypoints(keypoints0, keypoints1):
+    return match_keypoint_ids(get_ids(keypoints0), get_ids(keypoints1))
+
+
+def match_multiple_keypoint_ids(keypoint_ids):
+    from functools import reduce
+    # ids = [get_ids(keypoints) for keypoints_ in keypoints]
+    shared_ids = reduce(np.intersect1d, keypoint_ids)
+    matches = np.empty((len(shared_ids), len(keypoint_ids)), dtype=np.int64)
+    for i, ids in enumerate(keypoint_ids):
+        matches01 = match_keypoint_ids(shared_ids, ids)
+        matches[:, i] = matches01[:, 1]
+    return matches
+
+
+def match_multiple_keypoints(keypoints):
+    return match_multiple_keypoint_ids(
+        [get_ids(keypoints_) for keypoints_ in keypoints]
+    )
 
 
 def init_keypoint_frame(image):

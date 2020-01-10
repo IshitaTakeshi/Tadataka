@@ -41,8 +41,10 @@ def to_opencv_format(image):
 
 
 def extract_keypoints(image):
-    keypoints = corner_peaks(corner_harris(image), min_distance=1)
-    return yx_to_xy(keypoints)
+    keypoints = keypoint_detector.detect(to_opencv_format(image), None)
+    if len(keypoints) == 0:
+        return np.empty((0, 2), dtype=np.float64)
+    return np.array([list(p.pt) for p in keypoints])
 
 
 def extract_brief(image):

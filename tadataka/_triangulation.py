@@ -55,7 +55,7 @@ def linear_triangulation(rotations, translations, keypoints):
             rotation matrices of shape
         translations : np.ndarray (n_poses, 3)
             translation vectors of shape
-        keypoints : np.ndarray (n_keypoints, n_poses, 2)
+        keypoints : np.ndarray (n_poses, n_keypoints, 2)
             keypoints observed in each viewpoint
     Returns:
         points : np.ndarray (n_keypoints, 3)
