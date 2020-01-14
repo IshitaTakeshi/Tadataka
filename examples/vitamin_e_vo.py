@@ -57,8 +57,8 @@ def triangulate(camera_model0, camera_model1,
     keypoints1_ = get_array(keypoints1)[matches01[:, 1]]
     triangulator = TwoViewTriangulation(pose0, pose1)
     points01, depths = triangulator.triangulate(
-        camera_model0.undistort(keypoints0_),
-        camera_model1.undistort(keypoints1_)
+        camera_model0.normalize(keypoints0_),
+        camera_model1.normalize(keypoints1_)
     )
     return points01, depths
 
@@ -81,8 +81,8 @@ def run_vo(camera_model0, camera_model1, keypoints0, keypoints1):
 
     pose0 = Pose.identity()
     pose1 = estimate_pose_change(
-        camera_model0.undistort(keypoints0_[matches01[:, 0]]),
-        camera_model1.undistort(keypoints1_[matches01[:, 1]])
+        camera_model0.normalize(keypoints0_[matches01[:, 0]]),
+        camera_model1.normalize(keypoints1_[matches01[:, 1]])
     )
 
     points01, depths = triangulate(
