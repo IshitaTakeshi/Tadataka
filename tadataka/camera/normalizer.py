@@ -12,10 +12,10 @@ class Normalizer(object):
         """
         return (keypoints - self.offset) / self.focal_length
 
-    def inverse(self, normalized_keypoints):
+    def unnormalize(self, normalized_keypoints):
         """
         Inverse transformation from the normalized plane
-        x = fx * X / Z + cx
-        y = fy * Y / Z + cy
+        x = fx * (X / Z) + cx
+        y = fy * (Y / Z) + cy
         """
         return normalized_keypoints * self.focal_length + self.offset
