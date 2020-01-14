@@ -6,7 +6,8 @@ from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.feature import extract_features, Matcher
 from tadataka.visual_odometry.vitamin_e import (
     Tracker, init_keypoint_frame, get_array, track_,
-    match_keypoint_ids, match_multiple_keypoint_ids)
+    match_keypoints, match_keypoint_ids,
+    match_multiple_keypoint_ids)
 
 
 match = Matcher(enable_ransac=False, enable_homography_filter=False)
@@ -99,9 +100,10 @@ def test_keypoint_tracking():
 
     keypoints1_true = init_keypoint_frame(image1)
 
+    matches = match_keypoints(keypoints1_true, keypoints1_pred)
     assert_array_almost_equal(
-        get_array(keypoints1_true),
-        get_array(keypoints1_pred)
+        get_array(keypoints1_true)[matches[:, 0]],
+        get_array(keypoints1_pred)[matches[:, 1]]
     )
 
 
