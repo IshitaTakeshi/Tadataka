@@ -122,6 +122,7 @@ def test_depths_from_triangulation():
         CameraParameters(focal_length=[1, 1], offset=[0, 0]),
     )
 
+    # poses are represented in local coordinates
     rotation = Rotation.from_quat([0, 0, 0, 1])
     R0 = R1 = rotation.as_matrix()
     t0 = np.array([-1, 0, 0])
