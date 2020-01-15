@@ -28,14 +28,22 @@ class CameraModel(object):
         self.camera_parameters = camera_parameters
         self.distortion_model = distortion_model
 
-    def undistort(self, keypoints):
+    def normalize(self, keypoints):
+        """
+        Move keypoints from image coordinate to
+        the normalized image plane
+        """
         return self.distortion_model.undistort(
             self.normalizer.normalize(keypoints)
         )
 
-    def distort(self, normalized_keypoints):
-        return self.normalizer.inverse(
-            self.distortion_model.undistort(normalized_keypoints)
+    def unnormalize(self, normalized_keypoints):
+        """
+        Move coordinates from image coordinate to
+        the normalized image plane
+        """
+        return self.normalizer.unnormalize(
+            self.distortion_model.distort(normalized_keypoints)
         )
 
     def __str__(self):

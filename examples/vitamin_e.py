@@ -92,8 +92,8 @@ def triangulate(camera_model0, camera_model1,
     keypoints0_ = get_array(keypoints0)[matches01[:, 0]]
     keypoints1_ = get_array(keypoints1)[matches01[:, 1]]
     triangulator = TwoViewTriangulation(pose0, pose1)
-    A0 = camera_model0.undistort(keypoints0_)
-    A1 = camera_model1.undistort(keypoints1_)
+    A0 = camera_model0.normalize(keypoints0_)
+    A1 = camera_model1.normalize(keypoints1_)
 
     colors = np.random.random((len(matches01), 3))
     fig = plt.figure()
@@ -111,8 +111,8 @@ def triangulate(camera_model0, camera_model1,
     plt.show()
 
     points01, depths = triangulator.triangulate(
-        camera_model0.undistort(keypoints0_),
-        camera_model1.undistort(keypoints1_)
+        camera_model0.normalize(keypoints0_),
+        camera_model1.normalize(keypoints1_)
     )
     return points01, depths
 
@@ -123,8 +123,8 @@ def ordinary_triangulation(camera_model0, camera_model1,
     matches01 = match(features0, features1)
     triangulator = TwoViewTriangulation(pose0, pose1)
     points01, depths = triangulator.triangulate(
-        camera_model0.undistort(features0.keypoints[matches01[:, 0]]),
-        camera_model1.undistort(features0.keypoints[matches01[:, 1]])
+        camera_model0.normalize(features0.keypoints[matches01[:, 0]]),
+        camera_model1.normalize(features0.keypoints[matches01[:, 1]])
     )
     plot_map([pose0, pose1], points01)
 
