@@ -10,8 +10,8 @@ from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
 from tadataka.pose import (
-    Pose, solve_pnp, pose_change_from_stereo,
-    n_triangulated, triangulation_indices
+    calc_relative_pose, n_triangulated, Pose, pose_change_from_stereo,
+    solve_pnp, triangulation_indices
 )
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
@@ -163,3 +163,18 @@ def test_estimate_pose_change():
 
     case1()
     case2()
+
+
+def test_calc_relative_pose():
+    pose0 = Pose(Rotation.from_euler('xyz', [-np.pi, 0, 0]),
+                 np.array([0, 1, 0]))
+    pose1 = Pose(Rotation.from_euler('xyz', [np.pi/4, 0, 0]),
+                 np.array([0, -1, 0]))
+
+    pose01 = calc_relative_pose(pose0, pose1)
+    assert_array_almost_equal(
+        pose01.rotation.as_euler('xyz'),
+        [-3 * np.pi / 4, 0, 0]
+    )
+
+    assert_array_almost_equal(pose01.t, [0, -2, 0])
