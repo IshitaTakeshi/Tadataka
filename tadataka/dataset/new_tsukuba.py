@@ -68,7 +68,6 @@ class NewTsukubaDataset(BaseDataset):
         assert((len(self.depth_L_paths) == len(self.depth_R_paths) ==
                 len(self.image_L_paths) == len(self.image_R_paths)))
 
-        print(self.depth_L_paths)
         self.length = len(self.depth_L_paths)
 
     def load(self, index):
@@ -82,7 +81,6 @@ class NewTsukubaDataset(BaseDataset):
         depth_r = load_depth(self.depth_R_paths[index])
 
         position_center = self.positions[index]
-        print("position_center", position_center)
         rotation = self.rotations[index]
         offset = calc_baseline_offset(rotation, self.baseline_length)
         pose_l = Pose(rotation, position_center - offset / 2.0)
