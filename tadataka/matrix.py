@@ -52,6 +52,9 @@ def to_homogeneous(X):
     Returns:
         Homogeneous coordinates of shape (n_points, dim + 1)
     """
+    if np.ndim(X) == 1:
+        return np.append(X, 1)
+
     ones = np.ones((X.shape[0], 1))
     return np.hstack((X, ones))
 

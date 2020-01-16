@@ -12,7 +12,8 @@ from scipy.spatial.transform import Rotation
 from tadataka.camera import CameraParameters
 from tadataka.matrix import (
     solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
-    decompose_essential, estimate_fundamental, fundamental_to_essential)
+    decompose_essential, estimate_fundamental, fundamental_to_essential,
+    to_homogeneous)
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.so3 import tangent_so3
@@ -32,6 +33,17 @@ def test_solve_linear():
     assert_equal(x.shape, (8,))
     assert_array_almost_equal(np.dot(A, x), np.zeros(3))
 
+
+def test_to_homogeneous():
+    assert_array_equal(
+        to_homogeneous(np.array([[2, 3], [4, 5]])),
+        [[2, 3, 1], [4, 5, 1]]
+    )
+
+    assert_array_equal(
+        to_homogeneous(np.array([2, 3])),
+        [2, 3, 1]
+    )
 
 def test_motion_matrix():
     R = np.arange(9).reshape(3, 3)
