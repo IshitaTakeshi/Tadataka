@@ -30,8 +30,8 @@ class CameraModel(object):
 
     def normalize(self, keypoints):
         """
-        Move keypoints from image coordinate to
-        the normalized image plane
+        Move keypoints from image coordinate system
+        to the normalized image plane
         """
         return self.distortion_model.undistort(
             self.normalizer.normalize(keypoints)
@@ -39,8 +39,8 @@ class CameraModel(object):
 
     def unnormalize(self, normalized_keypoints):
         """
-        Move coordinates from image coordinate to
-        the normalized image plane
+        Move coordinates from the normalized image plane
+        to the image coordinate system
         """
         return self.normalizer.unnormalize(
             self.distortion_model.distort(normalized_keypoints)
