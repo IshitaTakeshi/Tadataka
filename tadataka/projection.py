@@ -7,6 +7,8 @@ EPSILON = 1e-16
 
 
 def pi(P):
+    if np.ndim(P) == 1:
+        return P[0:2] / (P[2] + EPSILON)
     Z = P[:, [2]]
     XY = P[:, 0:2]
     return XY / (Z + EPSILON)
