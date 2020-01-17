@@ -9,12 +9,12 @@ dataset_root = Path(Path(__file__).parent, "new_tsukuba")
 
 
 def test_new_tsukuba():
-    image_shape = (480, 640, 3)
     dataset = NewTsukubaDataset(dataset_root)
 
     assert_equal(len(dataset), 5)
 
     L, R = dataset[0]
+    image_shape = (480, 640, 3)
     assert_equal(L.image.shape, image_shape)
     assert_equal(R.image.shape, image_shape)
     assert_equal(L.depth_map.shape, image_shape[0:2])

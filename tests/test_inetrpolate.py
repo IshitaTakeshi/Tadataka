@@ -11,8 +11,6 @@ def test_interpolate():
         [[0, 1, 1, 0], [0, 0, 0, 1]]
     ])
 
-    print(image.shape)
-
     coordinates = np.array([
     #      x    y
         [0.3, 0.6],

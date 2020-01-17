@@ -1,8 +1,14 @@
+from pathlib import Path
+
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from scipy.spatial.transform import Rotation
+
+from tadataka.dataset.new_tsukuba import NewTsukubaDataset
+from tadataka.pose import calc_relative_pose
 from tadataka.visual_odometry.semi_dense import (
-    convolve, coordinates_along_key_epipolar, coordinates_along_ref_epipolar
+    convolve, coordinates_along_key_epipolar, coordinates_along_ref_epipolar,
+    DepthEstimator, search_intensities
 )
 
 
@@ -14,6 +20,8 @@ def test_convolve():
     B = np.array([-1, 3, 1])
     errors = convolve(A, B, calc_error)
     assert_array_equal(errors, [0, -14, 7, 8, 33, 2])
+    argmin = search_intensities(A, B, calc_error)
+    assert(argmin == 1 + 1)  # + 1 for offest = (len(B) - 1) // 2
 
 
 def test_coordinates_along_key_epipolar():
@@ -47,3 +55,27 @@ def test_coordinates_along_ref_epipolar():
          [-3.0, -1.6],
          [-25.5, -10.6]]
     )
+
+
+dataset_root = Path("datasets/NewTsukubaStereoDataset")
+
+
+def test_depth_estimation():
+    dataset = NewTsukubaDataset(dataset_root)
+    keyframe, refframe = dataset[210]
+    pose_key_to_ref = calc_relative_pose(keyframe.pose, refframe.pose)
+    estimator = DepthEstimator(
+        keyframe.camera_model, refframe.camera_model,
+        keyframe.image, refframe.image,
+        pose_key_to_ref.world_to_local()
+    )
+
+    from matplotlib import pyplot as plt
+    plt.subplot(121)
+    plt.imshow(keyframe.image)
+    plt.subplot(122)
+    plt.imshow(refframe.image)
+
+    x, y = 450, 240
+    depth_pred = estimator(np.array([x, y]), 0.001, 1e1, 1.0)
+    print(keyframe.depth_map[y, x], depth_pred)
