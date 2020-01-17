@@ -166,6 +166,9 @@ def estimate_pose_change(keypoints0, keypoints1):
 
 
 def calc_relative_pose(pose0, pose1):
-    """Calculate the pose change from pose0 to pose1"""
+    """
+    Calculate the pose change from pose0 to pose1
+    in the world coordinate system
+    """
 
     return Pose(pose1.rotation * pose0.rotation.inv(), pose1.t - pose0.t)

@@ -10,6 +10,9 @@ from tadataka.matrix import to_homogeneous
 
 class TwoViewTriangulation(object):
     def __init__(self, pose0, pose1):
+        """
+        pose0, pose1: Poses in the local coordinate system
+        """
         self.triangulator = Triangulation([pose0, pose1])
 
     def triangulate(self, keypoints0, keypoints1):
@@ -20,6 +23,9 @@ class TwoViewTriangulation(object):
 
 class Triangulation(object):
     def __init__(self, poses):
+        """
+        poses: List of poses in the local coordinate system
+        """
         self.rotations = np.array([pose.rotation.as_dcm() for pose in poses])
         self.translations = np.array([pose.t for pose in poses])
 
@@ -29,6 +35,10 @@ class Triangulation(object):
 
 
 def depths_from_triangulation(pose0, pose1, keypoint0, keypoint1):
+    """
+    pose0, pose1 : Poses in the local coordinate system
+    """
+
     def to_homogeneous(x):
         return np.append(x, 1)
 
