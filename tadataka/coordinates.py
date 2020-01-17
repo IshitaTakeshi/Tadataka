@@ -4,6 +4,12 @@ from tadataka.rigid_transform import rotate_each
 from tadataka.so3 import rodrigues
 
 
+def image_coordinates(image_shape):
+    height, width = image_shape[0:2]
+    xs, ys = np.meshgrid(np.arange(width), np.arange(height))
+    return np.column_stack((xs.flatten(), ys.flatten()))
+
+
 def transpose_each(rotations):
     return np.swapaxes(rotations, 1, 2)
 
