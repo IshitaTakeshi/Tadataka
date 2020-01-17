@@ -15,12 +15,12 @@ vertices = np.array([
 ])
 
 
-def plot_cameras_(ax, poses):
-    ax.add_collection3d(cameras_poly3d(poses))
+def plot_cameras_(ax, poses, scale=1.0):
+    ax.add_collection3d(cameras_poly3d(poses, scale))
     return ax
 
 
-def cameras_poly3d(poses, scale=1.0):
+def cameras_poly3d(poses, scale):
     # this code is the modified version of
     # [an answer](https://stackoverflow.com/a/44920709)
     # by [serenity](https://stackoverflow.com/users/2666859/serenity)
