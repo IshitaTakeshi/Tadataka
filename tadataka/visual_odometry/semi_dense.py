@@ -1,8 +1,13 @@
 import numpy as np
+import numba
+
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.rigid_transform import transform
+from tadataka.interpolate import interpolate
+from tadataka.triangulation import depths_from_triangulation
+from tadataka.pose import Pose
 
 
 def normalize_length(v):
@@ -18,10 +23,10 @@ def calc_epipolar_direction(coordinate, t, K):
 
 
 # TODO use numba for acceleration
-def convolve(a, b, calc_error):
+def convolve(a, b, error_func):
     # reverese b because the second argument is reversed in the computation
     N = len(b)
-    return np.array([calc_error(a[i:i+N], b) for i in range(len(a)-N+1)])
+    return np.array([error_func(a[i:i+N], b) for i in range(len(a)-N+1)])
 
 
 def calc_inv_depths(ref_coordinate, key_coordinate,
@@ -60,9 +65,15 @@ def depth_coordinate(search_step):
     return 0 if np.abs(search_step[0]) > np.abs(search_step[1]) else 1
 
 
-def search_intensities(ref_intensities, key_intensities, calc_error):
-    errors = convolve(ref_intensities, key_intensities, calc_error)
-    return np.argmin(errors)
+def calc_error(v1, v2):
+    d = (v2 - v1).flatten()
+    return np.dot(d, d)
+
+
+def search_intensities(intensities_ref, intensities_key, error_func):
+    errors = convolve(intensities_ref, intensities_key, error_func)
+    assert(len(errors) == len(intensities_ref) - len(intensities_key) + 1)
+    return np.argmin(errors) + (len(intensities_key) - 1) // 2
 
 
 def photometric_disparity_error(epipolar_direction):
@@ -87,6 +98,18 @@ def coordinates_along_key_epipolar(x_key, t_key_to_ref, disparity):
     return x_key + np.outer([-2, -1, 0, 1, 2], disparity * direction)
 
 
+class InsufficientCoordinatesError(Exception):
+    pass
+
+
+def error_if_insufficient_coordinates(mask, min_coordinates):
+    if np.sum(mask) < min_coordinates:
+        raise InsufficientCoordinatesError(
+            "Insufficient number of coordinates "
+            "sampled from the epipolar line"
+        )
+
+
 class DepthEstimator(object):
     def __init__(self, camera_model_key, camera_model_ref,
                  image_key, image_ref, pose_key_to_ref):
@@ -94,70 +117,78 @@ class DepthEstimator(object):
         self.camera_model_ref = camera_model_ref
         self.image_key = image_key
         self.image_ref = image_ref
-        self.R = pose_key_to_ref.rotation.as_matrix()
-        self.t = pose_key_to_ref.t
+        self.pose_key_to_ref = pose_key_to_ref
 
     def __call__(self, u_key, min_depth, max_depth, prior_depth_key):
+        R = self.pose_key_to_ref.rotation.as_matrix()
+        t = self.pose_key_to_ref.t
+
         x_key = self.camera_model_key.normalize(u_key)
-        print(x_key)
 
         disparity_ref = 0.01
 
-        depth_ref = calc_depth_ref(self.R, self.t, x_key, prior_depth_key)
+        depth_ref = calc_depth_ref(R, t, x_key, prior_depth_key)
         inv_depth_ref = 1 / depth_ref
         inv_depth_key = 1 / prior_depth_key
         disparity_key = disparity_ref * (inv_depth_key / inv_depth_ref)
 
         # TODO check gradient along epipolar line
-        epipolar_direction_key = normalize_length(x_key - pi(self.t))
+        epipolar_direction_key = normalize_length(x_key - pi(t))
         xs_key = coordinates_along_line(
             x_key, epipolar_direction_key,
-            disparity_key * np.array([-2, -1, 0, 1, 2])
+            disparity_key * np.array([-4, -3, -2, -1, 0, 1, 2, 3, 4])
         )
-
         us_key = self.camera_model_key.unnormalize(xs_key)
-        # if not np.all(is_in_image_range(us_key, self.image_key.shape)):
-        #     raise ValueError(
-        #         "All coordinates sampled from keyframe epipolar line "
-        #         "have to be within the keyframe image range"
-        #     )
+        mask = is_in_image_range(us_key,
+                                 [self.image_key.shape[0]-1,
+                                  self.image_key.shape[1]-1])
+        error_if_insufficient_coordinates(
+            is_in_image_range(us_key, self.image_key.shape), len(xs_key)
+        )
 
         # searching along epipolar line with equal disparity means
         # searching the depth with equal inverse depth step
         # because inverse depth is approximately proportional to
         # the disparity
 
-        x_ref_max = pi(transform(self.R, self.t, to_homogeneous(x_key) * max_depth))
-        x_ref_min = pi(transform(self.R, self.t, to_homogeneous(x_key) * min_depth))
-        x_ref = pi(transform(self.R, self.t, to_homogeneous(x_key) * prior_depth_key))
-        epipolar_direction_ref = normalize_length(x_ref_max - x_ref_min)
-        N = np.linalg.norm(x_ref_max - x_ref_min) / disparity_ref
-        xs_ref = coordinates_along_line(
-            x_ref_min, epipolar_direction_ref,
-            disparity_ref * np.arange(N)
-        )
-        us_ref = self.camera_model_ref.unnormalize(xs_ref)
-        print(us_ref)
-        from matplotlib import pyplot as plt
-        plt.subplot(121)
-        plt.imshow(self.image_key)
-        plt.scatter(u_key[0], u_key[1])
-        plt.subplot(122)
-        plt.imshow(self.image_ref)
-        plt.scatter(us_ref[:, 0], us_ref[:, 1])
-        plt.show()
+        # search from max to min
+        x_ref_max = pi(transform(R, t / max_depth, to_homogeneous(x_key)))
+        x_ref_min = pi(transform(R, t / min_depth, to_homogeneous(x_key)))
+        epipolar_direction_ref = normalize_length(x_ref_min - x_ref_max)
 
-        mask = is_in_image_range(us_ref, self.image_ref.shape)
-        if np.sum(mask) < min_ref_coordinates:
-            raise ValueError("Insufficient number of coordinates "
-                             "sampled from the reference epipolar line")
+        N = np.linalg.norm(x_ref_min - x_ref_max) / disparity_ref
+        xs_ref = coordinates_along_line(x_ref_max, epipolar_direction_ref,
+                                        disparity_ref * np.arange(N))
+        us_ref = self.camera_model_ref.unnormalize(xs_ref)
+
+        mask = is_in_image_range(us_ref,
+                                 [self.image_ref.shape[0]-1,
+                                  self.image_ref.shape[1]-1])
+        error_if_insufficient_coordinates(mask, len(xs_key))
         xs_ref, us_ref = xs_ref[mask], us_ref[mask]
 
         intensities_ref = interpolate(self.image_ref, us_ref)
         intensities_key = interpolate(self.image_key, us_key)
 
-        argmin = search_intensities(ref_intensities, key_intensities, calc_error)
-        [key_depth, ref_depth] = estimate_depths(self.R, self.t,
-                                                 key_coordinates[2],
-                                                 ref_coordinates[argmin])
+        argmin = search_intensities(intensities_ref, intensities_key,
+                                    calc_error)
+
+        # from matplotlib import pyplot as plt
+        # plt.subplot(121)
+        # plt.imshow(self.image_key)
+        # plt.scatter(u_key[0], u_key[1], c='red')
+        # plt.subplot(122)
+        # plt.imshow(self.image_ref)
+        # errors = convolve(intensities_ref, intensities_key, calc_error)
+        # plt.scatter(us_ref[4:-4, 0], us_ref[4:-4, 1],
+        #             c=1-np.column_stack((errors / errors.max(),
+        #                                  errors / errors.max(),
+        #                                  errors / errors.max())))
+        # plt.scatter(us_ref[argmin, 0], us_ref[argmin, 1], c='red')
+        # plt.show()
+
+        key_depth, ref_depth = depths_from_triangulation(
+            Pose.identity(), self.pose_key_to_ref,
+            xs_key[2], xs_ref[argmin]
+        )
         return key_depth
