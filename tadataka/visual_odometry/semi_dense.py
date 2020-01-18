@@ -103,10 +103,12 @@ class InsufficientCoordinatesError(Exception):
 
 
 def error_if_insufficient_coordinates(mask, min_coordinates):
-    if np.sum(mask) < min_coordinates:
+    n_in_image = np.sum(mask)
+    if n_in_image < min_coordinates:
         raise InsufficientCoordinatesError(
             "Insufficient number of coordinates "
-            "sampled from the epipolar line"
+            "sampled from the epipolar line. "
+            "Required {}, but found {}.".format(min_coordinates, n_in_image)
         )
 
 
