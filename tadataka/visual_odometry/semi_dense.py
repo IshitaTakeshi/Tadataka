@@ -148,14 +148,14 @@ class DepthEstimator(object):
             is_in_image_range(us_key, self.image_key.shape), len(xs_key)
         )
 
-        # searching along epipolar line with equal disparity means
+        # searching along the epipolar line with equal disparity means
         # searching the depth with equal inverse depth step
         # because inverse depth is approximately proportional to
         # the disparity
 
         # search from max to min
-        x_ref_max = pi(transform(R, t / max_depth, to_homogeneous(x_key)))
-        x_ref_min = pi(transform(R, t / min_depth, to_homogeneous(x_key)))
+        x_ref_max = pi(transform(R, t, to_homogeneous(x_key) * max_depth))
+        x_ref_min = pi(transform(R, t, to_homogeneous(x_key) * min_depth))
         epipolar_direction_ref = normalize_length(x_ref_min - x_ref_max)
 
         N = np.linalg.norm(x_ref_min - x_ref_max) / disparity_ref
