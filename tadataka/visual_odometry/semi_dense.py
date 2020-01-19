@@ -112,6 +112,16 @@ def error_if_insufficient_coordinates(mask, min_coordinates):
         )
 
 
+keyframe_sampling_steps = np.array([-4, -3, -2, -1, 0, 1, 2, 3, 4])
+
+
+def calc_disparity_key(depth_key, depth_ref, disparity_ref):
+    inv_depth_key = 1 / depth_key
+    inv_depth_ref = 1 / depth_ref
+    disparity_key = disparity_ref * (inv_depth_key / inv_depth_ref)
+    return disparity_key
+
+
 class DepthEstimator(object):
     def __init__(self, camera_model_key, camera_model_ref,
                  image_key, image_ref, pose_key_to_ref):
@@ -130,15 +140,14 @@ class DepthEstimator(object):
         disparity_ref = 0.01
 
         depth_ref = calc_depth_ref(R, t, x_key, prior_depth_key)
-        inv_depth_ref = 1 / depth_ref
-        inv_depth_key = 1 / prior_depth_key
-        disparity_key = disparity_ref * (inv_depth_key / inv_depth_ref)
+        disparity_key = calc_disparity_key(prior_depth_key,
+                                           depth_ref, disparity_ref)
 
         # TODO check gradient along epipolar line
         epipolar_direction_key = normalize_length(x_key - pi(t))
         xs_key = coordinates_along_line(
             x_key, epipolar_direction_key,
-            disparity_key * np.array([-4, -3, -2, -1, 0, 1, 2, 3, 4])
+            disparity_key * keyframe_sampling_steps
         )
         us_key = self.camera_model_key.unnormalize(xs_key)
         mask = is_in_image_range(us_key,
