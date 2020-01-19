@@ -6,7 +6,7 @@ from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.rigid_transform import transform
 from tadataka.interpolate import interpolate
-from tadataka.triangulation import depths_from_triangulation
+from tadataka.triangulation import DepthFromTriangulation
 from tadataka.pose import Pose
 
 
@@ -175,22 +175,6 @@ class DepthEstimator(object):
         argmin = search_intensities(intensities_ref, intensities_key,
                                     calc_error)
 
-        # from matplotlib import pyplot as plt
-        # plt.subplot(121)
-        # plt.imshow(self.image_key)
-        # plt.scatter(u_key[0], u_key[1], c='red')
-        # plt.subplot(122)
-        # plt.imshow(self.image_ref)
-        # errors = convolve(intensities_ref, intensities_key, calc_error)
-        # plt.scatter(us_ref[4:-4, 0], us_ref[4:-4, 1],
-        #             c=1-np.column_stack((errors / errors.max(),
-        #                                  errors / errors.max(),
-        #                                  errors / errors.max())))
-        # plt.scatter(us_ref[argmin, 0], us_ref[argmin, 1], c='red')
-        # plt.show()
-
-        key_depth, ref_depth = depths_from_triangulation(
-            Pose.identity(), self.pose_key_to_ref,
-            xs_key[2], xs_ref[argmin]
-        )
+        f = DepthFromTriangulation(Pose.identity(), self.pose_key_to_ref)
+        key_depth, ref_depth = f(xs_key[2], xs_ref[argmin])
         return key_depth

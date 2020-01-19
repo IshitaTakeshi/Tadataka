@@ -34,33 +34,38 @@ class Triangulation(object):
                                        keypoints)
 
 
-def depths_from_triangulation(pose0, pose1, keypoint0, keypoint1):
-    """
-    pose0, pose1 : Poses in the local coordinate system
-    """
+class DepthFromTriangulation(object):
+    def __init__(self, pose0, pose1):
+        self.R0, self.t0 = pose0.rotation.as_dcm(), pose0.t
+        self.R1, self.t1 = pose1.rotation.as_dcm(), pose1.t
 
-    def to_homogeneous(x):
-        return np.append(x, 1)
+    def __call__(self, keypoint0, keypoint1):
+        """
+        pose0, pose1 : Poses in the local coordinate system
+        """
 
-    R0, t0 = pose0.rotation.as_matrix(), pose0.t
-    R1, t1 = pose1.rotation.as_matrix(), pose1.t
+        def to_homogeneous(x):
+            return np.append(x, 1)
 
-    # y0 = inv(K) * homogeneous(x0)
-    # y1 = inv(K) * homogeneous(x1)
-    # In this implementation, we assume K = I
+        # y0 = inv(K) * homogeneous(x0)
+        # y1 = inv(K) * homogeneous(x1)
+        # In this implementation, we assume K = I
 
-    # R0 * X + t0 = depth0 * y0
-    # R1 * X + t1 = depth1 * y1
+        # R0 * X + t0 = depth0 * y0
+        # R1 * X + t1 = depth1 * y1
 
-    # X = R0.T * (depth0 * y0 - t0) = depth0 * R0.T * y0 - R0.T * t0
-    # X = R1.T * (depth1 * y1 - t1) = depth1 * R1.T * y1 - R1.T * t1
-    # 0 = (depth0 * R0.T * y0 - R0.T * t0) - (depth1 * R1.T * y1 - R1.T * t1)
-    # R0.T * t0 - R1.T * t1 = depth0 * R0.T * y0 - depth1 * R1.T * y1
-    #                       = dot([R0.T * y0, -R1.T * y1], [depth0, depth1])
+        # X = R0.T * (depth0 * y0 - t0) = depth0 * R0.T * y0 - R0.T * t0
+        # X = R1.T * (depth1 * y1 - t1) = depth1 * R1.T * y1 - R1.T * t1
+        # 0 = (depth0 * R0.T * y0 - R0.T * t0) - (depth1 * R1.T * y1 - R1.T * t1)
+        # R0.T * t0 - R1.T * t1 = depth0 * R0.T * y0 - depth1 * R1.T * y1
+        #                       = dot([R0.T * y0, -R1.T * y1], [depth0, depth1])
 
-    y0 = to_homogeneous(keypoint0)
-    y1 = to_homogeneous(keypoint1)
-    A = np.column_stack((np.dot(R0.T, y0), -np.dot(R1.T, y1)))
-    b = np.dot(R0.T, t0) - np.dot(R1.T, t1)
-    depths, residuals, rank, s = np.linalg.lstsq(A, b)
-    return depths
+        R0, t0 = self.R0, self.t0
+        R1, t1 = self.R1, self.t1
+
+        y0 = to_homogeneous(keypoint0)
+        y1 = to_homogeneous(keypoint1)
+        A = np.column_stack((np.dot(R0.T, y0), -np.dot(R1.T, y1)))
+        b = np.dot(R0.T, t0) - np.dot(R1.T, t1)
+        depths, residuals, rank, s = np.linalg.lstsq(A, b)
+        return depths
