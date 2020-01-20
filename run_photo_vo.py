@@ -1,13 +1,19 @@
+from pathlib import Path
+
 import numpy as np
 from skimage.feature import plot_matches
 from skimage.io import imread
-from pathlib import Path
+
 from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 from tadataka.coordinates import xy_to_yx
 from tadataka.visual_odometry import FeatureBasedVO
 from tadataka.camera.io import load
 from tadataka.coordinates import local_to_world
 from tadataka.plot import plot_map
+from tadataka.plot.cameras import cameras_poly3d
+from tadataka.pose import Pose
 
 
 def match_point_indices(point_indices1, point_indices2):
@@ -66,24 +72,39 @@ vo = FeatureBasedVO(camera_models[1], window_size=6)
 
 filenames = sorted(Path("./datasets/saba/images").glob("*.jpg"))
 filenames = [filenames[0]] + filenames[4:]
+filenames = filenames[:5]
+
+fig = plt.figure(figsize=(6, 6))
+ax = fig.add_subplot(111, projection='3d')
+
+points = np.empty((0, 3))
+points_ax = ax.scatter(points[:, 0], points[:, 1], points[:, 2])
+poses = [Pose.identity()]
+poses_ax = ax.add_collection3d(cameras_poly3d(poses))
 
 
-for i, filename in enumerate(filenames):
-    image = imread(filename)
-    print("Adding {}-th frame".format(i))
-    print("filename = {}".format(filename))
-
+def update_lines(i):
+    image = imread(filenames[i])
     viewpoint = vo.add(image)
 
     if viewpoint < 0:
-        continue
+        return
 
     vo.try_remove()
-    print("{}-th Frame Added".format(i))
 
     if i == 0:
-        continue
+        return
 
-    if i % 100 == 0:
-        points, colors = vo.export_points()
-        plot_map(vo.export_poses(), points, colors)
+    poses = vo.export_poses()
+    points, colors = vo.export_points()
+
+    # NOTE: there is no .set_data() for 3 dim data...
+    points_ax.set_data(points)
+    poses_ax.set_data(cameras_poly3d(poses))
+    return lines
+
+
+anim = FuncAnimation(fig, update_lines, len(filenames),
+                     interval=1000, blit=False)
+
+plt.show()
