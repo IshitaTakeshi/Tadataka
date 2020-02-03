@@ -6,9 +6,13 @@ class CameraParameters(object):
         assert(len(focal_length) == 2)
         assert(len(offset) == 2)
 
-        self.image_shape = image_shape
-        self.focal_length = focal_length
-        self.offset = offset
+        self.focal_length = np.array(list(focal_length))
+        self.offset = np.array(list(offset))
+
+        if image_shape is None:
+            self.image_shape = None
+        else:
+            self.image_shape = np.array(list(image_shape))
 
     @property
     def matrix(self):
