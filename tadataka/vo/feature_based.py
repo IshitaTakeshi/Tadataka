@@ -16,7 +16,6 @@ from tadataka.utils import merge_dicts, value_list
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
 from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
-from tadataka.so3 import rodrigues
 from tadataka.local_ba import try_run_ba
 from tadataka.visual_odometry.base import BaseVO
 
