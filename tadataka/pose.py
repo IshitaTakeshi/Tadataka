@@ -12,6 +12,7 @@ from tadataka.depth import (depth_condition, warn_points_behind_cameras,
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
+from tadataka.se3 import exp_se3_t_
 from tadataka._triangulation import linear_triangulation
 
 
@@ -52,6 +53,11 @@ class Pose(object):
     @staticmethod
     def identity():
         return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+
+    @staticmethod
+    def from_se3(xi):
+        rotvec = xi[3:]
+        return Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
 
     def inv(self):
         inv_rotation = self.rotation.inv()

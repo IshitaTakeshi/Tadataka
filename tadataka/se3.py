@@ -12,26 +12,29 @@ def normalize(omega):
     return omega / theta, theta
 
 
-def exp_se3(xi):
+def exp_se3_t_(xi):
     v, rotvec = xi[:3], xi[3:]
 
-    I = np.eye(3)
-    R = exp_so3(rotvec)
-
+    # NOTE K is computed from the normalized rotvec
     omega, theta = normalize(rotvec)
     K = tangent_so3(omega)
 
-    # NOTE K is computed from the normalized rotvec
+    I = np.eye(3)
 
-    if theta < EPSILON:  # since theta = norm(omega) >= 0
+    if theta < EPSILON:  # theta = norm(omega) >= 0
         V = I + K * theta / 2 + np.dot(K, K) * pow(theta, 2) / 6
     else:
         V = (I + (1 - np.cos(theta)) / theta * K +
              (theta - np.sin(theta)) / theta * np.dot(K, K))
+    return np.dot(V, v)
+
+
+def exp_se3(xi):
+    rotvec = xi[3:]
 
     G = np.empty((4, 4))
-    G[0:3, 0:3] = R
-    G[0:3, 3] = np.dot(V, v)
+    G[0:3, 0:3] = exp_so3(rotvec)
+    G[0:3, 3] = exp_se3_t_(xi)
     G[3, 0:3] = 0
     G[3, 3] = 1
     return G
