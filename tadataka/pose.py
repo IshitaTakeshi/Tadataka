@@ -53,6 +53,14 @@ class Pose(object):
     def identity():
         return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
+    def inv(self):
+        inv_rotation = self.rotation.inv()
+        return Pose(inv_rotation, -np.dot(inv_rotation.as_dcm(), self.t))
+
+    def __mul__(self, other):
+        return Pose(self.rotation * other.rotation,
+                    np.dot(self.rotation.as_dcm(), other.t) + self.t)
+
     def __eq__(self, other):
         self_rotvec = self.rotation.as_rotvec()
         other_rotvec = other.rotation.as_rotvec()

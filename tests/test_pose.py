@@ -101,6 +101,43 @@ def test_R():
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
 
 
+def test_inv():
+    for i in range(10):
+        rotvec = np.random.uniform(-np.pi, np.pi, 3)
+        rotation = Rotation.from_rotvec(rotvec)
+
+        t = np.random.uniform(-10, 10, 3)
+
+        p = Pose(rotation, t)
+
+        q = p * p.inv()
+        assert_array_almost_equal(q.rotation.as_rotvec(), np.zeros(3))
+        assert_array_almost_equal(q.t, np.zeros(3))
+
+
+def test_mul():
+    # case1
+    pose1 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose2 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose3 = pose1 * pose2
+    assert_array_equal(pose3.rotation.as_rotvec(), np.zeros(3))
+    assert_array_equal(pose3.t, 2 * np.ones(3))
+
+    # case2
+    axis = np.array([0.0, 1.0, 2.0])
+    rotvec1 = 0.1 * axis
+    rotvec2 = 0.4 * axis
+    t1 = np.array([0.2, 0.4, -0.1])
+    t2 = np.array([-0.1, 2.0, 0.1])
+    pose1 = Pose(Rotation.from_rotvec(rotvec1), t1)
+    pose2 = Pose(Rotation.from_rotvec(rotvec2), t2)
+    pose3 = pose1 * pose2
+
+    assert_array_almost_equal(pose3.rotation.as_rotvec(), 0.5 * axis)
+    R1 = pose1.rotation.as_dcm()
+    assert_array_almost_equal(pose3.t, np.dot(R1, pose2.t) + pose1.t)
+
+
 def test_n_triangulated():
     assert(n_triangulated(1000, 0.2, 40) == 200)   # 1000 * 0.2
     assert(n_triangulated(100, 0.2, 40) == 40)    # max(100 * 0.2, 40)
