@@ -26,7 +26,7 @@ class Triangulation(object):
         """
         poses: List of poses in the local coordinate system
         """
-        self.rotations = np.array([pose.rotation.as_dcm() for pose in poses])
+        self.rotations = np.array([pose.rotation.as_matrix() for pose in poses])
         self.translations = np.array([pose.t for pose in poses])
 
     def triangulate(self, keypoints):
@@ -36,8 +36,8 @@ class Triangulation(object):
 
 class DepthFromTriangulation(object):
     def __init__(self, pose0, pose1):
-        self.R0, self.t0 = pose0.rotation.as_dcm(), pose0.t
-        self.R1, self.t1 = pose1.rotation.as_dcm(), pose1.t
+        self.R0, self.t0 = pose0.rotation.as_matrix(), pose0.t
+        self.R1, self.t1 = pose1.rotation.as_matrix(), pose1.t
 
     def __call__(self, keypoint0, keypoint1):
         """

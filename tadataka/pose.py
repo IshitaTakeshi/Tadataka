@@ -37,7 +37,7 @@ class Pose(object):
 
     @property
     def R(self):
-        return self.rotation.as_dcm()
+        return self.rotation.as_matrix()
 
     def __str__(self):
         rotvec = self.rotation.as_rotvec()
@@ -61,11 +61,11 @@ class Pose(object):
 
     def inv(self):
         inv_rotation = self.rotation.inv()
-        return Pose(inv_rotation, -np.dot(inv_rotation.as_dcm(), self.t))
+        return Pose(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
 
     def __mul__(self, other):
         return Pose(self.rotation * other.rotation,
-                    np.dot(self.rotation.as_dcm(), other.t) + self.t)
+                    np.dot(self.rotation.as_matrix(), other.t) + self.t)
 
     def __eq__(self, other):
         self_rotvec = self.rotation.as_rotvec()
@@ -74,15 +74,15 @@ class Pose(object):
                 np.isclose(self.t, other.t).all())
 
 
-min_correspondences = 6
-
-
 def calc_reprojection_threshold(keypoints, k=2.0):
     center = np.mean(keypoints, axis=0, keepdims=True)
     squared_distances = np.sum(np.power(keypoints - center, 2), axis=1)
     # rms of distances from center to keypoints
     rms = np.sqrt(np.mean(squared_distances))
     return k * rms / keypoints.shape[0]
+
+
+min_correspondences = 6
 
 
 def solve_pnp(points, keypoints):
@@ -176,7 +176,7 @@ def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
     # regarding viewpoint 0 as identity (world origin)
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
-    return Pose(Rotation.from_dcm(R), t)
+    return Pose(Rotation.from_matrix(R), t)
 
 
 def calc_relative_pose(pose0, pose1):

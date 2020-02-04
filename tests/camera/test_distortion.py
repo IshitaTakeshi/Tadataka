@@ -44,7 +44,7 @@ def test_normalizer():
         rotation_true = Rotation.from_rotvec(np.array([-1.0, 0.2, 3.1]))
         t_true = np.array([-0.8, 1.0, 8.3])
 
-        P = transform(rotation_true.as_dcm(), t_true, points)
+        P = transform(rotation_true.as_matrix(), t_true, points)
         keypoints_true = projection.compute(P)
 
         # poses should be able to be estimated without a camera matrix

@@ -159,7 +159,7 @@ def test_decompose_essential():
 
     N = 10
     angles = np.random.uniform(-np.pi, np.pi, (N, 3))
-    rotations = Rotation.from_euler('xyz', angles).as_dcm()
+    rotations = Rotation.from_euler('xyz', angles).as_matrix()
     translations = np.random.uniform(-10, 10, (N, 3))
 
     for R, t in itertools.product(rotations, translations):

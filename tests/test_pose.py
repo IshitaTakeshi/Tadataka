@@ -73,8 +73,8 @@ def test_solve_pnp():
 
 
 def test_eq():
-    rotaiton0 = Rotation.from_dcm(random_rotation_matrix(3))
-    rotaiton1 = Rotation.from_dcm(random_rotation_matrix(3))
+    rotaiton0 = Rotation.from_matrix(random_rotation_matrix(3))
+    rotaiton1 = Rotation.from_matrix(random_rotation_matrix(3))
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
@@ -133,7 +133,7 @@ def test_mul():
     pose3 = pose1 * pose2
 
     assert_array_almost_equal(pose3.rotation.as_rotvec(), 0.5 * axis)
-    R1 = pose1.rotation.as_dcm()
+    R1 = pose1.rotation.as_matrix()
     assert_array_almost_equal(pose3.t, np.dot(R1, pose2.t) + pose1.t)
 
 

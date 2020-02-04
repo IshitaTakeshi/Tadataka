@@ -28,7 +28,7 @@ def cameras_poly3d(poses, scale):
     V = []
     for pose in poses:
         pose = pose.local_to_world()
-        v = transform(pose.rotation.as_dcm(), pose.t, vertices * scale)
+        v = transform(pose.rotation.as_matrix(), pose.t, vertices * scale)
 
         P = np.array([
             [v[0], v[1], v[4]],

@@ -39,8 +39,8 @@ def tangent_so3(v):
 
 
 def exp_so3(rotvec):
-    return Rotation.from_rotvec(rotvec).as_dcm()
+    return Rotation.from_rotvec(rotvec).as_matrix()
 
 
 def log_so3(R):
-    return Rotation.from_dcm(R).as_rotvec()
+    return Rotation.from_matrix(R).as_rotvec()
