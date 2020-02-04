@@ -4,7 +4,7 @@ from skimage.transform import AffineTransform, warp
 
 from tadataka.flow_estimation.flow_estimation import estimate_affine_transform
 from tadataka.feature import extract_features, Matcher
-from tadataka.visual_odometry.vitamin_e import (
+from tadataka.vo.vitamin_e import (
     Tracker, init_keypoint_frame, get_array, track_,
     match_keypoints, match_keypoint_ids,
     match_multiple_keypoint_ids)

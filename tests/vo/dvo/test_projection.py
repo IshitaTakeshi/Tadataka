@@ -2,8 +2,8 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 import numpy as np
 
 from tadataka.camera import CameraParameters
-from tadataka.coordinates import compute_pixel_coordinates
-from tadataka.projection import inverse_projection, projection
+from tadataka.coordinates import image_coordinates
+from tadataka.vo.dvo.projection import inverse_projection, projection
 
 
 def test_inverse_projection():
@@ -28,7 +28,7 @@ def test_inverse_projection():
 
     # is really the inverse
     assert_array_equal(
-        compute_pixel_coordinates(depth_map.shape),
+        image_coordinates(depth_map.shape),
         projection(camera_parameters, S)
     )
 

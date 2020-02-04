@@ -5,7 +5,7 @@ from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.rigid_transform import transform
-from tadataka.interpolate import interpolate
+from tadataka.interpolation import interpolation
 from tadataka.triangulation import DepthFromTriangulation
 from tadataka.pose import Pose
 
@@ -178,8 +178,8 @@ class DepthEstimator(object):
         error_if_insufficient_coordinates(mask, len(xs_key))
         xs_ref, us_ref = xs_ref[mask], us_ref[mask]
 
-        intensities_ref = interpolate(self.image_ref, us_ref)
-        intensities_key = interpolate(self.image_key, us_key)
+        intensities_ref = interpolation(self.image_ref, us_ref)
+        intensities_key = interpolation(self.image_key, us_key)
 
         argmin = search_intensities(intensities_ref, intensities_key,
                                     calc_error)

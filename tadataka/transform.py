@@ -1,5 +1,5 @@
 from tadataka.interpolation import interpolation
-from tadataka.projection import reprojection
+from tadataka.vo.dvo.projection import reprojection
 
 
 def warp(camera_parameters, I1, D0, G):

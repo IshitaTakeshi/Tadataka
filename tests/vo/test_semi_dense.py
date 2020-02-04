@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 from tadataka.pose import calc_relative_pose
-from tadataka.visual_odometry.semi_dense import (
+from tadataka.vo.semi_dense import (
     convolve, coordinates_along_key_epipolar, coordinates_along_ref_epipolar,
     DepthEstimator, search_intensities
 )
