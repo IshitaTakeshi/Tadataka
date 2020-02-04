@@ -17,7 +17,7 @@ from tadataka.pose import Pose, solve_pnp, estimate_pose_change
 from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.local_ba import try_run_ba
-from tadataka.visual_odometry.base import BaseVO
+from tadataka.vo.base import BaseVO
 
 
 def triangulate(pose0, pose1, keypoints0, keypoints1):

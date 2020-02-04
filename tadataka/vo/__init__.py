@@ -1,1 +1,1 @@
-from tadataka.visual_odometry.feature_based import FeatureBasedVO
+from tadataka.vo.feature_based import FeatureBasedVO

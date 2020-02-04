@@ -5,7 +5,6 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 from scipy.spatial.transform import Rotation
 
 from tadataka.so3 import exp_so3
-
 from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
