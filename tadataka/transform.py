@@ -1,19 +1,25 @@
-from autograd import numpy as np
+from tadataka.interpolation import interpolation
+from tadataka.projection import reprojection
 
 
-def affine_transform(A, b, X):
-    return np.dot(A, X.T).T + b
+def warp(camera_parameters, I1, D0, G):
+    # this function samples pixels in I1 and project them to
+    # I0 coordinate system
 
+    # 'reprojection' transforms I0 coordinates to
+    # the corresponding coordinates in I1
 
-class BaseTransform(object):
-    def transform(self):
-        raise NotImplementedError()
+    # 'Q' has pixel coordinates in I1 coordinate system, but each pixel
+    # coordinate is corresponding to the one in I0
+    # Therefore image pixels sampled by 'Q' represents I1 transformed into
+    # I0 coordinate system
 
+    # 'G' describes the transformation from I0 coordinate system to
+    # I1 coordinate system
 
-class AffineTransform(BaseTransform):
-    def __init__(self, A, b):
-        self.A = A
-        self.b = b
+    Q, mask = reprojection(camera_parameters, D0, G)
 
-    def transform(self, X):
-        return affine_transform(self.A, self.b, X)
+    warped_image = interpolation(I1, Q)
+    warped_image = warped_image.reshape(D0.shape)
+
+    return warped_image, mask
