@@ -120,8 +120,7 @@ def test_estimate_fundamental():
 
 
 def to_essential(R, t):
-    S = tangent_so3(t.reshape(1, 3))[0]
-    return np.dot(S, R)
+    return np.dot(tangent_so3(t), R)
 
 
 def test_fundamental_to_essential():
@@ -139,7 +138,7 @@ def test_fundamental_to_essential():
 def test_decompose_essential():
     def test(R_true, t_true):
         # skew matrx corresponding to t
-        S_true = tangent_so3(t_true.reshape(1, *t_true.shape))[0]
+        S_true = tangent_so3(t_true)
 
         E_true = np.dot(R_true, S_true)
 
