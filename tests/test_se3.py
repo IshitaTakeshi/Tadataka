@@ -15,16 +15,6 @@ def tangent_se3_(xi):
     ])
 
 
-def test_tangent_se3_():
-    GT = np.array([
-        [0, -6, 5, 1],
-        [6, 0, -4, 2],
-        [-5, 4, 0, 3],
-        [0, 0, 0, 0]
-    ])
-    assert_array_equal(tangent_se3_([1, 2, 3, 4, 5, 6]), GT)
-
-
 def test_exp_se3():
     def run(xi):
         assert_array_almost_equal(
