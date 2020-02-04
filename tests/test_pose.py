@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from scipy.spatial.transform import Rotation
 
-from tadataka.so3 import rodrigues, exp_so3
+from tadataka.so3 import exp_so3
 
 from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
@@ -41,7 +41,7 @@ omegas = np.array([
     [-1.0, 0.2, 3.1]
 ])
 
-translations = generate_translations(rodrigues(omegas), points)
+translations = generate_translations(exp_so3(omegas), points)
 
 
 def test_solve_pnp():
