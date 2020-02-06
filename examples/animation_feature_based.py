@@ -8,6 +8,7 @@ import matplotlib.animation as animation
 from tadataka.camera.io import load
 from tadataka.plot import plot_map
 from tadataka.plot.cameras import cameras_poly3d
+from tadataka.plot.visualizers import set_aspect_equal
 from tadataka.vo import FeatureBasedVO
 
 
@@ -30,11 +31,12 @@ def set_image(image_axis, image):
 def set_ax_range(ax, points, trajectory):
     min1, max1 = np.min(points, axis=0), np.max(points, axis=0)
     min2, max2 = np.min(trajectory, axis=0), np.max(trajectory, axis=0)
-    min_ = np.min(np.concatenate((min1, min2)))
-    max_ = np.max(np.concatenate((max1, max2)))
-    ax.set_xlim([min_, max_])
-    ax.set_ylim([min_, max_])
-    ax.set_zlim([min_, max_])
+    min_ = np.min(np.vstack((min1, min2)), axis=0)
+    max_ = np.max(np.vstack((max1, max2)), axis=0)
+    ax.set_xlim([min_[0], max_[0]])
+    ax.set_ylim([min_[1], max_[1]])
+    ax.set_zlim([min_[2], max_[2]])
+    set_aspect_equal(ax)
 
 
 class Drawer(object):

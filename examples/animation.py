@@ -12,6 +12,7 @@ from tadataka.dataset.tum_rgbd import TumRgbdDataset
 from tadataka.camera import CameraParameters
 from tadataka.rigid_motion import LeastSquaresRigidMotion
 from tadataka.rigid_transform import Transform
+from tadataka.plot.visualizers import set_aspect_equal
 
 
 def set_line_3d(line, data):
@@ -35,6 +36,7 @@ def set_ax_range(ax, data):
     ax.set_xlim([min_[0], max_[0]])
     ax.set_ylim([min_[1], max_[1]])
     ax.set_zlim([min_[2], max_[2]])
+    set_aspect_equal(ax)
 
 
 class Drawer(object):
