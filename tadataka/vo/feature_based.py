@@ -166,7 +166,7 @@ class FeatureBasedVO(BaseVO):
 
         viewpoint1 = get_new_viewpoint(self.active_viewpoints)
 
-        features1 = Features(self.camera_model.undistort(keypoints),
+        features1 = Features(self.camera_model.normalize(keypoints),
                              descriptors)
 
         if len(self.active_viewpoints) == 0:
