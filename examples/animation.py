@@ -48,7 +48,7 @@ class Drawer(object):
         self.dataset = dataset
         self.trajectory_pred = self.pose.t
         self.trajectory_true = self.dataset[0].pose.t
-        self.line = self.ax1.plot([0], [0], [0])[0]
+        self.line = self.ax1.plot([0], [0], [0], color='red')[0]
         self.image_axis = self.ax2.imshow(dataset[0].image)
 
     def update(self, i):

@@ -45,7 +45,7 @@ class Drawer(object):
         self.ax1 = fig.add_subplot(121, projection='3d')
         self.ax2 = fig.add_subplot(122)
 
-        self.line = self.ax1.plot([0], [0], [0])[0]
+        self.line = self.ax1.plot([0], [0], [0], color='red')[0]
         self.points = self.ax1.scatter([0], [0], [0], s=0.1)
         self.ax1.view_init(30, 30)
         self.ax2.axis("off")
