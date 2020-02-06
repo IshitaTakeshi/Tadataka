@@ -48,6 +48,7 @@ class Drawer(object):
         self.line = self.ax1.plot([0], [0], [0])[0]
         self.points = self.ax1.scatter([0], [0], [0], s=0.1)
         self.ax1.view_init(30, 30)
+        self.ax2.axis("off")
 
         image = imread(filenames[0])
         self.vo.add(image)
