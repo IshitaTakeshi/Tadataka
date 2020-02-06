@@ -74,7 +74,6 @@ class Drawer(object):
 
         poses = vo.export_poses()
         trajectory = np.array([p.local_to_world().t for p in poses])
-
         set_line_3d(self.line, trajectory)
         set_ax_range(self.ax1, points, trajectory)
         set_image(self.image_axis, image)
@@ -90,5 +89,5 @@ vo = FeatureBasedVO(camera_model, window_size=4)
 drawer = Drawer(fig, vo)
 anim = animation.FuncAnimation(fig, drawer.update, len(filenames),
                                interval=100, blit=False)
-anim.save("feature-based-vo-saba.mp4")
 # plt.show()
+anim.save("feature-based-vo-saba.mp4", dpi=400)
