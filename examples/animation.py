@@ -68,6 +68,25 @@ class Drawer(object):
         set_image(self.image_axis, frame1.image)
 
 
+class TrajectoryVisualizer(object):
+    def __init__(self, fig, trajetory_true, trajectory_pred):
+        self.fig = fig
+        self.ax = fig.add_subplot(111, projection='3d')
+
+        P, Q = trajetory_true, trajectory_pred
+        self.ax.plot(P[:, 0], P[:, 1], P[:, 2], label="ground truth")
+        self.ax.plot(Q[:, 0], Q[:, 1], Q[:, 2], label="prediction")
+
+    def update(self, angle):
+        self.ax.view_init(30, angle)
+        return self.fig,
+
+
+def align_trajectories(trajectory1, trajectory2):
+    assert(len(trajectory1) == len(trajectory2))
+    R, t, s = LeastSquaresRigidMotion(trajectory1, trajectory2).solve()
+    return Transform(R, t, s)(trajectory1)
+
 
 dataset = TumRgbdDataset(Path("datasets/rgbd_dataset_freiburg1_desk"),
                          which_freiburg=1)
@@ -80,16 +99,13 @@ anim = animation.FuncAnimation(fig, drawer.update, len(dataset)-1,
 anim.save("dvo-freiburg1-desk.mp4")
 # plt.show()
 
-m = LeastSquaresRigidMotion(drawer.trajectory_pred, drawer.trajectory_true)
-R, t, s = m.solve()
-Q = drawer.trajectory_true
-P = Transform(R, t, s)(drawer.trajectory_pred)
 
 fig = plt.figure(figsize=(6, 6))
-ax = fig.add_subplot(111, projection='3d')
-ax.plot(Q[:, 0], Q[:, 1], Q[:, 2], label="true")
-ax.plot(P[:, 0], P[:, 1], P[:, 2], label="pred")
-
-plt.legend()
-plt.show()
-
+visualizer = TrajectoryVisualizer(
+    fig,
+    drawer.trajectory_true,
+    align_trajectories(drawer.trajectory_pred, drawer.trajectory_true)
+)
+anim = animation.FuncAnimation(fig, visualizer.update, frames=360,
+                               interval=50, blit=False)
+anim.save("dvo-freiburg1-desk-trajetory.mp4")
