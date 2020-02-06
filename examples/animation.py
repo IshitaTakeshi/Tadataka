@@ -41,15 +41,17 @@ def set_ax_range(ax, data):
 
 class Drawer(object):
     def __init__(self, fig, dataset):
-        self.ax1 = fig.add_subplot(121, projection='3d')
-        self.ax2 = fig.add_subplot(122)
+        self.ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+        self.ax2 = fig.add_subplot(2, 2, 2)
+        self.ax3 = fig.add_subplot(2, 2, 4)
 
         self.pose = Pose.identity()
         self.dataset = dataset
         self.trajectory_pred = self.pose.t
         self.trajectory_true = self.dataset[0].pose.t
-        self.line = self.ax1.plot([0], [0], [0], color='red')[0]
-        self.image_axis = self.ax2.imshow(dataset[0].image)
+        self.line = self.ax1.plot([0], [0], [0], color='blue')[0]
+        self.depth_axis = self.ax2.imshow(dataset[0].depth_map, cmap="gray")
+        self.image_axis = self.ax3.imshow(dataset[0].image)
 
     def update(self, i):
         frame0, frame1 = self.dataset[i+0], self.dataset[i+1]
@@ -65,6 +67,7 @@ class Drawer(object):
 
         set_line_3d(self.line, self.trajectory_pred)
         set_ax_range(self.ax1, self.trajectory_pred)
+        set_image(self.depth_axis, frame1.depth_map)
         set_image(self.image_axis, frame1.image)
 
 
@@ -99,7 +102,7 @@ drawer = Drawer(fig, dataset)
 
 anim = animation.FuncAnimation(fig, drawer.update, len(dataset)-1,
                                interval=50, blit=False)
-anim.save("dvo-freiburg1-desk.mp4")
+anim.save("dvo-freiburg1-desk.mp4", dpi=400)
 # plt.show()
 
 
@@ -111,4 +114,4 @@ visualizer = TrajectoryVisualizer(
 )
 anim = animation.FuncAnimation(fig, visualizer.update, frames=360,
                                interval=50, blit=False)
-anim.save("dvo-freiburg1-desk-trajetory.mp4")
+anim.save("dvo-freiburg1-desk-trajetory.mp4", dpi=400)
