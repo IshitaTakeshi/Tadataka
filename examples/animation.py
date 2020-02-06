@@ -74,8 +74,11 @@ class TrajectoryVisualizer(object):
         self.ax = fig.add_subplot(111, projection='3d')
 
         P, Q = trajetory_true, trajectory_pred
-        self.ax.plot(P[:, 0], P[:, 1], P[:, 2], label="ground truth")
-        self.ax.plot(Q[:, 0], Q[:, 1], Q[:, 2], label="prediction")
+        self.ax.plot(P[:, 0], P[:, 1], P[:, 2],
+                     color='red', label="ground truth")
+        self.ax.plot(Q[:, 0], Q[:, 1], Q[:, 2],
+                     color='blue', label="prediction")
+        self.ax.legend()
 
     def update(self, angle):
         self.ax.view_init(30, angle)
