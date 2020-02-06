@@ -85,9 +85,9 @@ class Transform(object):
     - :math:`\mathbf{t}`: Translation vector
 
     Args:
-        s: Scaling factor
         R: Rotation matrix
         t: Translation vector
+        s: Scaling factor
     """
 
     def __init__(self, R, t, s=1.0):

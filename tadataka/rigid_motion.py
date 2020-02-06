@@ -53,8 +53,8 @@ class LeastSquaresRigidMotion(object):
 
     Examples:
 
-    >>> s, R, t = LeastSquaresRigidMotion(P, Q).solve()
-    >>> P = transform(s, R, t, P)
+    >>> R, t, s = LeastSquaresRigidMotion(P, Q).solve()
+    >>> P = Transform(R, t, s)(P)
 
     See :cite:`zinsser2005point` for the detailed method.
 
@@ -98,4 +98,4 @@ class LeastSquaresRigidMotion(object):
         s = calculate_scaling(X, Y, R)
         t = calculate_translation(s, R, mean_p, mean_q)
 
-        return s, R, t
+        return R, t, s
