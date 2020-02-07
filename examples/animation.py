@@ -93,7 +93,7 @@ dataset = TumRgbdDataset(Path("datasets/rgbd_dataset_freiburg1_desk"),
 
 fig = plt.figure(figsize=(16, 10))
 
-vo = DVO(camera_parameters)
+vo = DVO()
 drawer = Drawer(fig, vo, dataset)
 
 anim = animation.FuncAnimation(fig, drawer.update, len(dataset)-1,

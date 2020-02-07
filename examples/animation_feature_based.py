@@ -10,6 +10,7 @@ from tadataka.plot import plot_map
 from tadataka.plot.cameras import cameras_poly3d
 from tadataka.plot.visualizers import set_aspect_equal
 from tadataka.vo import FeatureBasedVO
+from tadataka.dataset.frame import Frame
 
 
 def set_line_3d(line, data):
@@ -39,6 +40,11 @@ def set_ax_range(ax, points, trajectory):
     set_aspect_equal(ax)
 
 
+camera_models = load("./datasets/nikkei/cameras.txt")
+camera_model = camera_models[1]
+filenames = sorted(Path("datasets/nikkei/images").glob("*.jpg"))[:240]
+
+
 class Drawer(object):
     def __init__(self, fig, vo):
         self.vo = vo
@@ -51,8 +57,13 @@ class Drawer(object):
 
         self.ax2.axis("off")
 
+
         image = imread(filenames[0])
-        self.vo.add(image)
+
+        frame = Frame(camera_model, None, None, image, None)
+        pose = vo.estimate(frame)
+        self.trajectory = pose.t
+
         self.image_axis = self.ax2.imshow(image)
 
     def update(self, i):
@@ -60,34 +71,24 @@ class Drawer(object):
             return
 
         image = imread(filenames[i])
-        viewpoint = vo.add(image)
 
-        if viewpoint < 0:
-            return
-
-        vo.try_remove()
-
-        print("Added {}".format(i))
+        frame = Frame(camera_model, None, None, image, None)
+        pose = vo.estimate(frame)
 
         points, colors = vo.export_points()
         set_points_3d(self.points, points, colors)
 
-        poses = vo.export_poses()
-        trajectory = np.array([p.local_to_world().t for p in poses])
-        set_line_3d(self.line, trajectory)
-        set_ax_range(self.ax1, points, trajectory)
+        self.trajectory = np.vstack((self.trajectory, pose.t))
+        set_line_3d(self.line, self.trajectory)
+        set_ax_range(self.ax1, points, self.trajectory)
         set_image(self.image_axis, image)
 
 
-camera_models = load("./datasets/nikkei/cameras.txt")
-camera_model = camera_models[1]
-filenames = sorted(Path("datasets/nikkei/images").glob("*.jpg"))[:240]
-
 fig = plt.figure(figsize=(16, 10))
-vo = FeatureBasedVO(camera_model, window_size=4)
+vo = FeatureBasedVO(window_size=4)
 
 drawer = Drawer(fig, vo)
 anim = animation.FuncAnimation(fig, drawer.update, len(filenames),
                                interval=100, blit=False)
-# plt.show()
-anim.save("feature-based-vo-saba.mp4", dpi=400)
+plt.show()
+# anim.save("feature-based-vo-saba.mp4", dpi=400)
