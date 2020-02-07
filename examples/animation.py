@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from skimage.color import rgb2gray
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -40,35 +39,30 @@ def set_ax_range(ax, data):
 
 
 class Drawer(object):
-    def __init__(self, fig, dataset):
+    def __init__(self, fig, vo, dataset):
         self.ax1 = fig.add_subplot(1, 2, 1, projection='3d')
         self.ax2 = fig.add_subplot(2, 2, 2)
         self.ax3 = fig.add_subplot(2, 2, 4)
 
-        self.pose = Pose.identity()
+        self.vo = vo
         self.dataset = dataset
-        self.trajectory_pred = self.pose.t
-        self.trajectory_true = self.dataset[0].pose.t
+        self.trajectory_pred = np.empty((0, 3))
+        self.trajectory_true = np.empty((0, 3))
         self.line = self.ax1.plot([0], [0], [0], color='blue')[0]
         self.depth_axis = self.ax2.imshow(dataset[0].depth_map, cmap="gray")
         self.image_axis = self.ax3.imshow(dataset[0].image)
 
     def update(self, i):
-        frame0, frame1 = self.dataset[i+0], self.dataset[i+1]
+        frame = self.dataset[i]
+        pose = vo.estimate(frame)
 
-        vo = DVO(camera_parameters,
-                 rgb2gray(frame0.image), frame0.depth_map,
-                 rgb2gray(frame1.image))
-        dpose = vo.estimate_motion(n_coarse_to_fine=6)
-
-        self.pose = self.pose * dpose.inv()
-        self.trajectory_pred = np.vstack((self.trajectory_pred, self.pose.t))
-        self.trajectory_true = np.vstack((self.trajectory_true, frame1.pose.t))
+        self.trajectory_pred = np.vstack((self.trajectory_pred, pose.t))
+        self.trajectory_true = np.vstack((self.trajectory_true, frame.pose.t))
 
         set_line_3d(self.line, self.trajectory_pred)
         set_ax_range(self.ax1, self.trajectory_pred)
-        set_image(self.depth_axis, frame1.depth_map)
-        set_image(self.image_axis, frame1.image)
+        set_image(self.depth_axis, frame.depth_map)
+        set_image(self.image_axis, frame.image)
 
 
 class TrajectoryVisualizer(object):
@@ -98,7 +92,9 @@ dataset = TumRgbdDataset(Path("datasets/rgbd_dataset_freiburg1_desk"),
                          which_freiburg=1)
 
 fig = plt.figure(figsize=(16, 10))
-drawer = Drawer(fig, dataset)
+
+vo = DVO(camera_parameters)
+drawer = Drawer(fig, vo, dataset)
 
 anim = animation.FuncAnimation(fig, drawer.update, len(dataset)-1,
                                interval=50, blit=False)

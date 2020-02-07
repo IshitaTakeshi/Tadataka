@@ -6,6 +6,7 @@ from numpy.linalg import norm
 
 from skimage.io import imread
 from skimage.transform import resize
+from skimage.color import rgb2gray
 
 from tadataka.camera import CameraParameters
 from tadataka.rigid_transform import transform
@@ -31,8 +32,9 @@ def solve_linear_equation(J, r, weights=None):
         # mulitply weights to each row
         J = J * weights.reshape(-1, 1)
 
-    xi, error, _, _ = np.linalg.lstsq(J, r, rcond=None)
-    return xi, error[0]
+    xi, errors, _, _ = np.linalg.lstsq(J, r, rcond=None)
+    error = 0 if len(errors) == 0 else errors[0]
+    return xi, error
 
 
 def level_to_ratio(level):
@@ -70,12 +72,13 @@ def calc_pose_update(camera_parameters,
     r = -(I1 - I0)
     # weights = compute_weights_tukey(r)
     weights = compute_weights_student_t(r)
+    print(J.shape, r.shape, weights.shape)
 
     xi, error = solve_linear_equation(J, r, weights)
     return xi, error
 
 
-class DVO(object):
+class PoseChangeEstimator(object):
     def __init__(self, camera_parameters, I0, D0, I1,
                  epsilon=1e-4, max_iter=20):
         # TODO check if np.ndim(D0) == np.ndim(I1) == 2
@@ -89,7 +92,7 @@ class DVO(object):
 
         self.camera_parameters = camera_parameters
 
-    def estimate_motion(self, n_coarse_to_fine=5):
+    def estimate(self, n_coarse_to_fine=5):
         """Estimate a motion from t1 to t0"""
 
         levels = list(reversed(range(n_coarse_to_fine)))
@@ -101,7 +104,7 @@ class DVO(object):
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
                 return Pose.identity()
-        return pose
+        return pose.inv()
 
     def camera_parameters_at(self, level):
         """Change camera parameters as the image is resized"""
@@ -146,3 +149,27 @@ class DVO(object):
             dpose = Pose.from_se3(dxi)
             pose = pose * dpose
         return pose
+
+
+class DVO(object):
+    def __init__(self, camera_parameters):
+        self.camera_parameters = camera_parameters
+        self.pose = Pose.identity()
+        self.frames = []
+
+    def estimate(self, frame1):
+        if len(self.frames) == 0:
+            self.frames.append(frame1)
+            return self.pose
+
+        frame0 = self.frames[-1]
+
+        I0, D0 = rgb2gray(frame0.image), frame0.depth_map,
+        I1 = rgb2gray(frame1.image)
+        estimator = PoseChangeEstimator(self.camera_parameters, I0, D0, I1)
+        dpose = estimator.estimate()
+
+        self.frames.append(frame1)
+
+        self.pose = self.pose * dpose
+        return self.pose
