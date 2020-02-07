@@ -79,7 +79,7 @@ def calc_pose_update(camera_parameters,
 
 
 class PoseChangeEstimator(object):
-    def __init__(self, camera_parameters, I0, D0, I1,
+    def __init__(self, camera_model, I0, D0, I1,
                  epsilon=1e-4, max_iter=20):
         # TODO check if np.ndim(D0) == np.ndim(I1) == 2
 
@@ -90,7 +90,8 @@ class PoseChangeEstimator(object):
         self.epsilon = epsilon
         self.max_iter = max_iter
 
-        self.camera_parameters = camera_parameters
+        # FIXME use 'camera_model'
+        self.camera_parameters = camera_model.camera_parameters
 
     def estimate(self, n_coarse_to_fine=5):
         """Estimate a motion from t1 to t0"""
@@ -152,8 +153,7 @@ class PoseChangeEstimator(object):
 
 
 class DVO(object):
-    def __init__(self, camera_parameters):
-        self.camera_parameters = camera_parameters
+    def __init__(self):
         self.pose = Pose.identity()
         self.frames = []
 
@@ -166,7 +166,8 @@ class DVO(object):
 
         I0, D0 = rgb2gray(frame0.image), frame0.depth_map,
         I1 = rgb2gray(frame1.image)
-        estimator = PoseChangeEstimator(self.camera_parameters, I0, D0, I1)
+
+        estimator = PoseChangeEstimator(frame1.camera_model, I0, D0, I1)
         dpose = estimator.estimate()
 
         self.frames.append(frame1)
