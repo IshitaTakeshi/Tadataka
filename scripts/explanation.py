@@ -11,11 +11,12 @@ from tadataka.pose import estimate_pose_change, Pose, solve_pnp
 from tadataka.triangulation import Triangulation
 
 
+# ブロック1 =====================================================
 # ファイルに記録されている1番目のカメラを使う
-camera_models = load("./datasets/nikkei/cameras.txt")
+camera_models = load("nikkei/cameras.txt")
 camera_model = camera_models[1]
 
-filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
+filenames = sorted(Path("nikkei/images").glob("*.jpg"))
 filenames = filenames[70:]
 
 # 特徴点のマッチングを行うオブジェクト
@@ -50,9 +51,10 @@ pose1 = estimate_pose_change(keypoints0_undistorted,
                              keypoints1_undistorted,
                              matches01)
 
-# ==================== カメラ姿勢の初期化ここまで ====================
+plot_map([pose0, pose1], np.empty((0, 3)))
 
-# ========================== 3次元点の復元 ==========================
+# ブロック1終わり ===================================================
+# ブロック2 =========================================================
 
 # カメラの姿勢が推定できたので，triangulationによって3次元点を復元する
 
@@ -79,9 +81,9 @@ points, correspondence0, correspondence1 = subscribe(
     point_array01, matches01
 )
 
-# ======================= 3次元点の復元ここまで =======================
+# ブロック2終わり ===================================================
+# ブロック3 =========================================================
 
-# ======================= 3フレーム目の姿勢推定 =======================
 image2 = imread(filenames[2])
 
 keypoints2, descriptors2 = extract_features(image2)
@@ -89,8 +91,6 @@ keypoints2_undistorted = camera_model.undistort(keypoints2)
 features2 = Features(keypoints2_undistorted, descriptors2)
 
 matches02 = match(features0, features2)
-
-plot_matches(image0, image2, keypoints0, keypoints2, matches02)
 
 # 3フレーム目の姿勢推定では，1フレーム目と2フレーム目から
 # 復元された3次元点 'point_array01' と，3フレーム目の特徴点 'keypoints2'
@@ -113,8 +113,8 @@ pose2 = solve_pnp(np.array([points[i] for i in point_indices2]),
 
 plot_map([pose0, pose1, pose2], point_array01)
 
-# =================== 3フレーム目の姿勢推定ここまで ===================
-# ================== 3フレーム目による triangulation ==================
+# ブロック3終わり ===================================================
+# ブロック4 =========================================================
 
 t = Triangulation(pose0, pose2)
 point_array02, depth_mask = t.triangulate(
@@ -128,4 +128,4 @@ matches02 = matches02[depth_mask]
 plot_map([pose0, pose1, pose2],
          np.vstack((point_array01, point_array02)))
 
-# ============= 3フレーム目による triangulation ここまで =============
+# ブロック4終わり ===================================================
