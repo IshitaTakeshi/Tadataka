@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 from numpy.testing import (assert_array_almost_equal,
                            assert_array_equal, assert_equal)
@@ -7,12 +5,11 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 
-
-dataset_root = Path(Path(__file__).parent, "new_tsukuba")
+from tests.dataset.path import new_tsukuba
 
 
 def test_new_tsukuba():
-    dataset = NewTsukubaDataset(dataset_root)
+    dataset = NewTsukubaDataset(new_tsukuba)
 
     assert_equal(len(dataset), 5)
 

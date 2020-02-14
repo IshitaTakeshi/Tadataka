@@ -1,18 +1,17 @@
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
-from pathlib import Path
 
 from scipy.spatial.transform import Rotation
+
 from tadataka.dataset.euroc import EurocDataset
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.distortion import RadTan
 
-
-dataset_root = Path(Path(__file__).parent, "euroc",  "mav0")
+from tests.dataset.path import euroc
 
 
 def test_euroc():
-    dataset = EurocDataset(dataset_root)
+    dataset = EurocDataset(euroc)
     frame_l, frame_r = dataset[0]
 
     camera_parameters = CameraParameters(
