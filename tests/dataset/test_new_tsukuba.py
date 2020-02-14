@@ -1,6 +1,9 @@
 from pathlib import Path
+
+import numpy as np
 from numpy.testing import (assert_array_almost_equal,
                            assert_array_equal, assert_equal)
+from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 
@@ -20,26 +23,27 @@ def test_new_tsukuba():
     assert_equal(L.depth_map.shape, image_shape[0:2])
     assert_equal(R.depth_map.shape, image_shape[0:2])
 
-    assert_array_equal(L.pose.t, [-5, 0, 0])
-    assert_array_equal(R.pose.t, [5, 0, 0])
-
     L, R = dataset[4]
+    translation_true = np.array([-51.802731, 4.731323, -105.171677])
+    degrees_true = np.array([16.091024, -10.583960, 0.007110])
+    rotation_true = Rotation.from_euler('xyz', degrees_true, degrees=True)
+
     pose_l = L.pose
     assert_array_almost_equal(
         pose_l.t,
-        [-4.99999376e+00, -6.10864598e-07, -3.51827802e-02]
+        translation_true + np.dot(rotation_true.as_matrix(), [-5, 0, 0])
     )
     assert_array_almost_equal(
         pose_l.rotation.as_euler('xyz', degrees=True),
-        [-0.070745, 0.082921, 0.000007]
+        degrees_true
     )
 
     pose_r = R.pose
     assert_array_almost_equal(
         pose_r.t,
-        [4.99999576e+00,  6.10864598e-07, -4.96552198e-02]
+        translation_true + np.dot(rotation_true.as_matrix(), [5, 0, 0])
     )
     assert_array_almost_equal(
         pose_r.rotation.as_euler('xyz', degrees=True),
-        [-0.070745, 0.082921, 0.000007]
+        degrees_true
     )
