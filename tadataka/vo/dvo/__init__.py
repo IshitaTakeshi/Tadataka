@@ -72,7 +72,6 @@ def calc_pose_update(camera_parameters,
     r = -(I1 - I0)
     # weights = compute_weights_tukey(r)
     weights = compute_weights_student_t(r)
-    print(J.shape, r.shape, weights.shape)
 
     xi, error = solve_linear_equation(J, r, weights)
     return xi, error
@@ -163,7 +162,7 @@ class DVO(object):
 
         frame0 = self.frames[-1]
 
-        I0, D0 = rgb2gray(frame0.image), frame0.depth_map,
+        I0, D0 = rgb2gray(frame0.image), frame0.depth_map
         I1 = rgb2gray(frame1.image)
 
         estimator = PoseChangeEstimator(frame1.camera_model, I0, D0, I1)
