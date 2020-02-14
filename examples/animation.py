@@ -54,7 +54,7 @@ class Drawer(object):
 
     def update(self, i):
         frame = self.dataset[i]
-        pose = vo.estimate(frame)
+        pose = self.vo.estimate(frame)
 
         self.trajectory_pred = np.vstack((self.trajectory_pred, pose.t))
         self.trajectory_true = np.vstack((self.trajectory_true, frame.pose.t))
