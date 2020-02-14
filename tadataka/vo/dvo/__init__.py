@@ -94,8 +94,6 @@ class PoseChangeEstimator(object):
         self.camera_parameters = camera_model.camera_parameters
 
     def estimate(self, n_coarse_to_fine=5):
-        """Estimate a motion from t1 to t0"""
-
         levels = list(reversed(range(n_coarse_to_fine)))
 
         pose = Pose.identity()
@@ -105,6 +103,7 @@ class PoseChangeEstimator(object):
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
                 return Pose.identity()
+        # invert because 'pose' is representing the pose change from t1 to t0
         return pose.inv()
 
     def camera_parameters_at(self, level):
