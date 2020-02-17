@@ -8,7 +8,7 @@ setup(
     author='Takeshi Ishita',
     author_email='ishitah.takeshi@gmail.com',
     license='MIT',
-    packages=['tadataka'],
+    packages=find_packages(),
     install_requires=[
         'autograd',
         'bidict',
