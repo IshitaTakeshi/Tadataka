@@ -8,13 +8,13 @@ from tadataka.visual_odometry import FeatureBasedVO
 
 
 # カメラパラメータの読み込み
-camera_models = load("./datasets/nikkei/cameras.txt")
+camera_models = load("nikkei/cameras.txt")
 # ID = 1 で登録されているパラメータを使う
 # IDはカメラが複数あるときに使われるものなので今回は気にしなくてよい
 camera_model = camera_models[1]
 vo = FeatureBasedVO(camera_model, window_size=4)
 
-filenames = sorted(Path("./datasets/nikkei/images").glob("*.jpg"))
+filenames = sorted(Path("nikkei/images").glob("*.jpg"))
 
 for i, filename in enumerate(filenames):
     # 画像の読み込み

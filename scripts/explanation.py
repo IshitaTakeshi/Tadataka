@@ -1,4 +1,3 @@
-# ======================== カメラ姿勢の初期化 ========================
 import numpy as np
 from pathlib import Path
 from skimage.io import imread
@@ -12,6 +11,7 @@ from tadataka.triangulation import Triangulation
 
 
 # ブロック1 =====================================================
+
 # ファイルに記録されている1番目のカメラを使う
 camera_models = load("nikkei/cameras.txt")
 camera_model = camera_models[1]
