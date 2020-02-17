@@ -78,6 +78,9 @@ def calc_pose_update(camera_parameters,
 
 
 class PoseChangeEstimator(object):
+    """
+    Estimate pose change from t1 to t0
+    """
     def __init__(self, camera_model, I0, D0, I1,
                  epsilon=1e-4, max_iter=20):
         # TODO check if np.ndim(D0) == np.ndim(I1) == 2
@@ -102,8 +105,7 @@ class PoseChangeEstimator(object):
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
                 return Pose.identity()
-        # invert because 'pose' is representing the pose change from t1 to t0
-        return pose.inv()
+        return pose
 
     def camera_parameters_at(self, level):
         """Change camera parameters as the image is resized"""
@@ -167,8 +169,9 @@ class DVO(object):
 
         estimator = PoseChangeEstimator(frame1.camera_model, I0, D0, I1)
         dpose = estimator.estimate()
+        # invert because 'pose' is representing the pose change from t1 to t0
 
         self.frames.append(frame1)
 
-        self.pose = self.pose * dpose
+        self.pose = self.pose * dpose.inv()
         return self.pose
