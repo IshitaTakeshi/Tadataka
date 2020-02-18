@@ -1,7 +1,7 @@
 import numpy as np
 
 from tadataka.rigid_transform import rotate_each
-from tadataka.so3 import rodrigues
+from tadataka.so3 import exp_so3
 
 
 def image_coordinates(image_shape):
@@ -33,7 +33,7 @@ def convert_coordinates_rotations(rotations, translations):
 
 def convert_coordinates_omegas(omegas, translations):
     return (convert_omegas(omegas),
-            convert_translations(rodrigues(omegas), translations))
+            convert_translations(exp_so3(omegas), translations))
 
 
 def convert_coordinates(rotations_or_omegas, translations):

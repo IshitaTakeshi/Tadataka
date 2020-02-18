@@ -1,8 +1,5 @@
 import numpy as np
 
-from tadataka.so3 import rodrigues
-from tadataka.rigid_transform import transform_all
-
 
 def generate_translations(rotations, points, depth_margin=2.0):
     """

@@ -1,13 +1,11 @@
-from pathlib import Path
-
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal
 from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.tum_rgbd import TumRgbdDataset
 
+from tests.dataset.path import tum_rgbd
 
-dataset_root = Path(Path(__file__).parent, "tum_rgbd")
 
 angles_gt = np.repeat(np.arange(0., 0.7, 0.02), 3).reshape(35, 3)
 positions_gt = np.arange(0., 0.21, 0.002).reshape(35, 3)
@@ -17,7 +15,7 @@ def test_tum_dataset():
     # 3rd frame should not be loaded because
     # the depth timestamp cannot match the corresponding pose timestamp
 
-    dataset = TumRgbdDataset(dataset_root, which_freiburg=1)
+    dataset = TumRgbdDataset(tum_rgbd, which_freiburg=1)
     image_shape = (30, 40)
 
     # test index access

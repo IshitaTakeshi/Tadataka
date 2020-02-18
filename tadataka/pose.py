@@ -12,6 +12,7 @@ from tadataka.depth import (depth_condition, warn_points_behind_cameras,
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
+from tadataka.se3 import exp_se3_t_
 from tadataka._triangulation import linear_triangulation
 
 
@@ -36,7 +37,7 @@ class Pose(object):
 
     @property
     def R(self):
-        return self.rotation.as_dcm()
+        return self.rotation.as_matrix()
 
     def __str__(self):
         rotvec = self.rotation.as_rotvec()
@@ -53,14 +54,24 @@ class Pose(object):
     def identity():
         return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
+    @staticmethod
+    def from_se3(xi):
+        rotvec = xi[3:]
+        return Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
+
+    def inv(self):
+        inv_rotation = self.rotation.inv()
+        return Pose(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
+
+    def __mul__(self, other):
+        return Pose(self.rotation * other.rotation,
+                    np.dot(self.rotation.as_matrix(), other.t) + self.t)
+
     def __eq__(self, other):
         self_rotvec = self.rotation.as_rotvec()
         other_rotvec = other.rotation.as_rotvec()
         return (np.isclose(self_rotvec, other_rotvec).all() and
                 np.isclose(self.t, other.t).all())
-
-
-min_correspondences = 6
 
 
 def calc_reprojection_threshold(keypoints, k=2.0):
@@ -69,6 +80,9 @@ def calc_reprojection_threshold(keypoints, k=2.0):
     # rms of distances from center to keypoints
     rms = np.sqrt(np.mean(squared_distances))
     return k * rms / keypoints.shape[0]
+
+
+min_correspondences = 6
 
 
 def solve_pnp(points, keypoints):
@@ -162,7 +176,7 @@ def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
     # regarding viewpoint 0 as identity (world origin)
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
-    return Pose(Rotation.from_dcm(R), t)
+    return Pose(Rotation.from_matrix(R), t)
 
 
 def calc_relative_pose(pose0, pose1):

@@ -8,7 +8,7 @@ from tadataka.camera.io import load
 from tadataka.feature import extract_features, Matcher
 from tadataka.pose import Pose, estimate_pose_change, solve_pnp
 from tadataka.triangulation import TwoViewTriangulation, Triangulation
-from tadataka.visual_odometry.vitamin_e import (
+from tadataka.vo.vitamin_e import (
     Tracker, estimate_flow, get_array, init_keypoint_frame,
     match_keypoints, match_multiple_keypoints)
 from tadataka.dataset.tum_rgbd import TumRgbdDataset

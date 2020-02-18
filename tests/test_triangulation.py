@@ -33,9 +33,9 @@ projection = PerspectiveProjection(
     CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
 )
 
-R0 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
-R1 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
-R2 = Rotation.from_euler('xyz', np.random.random(3)).as_dcm()
+R0 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
+R1 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
+R2 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
 
 [t0, t1, t2] = generate_translations(
     np.array([R0, R1, R2]), points_true
@@ -71,8 +71,8 @@ def test_linear_triangulation():
 
 def test_two_view_triangulation():
     triangulator = TwoViewTriangulation(
-        Pose(Rotation.from_dcm(R0), t0),
-        Pose(Rotation.from_dcm(R1), t1)
+        Pose(Rotation.from_matrix(R0), t0),
+        Pose(Rotation.from_matrix(R1), t1)
     )
 
     points, depths = triangulator.triangulate(keypoints0, keypoints1)
@@ -91,9 +91,9 @@ def test_two_view_triangulation():
 
 def test_triangulation():
     triangulator = Triangulation(
-        [Pose(Rotation.from_dcm(R0), t0),
-         Pose(Rotation.from_dcm(R1), t1),
-         Pose(Rotation.from_dcm(R2), t2)]
+        [Pose(Rotation.from_matrix(R0), t0),
+         Pose(Rotation.from_matrix(R1), t1),
+         Pose(Rotation.from_matrix(R2), t2)]
     )
 
     keypoints = np.stack((

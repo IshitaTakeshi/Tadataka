@@ -4,8 +4,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from scipy.spatial.transform import Rotation
 
-from tadataka.so3 import rodrigues, exp_so3
-
+from tadataka.so3 import exp_so3
 from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
@@ -41,7 +40,7 @@ omegas = np.array([
     [-1.0, 0.2, 3.1]
 ])
 
-translations = generate_translations(rodrigues(omegas), points)
+translations = generate_translations(exp_so3(omegas), points)
 
 
 def test_solve_pnp():
@@ -74,8 +73,8 @@ def test_solve_pnp():
 
 
 def test_eq():
-    rotaiton0 = Rotation.from_dcm(random_rotation_matrix(3))
-    rotaiton1 = Rotation.from_dcm(random_rotation_matrix(3))
+    rotaiton0 = Rotation.from_matrix(random_rotation_matrix(3))
+    rotaiton1 = Rotation.from_matrix(random_rotation_matrix(3))
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
@@ -99,6 +98,43 @@ def test_R():
     rotvec, t = np.array([np.pi, 0, 0]), np.zeros(3)
     pose = Pose(Rotation.from_rotvec(rotvec), t)
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
+
+
+def test_inv():
+    for i in range(10):
+        rotvec = np.random.uniform(-np.pi, np.pi, 3)
+        rotation = Rotation.from_rotvec(rotvec)
+
+        t = np.random.uniform(-10, 10, 3)
+
+        p = Pose(rotation, t)
+
+        q = p * p.inv()
+        assert_array_almost_equal(q.rotation.as_rotvec(), np.zeros(3))
+        assert_array_almost_equal(q.t, np.zeros(3))
+
+
+def test_mul():
+    # case1
+    pose1 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose2 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose3 = pose1 * pose2
+    assert_array_equal(pose3.rotation.as_rotvec(), np.zeros(3))
+    assert_array_equal(pose3.t, 2 * np.ones(3))
+
+    # case2
+    axis = np.array([0.0, 1.0, 2.0])
+    rotvec1 = 0.1 * axis
+    rotvec2 = 0.4 * axis
+    t1 = np.array([0.2, 0.4, -0.1])
+    t2 = np.array([-0.1, 2.0, 0.1])
+    pose1 = Pose(Rotation.from_rotvec(rotvec1), t1)
+    pose2 = Pose(Rotation.from_rotvec(rotvec2), t2)
+    pose3 = pose1 * pose2
+
+    assert_array_almost_equal(pose3.rotation.as_rotvec(), 0.5 * axis)
+    R1 = pose1.rotation.as_matrix()
+    assert_array_almost_equal(pose3.t, np.dot(R1, pose2.t) + pose1.t)
 
 
 def test_n_triangulated():

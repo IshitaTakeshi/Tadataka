@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 from tadataka.pose import calc_relative_pose
-from tadataka.visual_odometry.semi_dense import (
+from tadataka.vo.semi_dense import (
     convolve, coordinates_along_key_epipolar, coordinates_along_ref_epipolar,
     DepthEstimator, search_intensities
 )
@@ -57,25 +57,23 @@ def test_coordinates_along_ref_epipolar():
     )
 
 
-dataset_root = Path("datasets/NewTsukubaStereoDataset")
 
-
-def test_depth_estimation():
-    dataset = NewTsukubaDataset(dataset_root)
-    keyframe, refframe = dataset[210]
-    pose_key_to_ref = calc_relative_pose(keyframe.pose, refframe.pose)
-    estimator = DepthEstimator(
-        keyframe.camera_model, refframe.camera_model,
-        keyframe.image, refframe.image,
-        pose_key_to_ref.world_to_local()
-    )
-
-    from matplotlib import pyplot as plt
-    plt.subplot(121)
-    plt.imshow(keyframe.image)
-    plt.subplot(122)
-    plt.imshow(refframe.image)
-
-    x, y = 450, 240
-    depth_pred = estimator(np.array([x, y]), 0.001, 1e1, 1.0)
-    print(keyframe.depth_map[y, x], depth_pred)
+# def test_depth_estimation():
+#     dataset = NewTsukubaDataset(dataset_root)
+#     keyframe, refframe = dataset[210]
+#     pose_key_to_ref = calc_relative_pose(keyframe.pose, refframe.pose)
+#     estimator = DepthEstimator(
+#         keyframe.camera_model, refframe.camera_model,
+#         keyframe.image, refframe.image,
+#         pose_key_to_ref.world_to_local()
+#     )
+#
+#     from matplotlib import pyplot as plt
+#     plt.subplot(121)
+#     plt.imshow(keyframe.image)
+#     plt.subplot(122)
+#     plt.imshow(refframe.image)
+#
+#     x, y = 450, 240
+#     depth_pred = estimator(np.array([x, y]), 0.001, 1e1, 1.0)
+#     print(keyframe.depth_map[y, x], depth_pred)

@@ -16,9 +16,8 @@ from tadataka.utils import merge_dicts, value_list
 from tadataka.pose import Pose, solve_pnp, estimate_pose_change
 from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
-from tadataka.so3 import rodrigues
 from tadataka.local_ba import try_run_ba
-from tadataka.visual_odometry.base import BaseVO
+from tadataka.vo.base import BaseVO
 
 
 def triangulate(pose0, pose1, keypoints0, keypoints1):
@@ -83,13 +82,12 @@ def filter_matches(matches, viewpoints, min_matches):
 
 
 
-class FeatureBasedVO(BaseVO):
-    def __init__(self, camera_model,
+class FeatureBasedVO(object):
+    def __init__(self,
                  matcher=Matcher(enable_ransac=True,
                                  enable_homography_filter=True),
                  window_size=8, min_matches=60):
 
-        super().__init__(camera_model)
         self.__window_size = window_size
 
         self.matcher = matcher
@@ -115,6 +113,14 @@ class FeatureBasedVO(BaseVO):
 
     def export_poses(self):
         return [self.poses[v] for v in sorted(self.poses.keys())]
+
+    def estimate(self, frame):
+        viewpoint = self.add(frame.camera_model, frame.image)
+        if viewpoint < 0:
+            return None
+
+        self.try_remove()
+        return self.poses[viewpoint].local_to_world()
 
     @property
     def n_active_keyframes(self):
@@ -158,7 +164,7 @@ class FeatureBasedVO(BaseVO):
         )
         return pose1, point_dict, correspondence0s, correspondence1
 
-    def add(self, image, min_keypoints=8):
+    def add(self, camera_model, image, min_keypoints=8):
         keypoints, descriptors = extract_features(image)
 
         if len(keypoints) <= min_keypoints:
@@ -167,7 +173,7 @@ class FeatureBasedVO(BaseVO):
 
         viewpoint1 = get_new_viewpoint(self.active_viewpoints)
 
-        features1 = Features(self.camera_model.undistort(keypoints),
+        features1 = Features(camera_model.normalize(keypoints),
                              descriptors)
 
         if len(self.active_viewpoints) == 0:

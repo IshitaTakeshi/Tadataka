@@ -98,12 +98,12 @@ class EurocDataset(BaseDataset):
         self.length = matches.shape[0]
 
     def load(self, index):
-        T = motion_matrix(self.rotations[index].as_dcm(), self.positions[index])
+        T = motion_matrix(self.rotations[index].as_matrix(), self.positions[index])
         R0, position0 = get_rotation_translation(np.dot(T, self.T0))
         R1, position1 = get_rotation_translation(np.dot(T, self.T1))
 
-        pose0 = Pose(Rotation.from_dcm(R0), position0)
-        pose1 = Pose(Rotation.from_dcm(R1), position1)
+        pose0 = Pose(Rotation.from_matrix(R0), position0)
+        pose1 = Pose(Rotation.from_matrix(R1), position1)
 
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])

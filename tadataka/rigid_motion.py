@@ -53,8 +53,8 @@ class LeastSquaresRigidMotion(object):
 
     Examples:
 
-    >>> s, R, t = LeastSquaresRigidMotion(P, Q).solve()
-    >>> P = transform(s, R, t, P)
+    >>> R, t, s = LeastSquaresRigidMotion(P, Q).solve()
+    >>> P = Transform(R, t, s)(P)
 
     See :cite:`zinsser2005point` for the detailed method.
 
@@ -98,32 +98,4 @@ class LeastSquaresRigidMotion(object):
         s = calculate_scaling(X, Y, R)
         t = calculate_translation(s, R, mean_p, mean_q)
 
-        return s, R, t
-
-
-def transform(s: float, R: np.ndarray,
-              t: np.ndarray, P: np.ndarray) -> np.ndarray:
-    """
-    Transform each point :math:`\mathbf{p} \in P` into
-    :math:`\mathbf{q} = sR\mathbf{p} + \mathbf{t}` where
-
-    - :math:`s`: Scaling factor
-    - :math:`R`: Rotation matrix
-    - :math:`\mathbf{t}`: Translation vector
-
-    Args:
-        s: Scaling factor
-        R: Rotation matrix
-        t: Translation vector
-        P: Points to be transformed of shape (n_image_points, n_channels)
-
-    Returns:
-        Transformed vector
-    """
-
-    if np.ndim(t) == 1:
-        t = t.reshape(-1, 1)  # align the dimension
-
-    P = s * np.dot(R, P.T) + t
-
-    return P.T
+        return R, t, s

@@ -1,7 +1,5 @@
 import numpy as np
 
-from tadataka.so3 import rodrigues
-
 
 def cubic_lattice(N):
     array = np.arange(N)

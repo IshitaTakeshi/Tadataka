@@ -37,7 +37,7 @@ def discard_alpha(image):
 
 def calc_baseline_offset(rotation, baseline_length):
     local_offset = np.array([baseline_length, 0, 0])
-    R = rotation.as_dcm()
+    R = rotation.as_matrix()
     return np.dot(R, local_offset)
 
 

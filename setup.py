@@ -19,6 +19,7 @@ setup(
         # TODO make independent from opencv
         'opencv-python',
         'opencv-contrib-python',
+        'pandas',
         'scikit-image',
         'scikit-learn',
         'scipy>=1.4.1',
