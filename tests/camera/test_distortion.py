@@ -110,7 +110,7 @@ def test_fov_distort():
     assert_array_almost_equal(FOV(omega=0).distort(X), X)
 
 
-def test_radtan_undistort():
+def test_radtan_distort():
     X = np.array([
         [0, 1],
         [0, 2],
@@ -122,16 +122,16 @@ def test_radtan_undistort():
     r4 = np.array([1, 16, 1, 16, 25]).reshape(-1, 1)
     r6 = np.array([1, 64, 1, 64, 125]).reshape(-1, 1)
 
-    assert_array_equal(RadTan([2, 0, 0, 0]).undistort(X),
+    assert_array_equal(RadTan([2, 0, 0, 0]).distort(X),
                        X * (1 + 2 * r2))
 
-    assert_array_equal(RadTan([0, 3, 0, 0]).undistort(X),
+    assert_array_equal(RadTan([0, 3, 0, 0]).distort(X),
                        X * (1 + 3 * r4))
 
-    assert_array_equal(RadTan([0, 0, 0, 0, 2]).undistort(X),
+    assert_array_equal(RadTan([0, 0, 0, 0, 2]).distort(X),
                        X * (1 + 2 * r6))
 
-    Y = RadTan([0, 0, 3, 0]).undistort(X)
+    Y = RadTan([0, 0, 3, 0]).distort(X)
     # X[:, 0] + 2 * p1 * X[:, 0] * X[:, 1]
     assert_array_equal(Y[:, 0],
                        [0 + 0,
@@ -147,7 +147,7 @@ def test_radtan_undistort():
                         0 + 3 * (4 + 2 * 0 * 0),
                         2 + 3 * (5 + 2 * 2 * 2)])
 
-    Y = RadTan([0, 0, 0, 4]).undistort(X)
+    Y = RadTan([0, 0, 0, 4]).distort(X)
     # X[:, 0] + p2 * (r2 + 2 * X[:, 0] * X[:, 0])
     assert_array_equal(Y[:, 0],
                        [0 + 4 * (1 + 2 * 0 * 0),
@@ -163,8 +163,26 @@ def test_radtan_undistort():
                         0 + 0,
                         2 + 2 * 4 * 1 * 2])
 
-    assert_array_equal(RadTan([0, 0, 0, 0]).undistort(X), X)
+    assert_array_equal(RadTan([0, 0, 0, 0]).distort(X), X)
 
+
+def test_undistort():
+    X_true = np.array([
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [2, 0],
+        [1, 2],
+        [-3, -5],
+        [9, -3]
+    ])
+
+    model = RadTan([0.5, 0.2, -0.3, 0.1, 0.0])
+    Y = model.distort(X_true)
+    X_pred = model.undistort(Y)
+
+    assert_array_almost_equal(X_true, X_pred, decimal=4)
 
 
 def test_eq():

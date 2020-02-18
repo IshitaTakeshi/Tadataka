@@ -2,7 +2,7 @@ import re
 
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
-from tadataka.camera.distortion import FOV
+from tadataka.camera.distortion import FOV, RadTan
 
 
 def parse_(string):

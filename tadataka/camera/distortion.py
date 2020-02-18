@@ -2,7 +2,8 @@
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
 import numpy as np
-
+from autograd import jacobian
+from autograd import numpy as anp
 
 EPSILON = 1e-4
 
@@ -84,27 +85,46 @@ class RadTan(BaseDistortion):
         self.dist_coeffs = [0] * 5
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
-    def dostort(self):
-        raise NotImplementedError()
-
-    def undistort(self, distorted_keypoints):
-        X = distorted_keypoints
-
+    def _distort(self, p):
         k1, k2, p1, p2, k3 = self.dist_coeffs
 
-        r2 = np.sum(np.power(X, 2), axis=1)
-        r4 = np.power(r2, 2)
-        r6 = np.power(r2, 3)
-        kr = 1.0 + k1 * r2 + k2 * r4 + k3 * r6
+        r2 = anp.sum(anp.power(p, 2))
+        r4 = anp.power(r2, 2)
+        r6 = anp.power(r2, 3)
+        kr = 1 + k1 * r2 + k2 * r4 + k3 * r6
 
-        X00 = X[:, 0] * X[:, 0]
-        X01 = X[:, 0] * X[:, 1]
-        X11 = X[:, 1] * X[:, 1]
+        x, y = p
+        return anp.array([
+            x * kr + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x),
+            y * kr + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y)
+        ])
 
-        Y = np.empty(X.shape)
-        Y[:, 0] = X[:, 0] * kr + 2.0 * p1 * X01 + p2 * (r2 + 2.0 * X00)
-        Y[:, 1] = X[:, 1] * kr + 2.0 * p2 * X01 + p1 * (r2 + 2.0 * X11)
-        return Y
+    def distort(self, undistorted_keypoints):
+        N = undistorted_keypoints.shape[0]
+        Q = np.empty(undistorted_keypoints.shape)
+        for i in range(N):
+            Q[i] = self._distort(undistorted_keypoints[i])
+        return Q
+
+    def _undistort(self, q, max_iter=100, threshold=1e-10):
+        p = anp.array(q)
+        for i in range(max_iter):
+            J = jacobian(self._distort)(p)
+            r = q - self._distort(p)
+            d = np.linalg.solve(J, r)
+
+            if np.dot(d, d) < threshold:
+                break
+
+            p = p + d
+        return p
+
+    def undistort(self, distorted_keypoints):
+        N = distorted_keypoints.shape[0]
+        P = np.empty(distorted_keypoints.shape)
+        for i in range(N):
+            P[i] = self._undistort(distorted_keypoints[i])
+        return P
 
     @staticmethod
     def from_params(params):
