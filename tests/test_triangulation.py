@@ -122,19 +122,18 @@ def test_depths_from_triangulation():
         CameraParameters(focal_length=[1, 1], offset=[0, 0]),
     )
 
-    # poses are represented in local coordinates
-    rotation = Rotation.from_quat([0, 0, 0, 1])
-    R0 = R1 = rotation.as_matrix()
-    t0 = np.array([-1, 0, 0])
-    t1 = np.array([1, 0, 0])
+    rotation0 = Rotation.from_quat([0, 0, 0, 1])
+    rotation1 = Rotation.from_quat([0, 0, 1, 0])
+    t0 = np.array([-1, 3, 4])
+    t1 = np.array([4, 1, 6])
+    point = np.array([0, 0, 5])
 
-    pose0 = Pose(rotation, t0)
-    pose1 = Pose(rotation, t1)
+    p0 = transform(rotation0.as_matrix(), t0, point)
+    p1 = transform(rotation1.as_matrix(), t1, point)
+    keypoint0 = projection.compute(p0)
+    keypoint1 = projection.compute(p1)
 
-    points = np.array([[0, 0, 5]])
-
-    keypoint0 = projection.compute(transform(R0, t0, points))[0]
-    keypoint1 = projection.compute(transform(R1, t1, points))[0]
-
+    pose0 = Pose(rotation0, t0)
+    pose1 = Pose(rotation1, t1)
     depths = DepthFromTriangulation(pose0, pose1)(keypoint0, keypoint1)
-    assert_array_almost_equal(depths, np.array([5, 5]))
+    assert_array_almost_equal(depths, [p0[2], p1[2]])
