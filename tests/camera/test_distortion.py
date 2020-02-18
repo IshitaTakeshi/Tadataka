@@ -178,7 +178,7 @@ def test_undistort():
         [9, -3]
     ])
 
-    model = RadTan([0.5, 0.2, -0.3, 0.1, 0.0])
+    model = RadTan([0.5, 0.2, -0.3, 0.1, 0.02])
     Y = model.distort(X_true)
     X_pred = model.undistort(Y)
 
