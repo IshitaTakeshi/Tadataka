@@ -79,9 +79,11 @@ class Transform(object):
     """
     Transform each point :math:`\mathbf{p} \in P` into
     :math:`\mathbf{q} = sR\mathbf{p} + \mathbf{t}` where
+
     - :math:`s`: Scaling factor
     - :math:`R`: Rotation matrix
     - :math:`\mathbf{t}`: Translation vector
+
     Args:
         R: Rotation matrix
         t: Translation vector
