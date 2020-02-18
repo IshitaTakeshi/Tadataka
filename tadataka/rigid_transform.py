@@ -13,7 +13,6 @@ def transform_each(rotations, translations, points):
     return points
 
 
-
 def transform_all(rotations, translations, points):
     # same as computing
     # for R, t in zip(rotations, translations):
@@ -74,6 +73,34 @@ def rotate_each(rotations, points):
     assert(points.shape[1] == 3)
 
     return np.einsum('ijk,ik->ij', rotations, points)
+
+
+class Transform(object):
+    """
+    Transform each point :math:`\mathbf{p} \in P` into
+    :math:`\mathbf{q} = sR\mathbf{p} + \mathbf{t}` where
+    - :math:`s`: Scaling factor
+    - :math:`R`: Rotation matrix
+    - :math:`\mathbf{t}`: Translation vector
+    Args:
+        R: Rotation matrix
+        t: Translation vector
+        s: Scaling factor
+    """
+
+    def __init__(self, R, t, s=1.0):
+        self.R = R
+        self.t = t
+        self.s = s
+
+    def __call__(self, P):
+        """
+        Args:
+            P: Points of shape (n_image_points, n_channels)
+        """
+
+        R, t, s = self.R, self.t, self.s
+        return s * np.dot(R, P.T).T + t
 
 
 def transform(R, t, P):
