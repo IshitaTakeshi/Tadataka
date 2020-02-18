@@ -4,7 +4,7 @@ import numba
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
-from tadataka.rigid_transform import transform
+from tadataka.rigid_transform import Transform
 from tadataka.interpolation import interpolation
 from tadataka.triangulation import DepthFromTriangulation
 from tadataka.pose import Pose
@@ -72,30 +72,16 @@ def calc_error(v1, v2):
 
 def search_intensities(intensities_ref, intensities_key, error_func):
     errors = convolve(intensities_ref, intensities_key, error_func)
-    assert(len(errors) == len(intensities_ref) - len(intensities_key) + 1)
-    return np.argmin(errors) + (len(intensities_key) - 1) // 2
+    return np.argmin(errors)
 
 
 def photometric_disparity_error(epipolar_direction):
     return
 
 
-def calc_depth_ref(R_key_to_ref, t_key_to_ref, x_key, depth_key):
-    p = depth_key * to_homogeneous(x_key)
-    q = transform(R_key_to_ref, t_key_to_ref, p)
+def calc_depth_ref(transformer, x_key, depth_key):
+    q = transformer(depth_key * to_homogeneous(x_key))
     return q[2]
-
-
-def coordinates_along_ref_epipolar(R_key_to_ref, t_key_to_ref,
-                                   x_key, inv_depths):
-    P = np.outer(1 / inv_depths, to_homogeneous(x_key))
-    Q = transform(R_key_to_ref, t_key_to_ref, P)
-    return pi(Q)
-
-
-def coordinates_along_key_epipolar(x_key, t_key_to_ref, disparity):
-    direction = normalize_length(x_key - pi(t_key_to_ref))
-    return x_key + np.outer([-2, -1, 0, 1, 2], disparity * direction)
 
 
 class InsufficientCoordinatesError(Exception):
@@ -112,78 +98,103 @@ def error_if_insufficient_coordinates(mask, min_coordinates):
         )
 
 
+def disparity_ratio(depth_key, depth_ref):
+    inv_depth_key = 1 / depth_key
+    inv_depth_ref = 1 / depth_ref
+    return (inv_depth_key / inv_depth_ref)
+
+
 keyframe_sampling_steps = np.array([-4, -3, -2, -1, 0, 1, 2, 3, 4])
 
 
-def calc_disparity_key(depth_key, depth_ref, disparity_ref):
-    inv_depth_key = 1 / depth_key
-    inv_depth_ref = 1 / depth_ref
-    disparity_key = disparity_ref * (inv_depth_key / inv_depth_ref)
-    return disparity_key
+class KeyFrameSampler(object):
+    def __init__(self, camera_model, image_shape, t):
+        self.camera_model = camera_model
+        self.image_shape = image_shape
+        self.t = t
+
+    def __call__(self, x, disparity):
+        epipolar_direction = normalize_length(x - pi(self.t))
+
+        xs = coordinates_along_line(x, epipolar_direction,
+                                    disparity * keyframe_sampling_steps)
+        us = self.camera_model.unnormalize(xs)
+
+        mask = is_in_image_range(us,
+                                 [self.image_shape[0]-1,
+                                  self.image_shape[1]-1])
+        error_if_insufficient_coordinates(mask, len(keyframe_sampling_steps))
+        return xs, us
+
+
+class ReferenceFrameSampler(object):
+    def __init__(self, camera_model, image_shape):
+        self.camera_model = camera_model
+        self.image_shape = image_shape
+
+    def __call__(self, x_min, x_max, disparity):
+        epipolar_direction = normalize_length(x_min - x_max)
+
+        N = np.linalg.norm(x_min - x_max) / disparity
+
+        xs = coordinates_along_line(x_max, epipolar_direction,
+                                    disparity * np.arange(N))
+        us = self.camera_model.unnormalize(xs)
+
+        mask = is_in_image_range(us,
+                                 [self.image_shape[0]-1,
+                                  self.image_shape[1]-1])
+        error_if_insufficient_coordinates(mask, len(keyframe_sampling_steps))
+        return xs[mask], us[mask]
 
 
 class DepthEstimator(object):
     def __init__(self, camera_model_key, camera_model_ref,
                  image_key, image_ref, pose_key_to_ref):
-        self.camera_model_key = camera_model_key
-        self.camera_model_ref = camera_model_ref
+        R, t = pose_key_to_ref.R, pose_key_to_ref.t
+        self.transformer = Transform(R, t)
+
+        self.sample_key = KeyFrameSampler(camera_model_key,
+                                          image_key.shape, t)
+        self.sample_ref = ReferenceFrameSampler(camera_model_ref,
+                                                image_ref.shape)
+
         self.image_key = image_key
         self.image_ref = image_ref
-        self.pose_key_to_ref = pose_key_to_ref
+
+        self.calc_depths = DepthFromTriangulation(
+            Pose.identity(), pose_key_to_ref
+        )
+        self.camera_model_key = camera_model_key
 
     def __call__(self, u_key, min_depth, max_depth, prior_depth_key):
-        R = self.pose_key_to_ref.rotation.as_matrix()
-        t = self.pose_key_to_ref.t
-
-        x_key = self.camera_model_key.normalize(u_key)
-
         disparity_ref = 0.01
 
-        depth_ref = calc_depth_ref(R, t, x_key, prior_depth_key)
-        disparity_key = calc_disparity_key(prior_depth_key,
-                                           depth_ref, disparity_ref)
+        x_key = self.camera_model_key.normalize(np.atleast_2d(u_key))[0]
+
+        depth_ref = calc_depth_ref(self.transformer, x_key, prior_depth_key)
+        disparity_key = disparity_ratio(prior_depth_key, depth_ref) * disparity_ref
 
         # TODO check gradient along epipolar line
-        epipolar_direction_key = normalize_length(x_key - pi(t))
-        xs_key = coordinates_along_line(
-            x_key, epipolar_direction_key,
-            disparity_key * keyframe_sampling_steps
-        )
-        us_key = self.camera_model_key.unnormalize(xs_key)
-        mask = is_in_image_range(us_key,
-                                 [self.image_key.shape[0]-1,
-                                  self.image_key.shape[1]-1])
-        error_if_insufficient_coordinates(
-            is_in_image_range(us_key, self.image_key.shape), len(xs_key)
-        )
 
         # searching along the epipolar line with equal disparity means
         # searching the depth with equal inverse depth step
         # because inverse depth is approximately proportional to
         # the disparity
 
-        # search from max to min
-        x_ref_max = pi(transform(R, t, to_homogeneous(x_key) * max_depth))
-        x_ref_min = pi(transform(R, t, to_homogeneous(x_key) * min_depth))
-        epipolar_direction_ref = normalize_length(x_ref_min - x_ref_max)
+        x_ref_max = pi(self.transformer(to_homogeneous(x_key) * max_depth))
+        x_ref_min = pi(self.transformer(to_homogeneous(x_key) * min_depth))
 
-        N = np.linalg.norm(x_ref_min - x_ref_max) / disparity_ref
-        xs_ref = coordinates_along_line(x_ref_max, epipolar_direction_ref,
-                                        disparity_ref * np.arange(N))
-        us_ref = self.camera_model_ref.unnormalize(xs_ref)
-
-        mask = is_in_image_range(us_ref,
-                                 [self.image_ref.shape[0]-1,
-                                  self.image_ref.shape[1]-1])
-        error_if_insufficient_coordinates(mask, len(xs_key))
-        xs_ref, us_ref = xs_ref[mask], us_ref[mask]
+        xs_key, us_key = self.sample_key(x_key, disparity_key)
+        xs_ref, us_ref = self.sample_ref(x_ref_min, x_ref_max, disparity_ref)
 
         intensities_ref = interpolation(self.image_ref, us_ref)
         intensities_key = interpolation(self.image_key, us_key)
 
-        argmin = search_intensities(intensities_ref, intensities_key,
-                                    calc_error)
+        errors = convolve(intensities_ref, intensities_key, calc_error)
+        argmin = np.argmin(errors)
+        offset = len(keyframe_sampling_steps) // 2
+        key_depth, ref_depth = self.calc_depths(x_key,
+                                                xs_ref[argmin-offset])
 
-        f = DepthFromTriangulation(Pose.identity(), self.pose_key_to_ref)
-        key_depth, ref_depth = f(xs_key[2], xs_ref[argmin])
         return key_depth
