@@ -35,6 +35,24 @@ def test_is_in_image_range():
         expected
     )
 
+    keypoints = np.array([
+        [19.00, 29.00],
+        [19.01, 29.00],
+        [19.00, 29.01],
+        [19.01, 29.01],
+        [00.00, 00.00],
+        [00.00, -0.01],
+        [-0.01, 00.00],
+        [-0.01, -0.01],
+    ])
+
+    expected = np.array([True, False, False, False, True, False, False, False])
+
+    assert_array_equal(
+        is_in_image_range(keypoints, (height, width)),
+        expected
+    )
+
 
 def test_radian_to_degree():
     assert(np.isclose(radian_to_degree(np.pi / 2), 90.0))
