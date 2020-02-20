@@ -14,27 +14,47 @@ def normalize_length(v):
 
 class EpipolarDirection(object):
     def __init__(self, t):
-        self.x0 = pi(self.t)
+        self.x0 = pi(t)
 
     def __call__(self, x):
-        return normalize_length(self.x0 - x)
+        return normalize_length(x - self.x0)
 
 
-def calc_coordinates(x_min, x_max, search_step):
+def calc_coordinates(x_min, x_max, step_size):
     direction = normalize_length(x_max - x_min)
-    N = np.linalg.norm(x_max - x_min) / search_step
-    return coordinates_along_line(x_min, direction,
-                                  search_step * np.arange(N))
+    N = np.linalg.norm(x_max - x_min) / step_size
+    return coordinates_along_line(x_min, step_size * direction, np.arange(N))
 
 
 class ReferenceCoordinates(object):
-    def __init__(self, camera_model, image_shape, search_step):
+    def __init__(self, camera_model, image_shape, step_size):
         self.camera_model = camera_model
         self.image_shape = image_shape
-        self.search_step = search_step
+        self.step_size = step_size
 
-    def __call__(self, x_min, x_max):
-        xs = calc_coordinates(x_min, x_max, self.search_step)
+    def __call__(self, x_range):
+        x_min, x_max = x_range
+        xs = calc_coordinates(x_min, x_max, self.step_size)
         us = self.camera_model.unnormalize(xs)
         mask = is_in_image_range(us, self.image_shape)
         return xs[mask], us[mask]
+
+
+class NormalizedKeyCoordinates(object):
+    def __init__(self, t, sampling_steps):
+        self.epipolar_direction = EpipolarDirection(t)
+        self.sampling_steps = sampling_steps
+
+    def __call__(self, x, step_size):
+        step = step_size * self.epipolar_direction(x)
+        return coordinates_along_line(x, step, self.sampling_steps)
+
+
+class KeyCoordinates(object):
+    def __init__(self, camera_model, t, sampling_steps=[-2, -1, 0, 1, 2]):
+        self.normalized = NormalizedKeyCoordinates(t, sampling_steps)
+        self.camera_model = camera_model
+
+    def __call__(self, x, step_size):
+        xs = self.normalized(x, step_size)
+        return self.camera_model.unnormalize(xs)

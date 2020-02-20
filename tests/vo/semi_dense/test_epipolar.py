@@ -1,8 +1,10 @@
 import numpy as np
 from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_almost_equal
 
 from tadataka.camera import CameraModel, CameraParameters, FOV
-from tadataka.vo.semi_dense.epipolar import ReferenceCoordinates
+from tadataka.vo.semi_dense.epipolar import (
+    ReferenceCoordinates, NormalizedKeyCoordinates)
 
 
 def test_reference_coordinates():
@@ -12,11 +14,13 @@ def test_reference_coordinates():
         CameraParameters(focal_length=[10, 10], offset=[80, 100]),
         FOV(0.00)
     )
+
     search_step = 5.0
     coordinates = ReferenceCoordinates(camera_model, image_shape, search_step)
+
     x_min = np.array([-15.0, -20.0])
     x_max = np.array([15.0, 20.0])
-    xs, us = coordinates(x_min, x_max)
+    xs, us = coordinates((x_min, x_max))
 
     mask = [3, 4, 5, 6, 7]  # only masked coordinates are in the image
 
@@ -47,3 +51,21 @@ def test_reference_coordinates():
         [200, 260]
     ])
     assert_array_equal(us, us_true[mask])
+
+
+def test_normalized_key_intensities():
+    t = np.array([-4, -8, 2])  # x0 = [-2, -4]
+    x = [7, 8]
+    search_step = 5
+    # step should be [3, 4]
+    sampling_steps = [-2, -1, 0, 1, 2]
+
+    coordinates = NormalizedKeyCoordinates(t, sampling_steps)
+    assert_array_almost_equal(
+        coordinates(x, search_step),
+        [[7 - 2 * 3, 8 - 2 * 4],
+         [7 - 1 * 3, 8 - 1 * 4],
+         [7 - 0 * 3, 8 - 0 * 4],
+         [7 + 1 * 3, 8 + 1 * 4],
+         [7 + 2 * 3, 8 + 2 * 4]]
+    )
