@@ -11,6 +11,8 @@ from tadataka.pose import Pose
 
 def inverse_projection(camera_model, x, depth):
     return depth * to_homogeneous(x)
+def intensity_gradient(intensities, interval):
+    return np.linalg.norm(intensities[1:] - intensities[:-1]) / interval
 
 
 def calc_inv_depths(ref_coordinate, key_coordinate,

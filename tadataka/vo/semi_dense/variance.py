@@ -3,10 +3,6 @@ import numpy as np
 from tadataka.matrix import to_homogeneous
 
 
-def intensity_gradient(intensities, interval):
-    return np.linalg.norm(intensities[1:] - intensities[:-1]) / interval
-
-
 class PhotometricVariance(object):
     def __init__(self, sigma_i):
         self.sigma_i = sigma_i
