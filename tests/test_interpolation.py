@@ -22,24 +22,28 @@ def test_interpolation():
     intensities = interpolation(image, coordinates, order=1)
 
     #                 y  x
-    expected = (image[0, 0] * (1.0 - 0.3) * (1.0 - 0.6) +
-                image[0, 1] * (0.3 - 0.0) * (1.0 - 0.6) +
-                image[1, 0] * (0.6 - 0.0) * (1.0 - 0.3) +
-                image[1, 1] * (0.3 - 0.0) * (0.6 - 0.0))
-    assert_almost_equal(intensities[0], expected)
+    expected0 = (image[0, 0] * (1.0 - 0.3) * (1.0 - 0.6) +
+                 image[0, 1] * (0.3 - 0.0) * (1.0 - 0.6) +
+                 image[1, 0] * (0.6 - 0.0) * (1.0 - 0.3) +
+                 image[1, 1] * (0.3 - 0.0) * (0.6 - 0.0))
+    assert_almost_equal(intensities[0], expected0)
 
     #                 y  x
-    expected = (image[0, 0] * (1.0 - 0.1) * (1.0 - 0.8) +
-                image[0, 1] * (0.1 - 0.0) * (1.0 - 0.8) +
-                image[1, 0] * (0.8 - 0.0) * (1.0 - 0.1) +
-                image[1, 1] * (0.1 - 0.0) * (0.8 - 0.0))
-    assert_almost_equal(intensities[1], expected)
+    expected1 = (image[0, 0] * (1.0 - 0.1) * (1.0 - 0.8) +
+                 image[0, 1] * (0.1 - 0.0) * (1.0 - 0.8) +
+                 image[1, 0] * (0.8 - 0.0) * (1.0 - 0.1) +
+                 image[1, 1] * (0.1 - 0.0) * (0.8 - 0.0))
+    assert_almost_equal(intensities[1], expected1)
 
     #                 y  x
-    expected = (image[0, 1] * (2.0 - 1.4) * (1.0 - 0.2) +
-                image[0, 2] * (1.4 - 1.0) * (1.0 - 0.2) +
-                image[1, 1] * (0.2 - 0.0) * (2.0 - 1.4) +
-                image[1, 2] * (1.4 - 1.0) * (0.2 - 0.0))
+    expected2 = (image[0, 1] * (2.0 - 1.4) * (1.0 - 0.2) +
+                 image[0, 2] * (1.4 - 1.0) * (1.0 - 0.2) +
+                 image[1, 1] * (0.2 - 0.0) * (2.0 - 1.4) +
+                 image[1, 2] * (1.4 - 1.0) * (0.2 - 0.0))
 
-    assert_almost_equal(intensities[2], expected)
+    assert_almost_equal(intensities[2], expected2)
+
     assert(np.isnan(intensities[3]))
+
+    intensity = interpolation(image, np.array([1.4, 0.2]), order=1)
+    assert_almost_equal(intensity, expected2)
