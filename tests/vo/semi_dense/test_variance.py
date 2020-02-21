@@ -54,8 +54,14 @@ def test_calc_alphas():
     d = t[1] - x_ref[1] * t[2]
     assert(alphas[1] == search_step[1] * n / (d * d))
 
-    # alpha = Alpha(R, t)
-    # alpha()
+    x_min_ref = np.array([-1, 2])
+    x_max_ref = np.array([2, 6])
+    direction = [0.6, 0.8]
+    xrange_ref = x_min_ref, x_max_ref
+    assert_almost_equal(
+        Alpha(R, t)(x_key, x_ref, (x_min_ref, x_max_ref)),
+        calc_alphas(x_key, x_ref, direction, R, t)[1]
+    )
 
 
 def test_alpha_index():
