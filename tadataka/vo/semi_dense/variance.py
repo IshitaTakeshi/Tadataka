@@ -1,5 +1,6 @@
 import numpy as np
 
+from tadataka.vector import normalize_length
 from tadataka.matrix import to_homogeneous
 
 
@@ -31,21 +32,26 @@ class GeometricVariance(object):
         return (var * ng * nl) / (p * p)
 
 
-def calc_alphas(x_key, x_ref, R, t, search_step):
+def calc_alphas(x_key, x_ref, epipolar_direction_ref, R, t):
     rot_x = np.dot(R, to_homogeneous(x_key))
 
     d = rot_x[2] * t[0:2] - rot_x[0:2] * t[2]
     n = x_ref[0:2] * t[2] - t[0:2]
 
-    return search_step * d / (n * n)
+    return epipolar_direction_ref * d / (n * n)
 
 
 def alpha_index(search_step):
     return np.argmax(np.abs(search_step))
 
 
-def calc_alpha(x_key, x_ref, R, t, search_step):
-    alphas = calc_alphas(x_key, x_ref, search_step, R, t)
-    index = alpha_index(search_step)
-    return alphas[index]
+class Alpha(object):
+    def __init__(self, R, t):
+        self.R, self.t = R, t
 
+    def __call__(self, x_key, x_ref, x_range_ref):
+        x_min_ref, x_max_ref = x_range_ref
+        direction = normalize_length(x_max_ref - x_min_ref)
+        alphas = calc_alphas(x_key, x_ref, direction, self.R, self.t)
+        index = alpha_index(direction)
+        return alphas[index]
