@@ -3,9 +3,8 @@ import numpy as np
 from numpy.linalg import norm
 
 from tadataka.vo.semi_dense.variance import (
-    alpha_index, calc_alphas,
-    GeometricVariance, PhotometricVariance,
-    VarianceEstimator
+    Alpha, alpha_index, calc_alphas,
+    GeometricVariance, PhotometricVariance
 )
 
 from tadataka.vo.semi_dense.epipolar import EpipolarDirection
@@ -43,7 +42,7 @@ def test_calc_alphas():
     search_step = np.array([0.1, 0.3])
     x_key = np.array([0.3, 0.9])
     x_ref = np.array([-0.6, 0.4])
-    alphas = calc_alphas(x_key, x_ref, R, t, search_step)
+    alphas = calc_alphas(x_key, x_ref, search_step, R, t)
 
     X = np.append(x_key, 1)
 
@@ -54,6 +53,9 @@ def test_calc_alphas():
     n = t[1] * np.dot(R[2], X) - t[2] * np.dot(R[1], X)
     d = t[1] - x_ref[1] * t[2]
     assert(alphas[1] == search_step[1] * n / (d * d))
+
+    # alpha = Alpha(R, t)
+    # alpha()
 
 
 def test_alpha_index():
