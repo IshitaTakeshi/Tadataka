@@ -202,15 +202,20 @@ def test_estimate_pose_change():
 
 
 def test_calc_relative_pose():
-    pose0 = Pose(Rotation.from_euler('xyz', [-np.pi, 0, 0]),
-                 np.array([0, 1, 0]))
-    pose1 = Pose(Rotation.from_euler('xyz', [np.pi/4, 0, 0]),
-                 np.array([0, -1, 0]))
+    rotation0 = Rotation.from_rotvec([0.3, -0.1, 0.2])
+    rotation1 = Rotation.from_rotvec([-0.1, -1.1, 1.4])
+    t0 = np.array([3.0, 0.0, 2.1])
+    t1 = np.array([-4.3, 6.1, -1.1])
+    pose0 = Pose(rotation0, t0)
+    pose1 = Pose(rotation1, t1)
 
     pose01 = calc_relative_pose(pose0, pose1)
-    assert_array_almost_equal(
-        pose01.rotation.as_euler('xyz'),
-        [-3 * np.pi / 4, 0, 0]
-    )
 
-    assert_array_almost_equal(pose01.t, [0, -2, 0])
+    point = np.array([4.0, 2.0, -5.0])
+
+    p0 = transform(pose0.R, pose0.t, point)
+    p1_pred = transform(pose01.R, pose01.t, p0)
+
+    p1_true = transform(pose1.R, pose1.t, point)
+
+    assert_array_almost_equal(p1_true, p1_pred)
