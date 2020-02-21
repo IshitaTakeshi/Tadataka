@@ -17,7 +17,7 @@ class EpipolarDirection(object):
         self.x0 = pi(t)
 
     def __call__(self, x):
-        return normalize_length(x - self.x0)
+        return x - self.x0
 
 
 def calc_coordinates(x_min, x_max, step_size):
@@ -46,7 +46,8 @@ class NormalizedKeyCoordinates(object):
         self.sampling_steps = sampling_steps
 
     def __call__(self, x, step_size):
-        step = step_size * self.epipolar_direction(x)
+        direction = normalize_length(self.epipolar_direction(x))
+        step = step_size * direction
         return coordinates_along_line(x, step, self.sampling_steps)
 
 

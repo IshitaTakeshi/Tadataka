@@ -54,15 +54,15 @@ def test_reference_coordinates():
 
 
 def test_normalized_key_intensities():
-    t = np.array([-4, -8, 2])  # x0 = [-2, -4]
+    t = np.array([-4, -8, 2])  # pi(t) == [-2, -4]
     x = [7, 8]
     search_step = 5
-    # step should be [3, 4]
     sampling_steps = [-2, -1, 0, 1, 2]
 
     direction = EpipolarDirection(t)
     coordinates = NormalizedKeyCoordinates(direction, sampling_steps)
 
+    # step should be [3, 4]
     assert_array_almost_equal(
         coordinates(x, search_step),
         [[7 - 2 * 3, 8 - 2 * 4],
