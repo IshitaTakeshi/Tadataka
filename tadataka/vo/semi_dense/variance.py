@@ -53,14 +53,3 @@ def calc_alpha(x_key, x_ref, R, t, search_step):
     index = alpha_index(search_step)
     return alphas[index]
 
-
-class VarianceEstimator(object):
-    def __init__(self, epipolar_direction, sigma_l, sigma_i):
-        self.sigma_l = sigma_l
-        self.sigma_i = sigma_i
-
-    def __call__(self, x, gradient, epipolar_gradient, alpha):
-        direction = self.epipolar_direction(x)
-        sigma_g = geometric_variance(direction, gradient, self.sigma_l)
-        sigma_p = photometric_variance(epipolar_gradient, self.sigma_i)
-        return alpha * alpha * (sigma_g + sigma_p)
