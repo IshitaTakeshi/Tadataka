@@ -41,8 +41,8 @@ class ReferenceCoordinates(object):
 
 
 class NormalizedKeyCoordinates(object):
-    def __init__(self, t, sampling_steps):
-        self.epipolar_direction = EpipolarDirection(t)
+    def __init__(self, epipolar_direction, sampling_steps):
+        self.epipolar_direction = epipolar_direction
         self.sampling_steps = sampling_steps
 
     def __call__(self, x, step_size):
@@ -51,9 +51,11 @@ class NormalizedKeyCoordinates(object):
 
 
 class KeyCoordinates(object):
-    def __init__(self, camera_model, t, sampling_steps=[-2, -1, 0, 1, 2]):
-        self.normalized = NormalizedKeyCoordinates(t, sampling_steps)
+    def __init__(self, camera_model, epipolar_direction,
+                 sampling_steps=[-2, -1, 0, 1, 2]):
         self.camera_model = camera_model
+        self.normalized = NormalizedKeyCoordinates(epipolar_direction,
+                                                   sampling_steps)
 
     def __call__(self, x, step_size):
         xs = self.normalized(x, step_size)

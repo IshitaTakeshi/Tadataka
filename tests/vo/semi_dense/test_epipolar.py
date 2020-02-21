@@ -4,7 +4,7 @@ from numpy.testing import assert_array_almost_equal
 
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.vo.semi_dense.epipolar import (
-    ReferenceCoordinates, NormalizedKeyCoordinates)
+    ReferenceCoordinates, NormalizedKeyCoordinates, EpipolarDirection)
 
 
 def test_reference_coordinates():
@@ -60,7 +60,9 @@ def test_normalized_key_intensities():
     # step should be [3, 4]
     sampling_steps = [-2, -1, 0, 1, 2]
 
-    coordinates = NormalizedKeyCoordinates(t, sampling_steps)
+    direction = EpipolarDirection(t)
+    coordinates = NormalizedKeyCoordinates(direction, sampling_steps)
+
     assert_array_almost_equal(
         coordinates(x, search_step),
         [[7 - 2 * 3, 8 - 2 * 4],
