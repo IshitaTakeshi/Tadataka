@@ -9,8 +9,6 @@ from tadataka.triangulation import DepthFromTriangulation
 from tadataka.pose import Pose
 
 
-def inverse_projection(camera_model, x, depth):
-    return depth * to_homogeneous(x)
 def intensity_gradient(intensities, interval):
     return np.linalg.norm(intensities[1:] - intensities[:-1]) / interval
 
@@ -26,11 +24,6 @@ def calc_inv_depths(ref_coordinate, key_coordinate,
 
 def depth_coordinate(search_step):
     return 0 if np.abs(search_step[0]) > np.abs(search_step[1]) else 1
-
-
-def search_intensities(intensities_ref, intensities_key, error_func):
-    errors = convolve(intensities_ref, intensities_key, error_func)
-    return np.argmin(errors)
 
 
 class InsufficientCoordinatesError(Exception):
