@@ -2,25 +2,12 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from tadataka.flow_estimation.image_curvature import (
-    grad_x, grad_y, compute_curvature, compute_image_curvature)
-
-
-A = np.arange(25).reshape(5, 5)
-B = np.arange(49).reshape(7, 7)
-
-
-def test_grad_x():
-    GX = grad_x(A)
-    assert_array_equal(GX[1:4, 1:4], 8)
-
-
-def test_grad_y():
-    GY = grad_y(A)
-    assert_array_equal(GY[1:4, 1:4], 40)
+    compute_curvature, compute_image_curvature)
 
 
 def test_compute_image_curvature():
-    G = compute_image_curvature(B)
+    A = np.arange(49).reshape(7, 7)
+    G = compute_image_curvature(A)
     assert_array_equal(G[2:5, 2:5], 0)
 
 
