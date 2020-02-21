@@ -1,15 +1,12 @@
 import numpy as np
 
 from tadataka.projection import pi
+from tadataka.vector import normalize_length
 from tadataka.utils import is_in_image_range
 
 
 def coordinates_along_line(start, step, disparities):
     return start + np.outer(disparities, step)
-
-
-def normalize_length(v):
-    return v / np.linalg.norm(v)
 
 
 class EpipolarDirection(object):
