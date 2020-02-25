@@ -63,9 +63,17 @@ def invert_depth(depth, EPSILON=1e-16):
     return 1 / (depth + EPSILON)
 
 
-def inv_depth_search_range(inv_depth, variance, deviation_factor=2.0):
-    return (inv_depth - deviation_factor * variance,
-            inv_depth + deviation_factor * variance)
+class InverseDepthSearchRange(object):
+    def __init__(self, factor=2.0, min_inv_depth=1e-16):
+        assert(min_inv_depth > 0.0)
+        self.factor = factor
+        self.min_inv_depth = min_inv_depth
+
+    def __call__(self, inv_depth, variance):
+        assert(variance >= 0.0)
+        L = max(inv_depth - self.factor * variance, self.min_inv_depth)
+        U = inv_depth + self.factor * variance
+        return L, U
 
 
 def calc_depth_ref(transform, x_key, depth_key):

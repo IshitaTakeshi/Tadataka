@@ -1,14 +1,15 @@
 import numpy as np
-from numpy.testing import assert_almost_equal
-
+from numpy.testing import assert_almost_equal, assert_equal
+import pytest
 from skimage.color import rgb2gray
 
 from tadataka.pose import calc_relative_pose
 from tadataka.dataset import NewTsukubaDataset
+from tadataka.coordinates import image_coordinates
 
 from tadataka.vo.semi_dense.semi_dense import (
     step_size_ratio, depth_search_range, epipolar_search_range,
-    GradientImage, InverseDepthEstimator)
+    GradientImage, InverseDepthEstimator, InverseDepthSearchRange)
 from tadataka.rigid_transform import Transform
 
 from tests.dataset.path import new_tsukuba
@@ -34,6 +35,16 @@ def test_depth_search_range():
     # invert and reverse the order
     assert_almost_equal(depth_search_range((0.25, 0.8)), (1.25, 4.0))
     assert_almost_equal(depth_search_range((0.10, 0.5)), (2.0, 10.0))
+
+
+def test_inverse_depth_search_range():
+    inv_depth_range = InverseDepthSearchRange(factor=2.0, min_inv_depth=0.02)
+    assert_equal(inv_depth_range(1.0, 0.2), (0.6, 1.4))
+    assert_equal(inv_depth_range(1.0, 1.5), (0.02, 4.0))
+
+    with pytest.raises(AssertionError):
+        # min_inv_depth must be positive
+        InverseDepthSearchRange(factor=2.0, min_inv_depth=-0.01)
 
 
 def test_epipolar_search_range():
