@@ -14,53 +14,6 @@ from tadataka.so3 import exp_so3
 from tests.data import dummy_points as points
 
 
-def test_normalizer():
-    camera_parameters = CameraParameters(
-        image_shape=[100, 100],  # temporal values
-        focal_length=[2., 3.],
-        offset=[-1., 4.]
-    )
-    projection = PerspectiveProjection(camera_parameters)
-
-    normalizer = Normalizer(camera_parameters)
-
-    def case1():
-        keypoints = np.array([
-            [4, 3],
-            [2, 1],
-            [1, 9]
-        ])
-        expected = np.array([
-            [5 / 2, -1 / 3],
-            [3 / 2, -3 / 3],
-            [2 / 2, 5 / 3]
-        ])
-        assert_array_almost_equal(
-            normalizer.normalize(keypoints),
-            expected
-        )
-
-    def case2():
-        rotation_true = Rotation.from_rotvec(np.array([-1.0, 0.2, 3.1]))
-        t_true = np.array([-0.8, 1.0, 8.3])
-
-        P = transform(rotation_true.as_matrix(), t_true, points)
-        keypoints_true = projection.compute(P)
-
-        # poses should be able to be estimated without a camera matrix
-        keypoints_ = normalizer.normalize(keypoints_true)
-        pose = solve_pnp(points, keypoints_)
-
-        P = transform(pose.R, pose.t, points)
-        keypoints_pred = projection.compute(P)
-
-        assert_array_almost_equal(t_true, pose.t)
-        assert_array_almost_equal(keypoints_true, keypoints_pred)
-
-    case1()
-    case2()
-
-
 X = np.array([
     [0.0, 0.0],
     [1.0 / np.sqrt(2), 1.0 / np.sqrt(2)],  # r = 1
