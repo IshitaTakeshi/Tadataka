@@ -1,5 +1,7 @@
 import numpy as np
 
+from tadataka.decorator import allow_1d
+
 
 def random_binary(size):
     return np.random.randint(0, 2, size, dtype=np.bool)
@@ -30,6 +32,7 @@ def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
 
+@allow_1d(which_argument=0)
 def is_in_image_range(keypoints, image_shape):
     height, width = image_shape[0:2]
     xs, ys = keypoints[:, 0], keypoints[:, 1]
