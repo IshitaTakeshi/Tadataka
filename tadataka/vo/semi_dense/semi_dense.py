@@ -128,35 +128,46 @@ class InverseDepthEstimator(object):
                  camera_model_key, camera_model_ref,
                  sigma_i, sigma_l, step_size_ref):
         self.image_key, self.image_ref = image_key, image_ref
+        self.camera_model_key = camera_model_key
+        self.camera_model_ref = camera_model_ref
+
         R, t = pose_key_to_ref.R, pose_key_to_ref.t
         self.transform = Transform(R, t)
         epipolar_direction = EpipolarDirection(t)
         self.alpha = Alpha(R, t)
+        self.inv_depth_search_range = InverseDepthSearchRange()
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
-        self.key_coordinates = KeyCoordinates(camera_model_key,
-                                              epipolar_direction)
+        self.key_coordinates = KeyCoordinates(epipolar_direction)
         self.photo_variance = PhotometricVariance(sigma_i)
         self.geo_variance = GeometricVariance(epipolar_direction, sigma_l)
-        self.ref_coordinates = ReferenceCoordinates(camera_model_ref,
-                                                    image_ref.shape,
-                                                    step_size_ref)
+        self.ref_coordinates = ReferenceCoordinates(step_size_ref)
         self.calc_depth = DepthFromTriangulation(pose_key_to_ref)
         self.step_size_key = KeyStepSize(self.transform, step_size_ref)
 
-    def __call__(self, x_key, u_key, prior_inv_depth, prior_variance):
-        inv_depth_range = inv_depth_search_range(prior_inv_depth,
-                                                 prior_variance)
+    def __call__(self, u_key, prior_inv_depth, prior_variance):
+        x_key = self.camera_model_key.normalize(u_key)
+
+        inv_depth_range = self.inv_depth_search_range(
+            prior_inv_depth, prior_variance
+        )
         depth_range = depth_search_range(inv_depth_range)
         x_range_ref = epipolar_search_range(self.transform, x_key, depth_range)
 
-        xs_ref, us_ref = self.ref_coordinates(x_range_ref)
+        xs_ref = self.ref_coordinates(x_range_ref)
+        us_ref = self.camera_model_ref.unnormalize(xs_ref)
+        mask = is_in_image_range(us_ref, self.image_ref.shape)
+        xs_ref, us_ref = xs_ref[mask], us_ref[mask]
+
         step_size_key = self.step_size_key(x_key, prior_inv_depth)
-        us_key = self.key_coordinates(x_key, step_size_key)
+        xs_key = self.key_coordinates(x_key, step_size_key)
+        us_key = self.camera_model_key.unnormalize(xs_key)
 
         intensities_key = interpolation(self.image_key, us_key)
         intensities_ref = interpolation(self.image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
+
+        u_ref = self.camera_model_ref.unnormalize(x_ref)
 
         key_depth = self.calc_depth(x_key, x_ref)
 
