@@ -96,8 +96,8 @@ class GradientImage(object):
         self.grad_y = image_grad_y
 
     def __call__(self, u_key):
-        gx = interpolation(self.grad_x, u_key, order=1)
-        gy = interpolation(self.grad_y, u_key, order=1)
+        gx = interpolation(self.grad_x, u_key)
+        gy = interpolation(self.grad_y, u_key)
         return np.array([gx, gy])
 
 
