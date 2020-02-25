@@ -16,6 +16,7 @@ def test_merge_dicts():
 
 def test_is_in_image_range():
     height, width = 30, 20
+    image_shape = (height, width)
 
     keypoints = np.array([
         [19, 29],
@@ -31,10 +32,11 @@ def test_is_in_image_range():
     expected = np.array([True, True, True, False, False, False, False, False])
 
     assert_array_equal(
-        is_in_image_range(keypoints, (height, width)),
+        is_in_image_range(keypoints, image_shape),
         expected
     )
 
+    # case if keypoints are in float
     keypoints = np.array([
         [19.00, 29.00],
         [19.01, 29.00],
@@ -49,9 +51,13 @@ def test_is_in_image_range():
     expected = np.array([True, False, False, False, True, False, False, False])
 
     assert_array_equal(
-        is_in_image_range(keypoints, (height, width)),
+        is_in_image_range(keypoints, image_shape),
         expected
     )
+
+    # case if 1d array is passed
+    assert(is_in_image_range([0, 29], image_shape))
+    assert(not is_in_image_range([-1, 29], image_shape))
 
 
 def test_radian_to_degree():
