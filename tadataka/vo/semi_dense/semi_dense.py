@@ -132,8 +132,7 @@ class InverseDepthEstimator(object):
         self.ref_coordinates = ReferenceCoordinates(camera_model_ref,
                                                     image_ref.shape,
                                                     step_size_ref)
-        self.calc_depths = DepthFromTriangulation(Pose.identity(),
-                                                  pose_key_to_ref)
+        self.calc_depth = DepthFromTriangulation(pose_key_to_ref)
         self.step_size_key = KeyStepSize(self.transform, step_size_ref)
 
     def __call__(self, x_key, u_key, prior_inv_depth, prior_variance):
@@ -151,7 +150,7 @@ class InverseDepthEstimator(object):
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
 
-        key_depth, ref_depth = self.calc_depths(x_key, x_ref)
+        key_depth = self.calc_depth(x_key, x_ref)
 
         alpha = self.alpha(x_key, x_ref, x_range_ref)
 
