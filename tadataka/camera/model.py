@@ -3,6 +3,7 @@ import re
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.distortion import FOV, RadTan, NoDistortion
+from tadataka.decorator import allow_1d
 
 
 def parse_(string):
@@ -31,6 +32,7 @@ class CameraModel(object):
         if distortion_model is None:
             self.distortion_model = NoDistortion()
 
+    @allow_1d(which_argument=1)
     def normalize(self, keypoints):
         """
         Move keypoints from image coordinate system
@@ -40,6 +42,7 @@ class CameraModel(object):
             self.normalizer.normalize(keypoints)
         )
 
+    @allow_1d(which_argument=1)
     def unnormalize(self, normalized_keypoints):
         """
         Move coordinates from the normalized image plane
