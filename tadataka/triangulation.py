@@ -85,8 +85,10 @@ class DepthFromTriangulation(object):
     def __call__(self, keypoint0, keypoint1):
         """
         Args:
-            keypoint0 (np.ndarray): Keypoint in the first viewpoint
-            keypoint1 (np.ndarray): Keypoint in the second viewpoint
+            keypoint0 (np.ndarray): Keypoint on the normalized image plane
+                in the first viewpoint
+            keypoint1 (np.ndarray): Keypoint on the normalized image plane
+                in the second viewpoint
         Returns:
             Depth corresponding to the first keypoint
         """
