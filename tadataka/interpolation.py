@@ -1,33 +1,27 @@
+import numba
 import numpy as np
 from scipy.ndimage import map_coordinates
 
 
-def interpolation_(I, Q, order):
-    # Because 'map_coordinates' requires indices of
-    # [row, column] order, the 2nd axis have to be reversed
-    # so that it becomes [y, x]
+def interpolation_(image, C):
+    L = np.floor(C)
+    U = L + 1
+    LI = L.astype(np.int64)
+    UI = U.astype(np.int64)
 
-    Q = Q[:, [1, 0]].T
+    CX, CY = C[:, 0], C[:, 1]
+    LX, LY = L[:, 0], L[:, 1]
+    UX, UY = U[:, 0], U[:, 1]
+    LXI, LYI = LI[:, 0], LI[:, 1]
+    UXI, UYI = UI[:, 0], UI[:, 1]
 
-    # Here,
-    # Q = [
-    #     [y0 y0... y0 ... yi yi... yi ... ym ym ... ym]
-    #     [x0 x1... xn ... x0 x1... xn ... x0 x1 ... xn]
-    # ]
-
-    # sample pixel sequences from the given image I1
-    # warped_image = [
-    #     I[y0, x0]  I[y0, x1]  ...  I[y0, xn]
-    #     I[y1, x0]  I[y1, x1]  ...  I[y1, xn]
-    #     ...
-    #     I[ym, x0]  I[ym, x1]  ...  I[ym, xn]
-    # ]
-
-    return map_coordinates(I.astype(np.float64), Q,
-                           mode="constant", cval=np.nan, order=order)
+    return (image[LYI, LXI] * (UX - CX) * (UY - CY) +
+            image[LYI, UXI] * (CX - LX) * (UY - CY) +
+            image[UYI, LXI] * (UX - CX) * (CY - LY) +
+            image[UYI, UXI] * (CX - LX) * (CY - LY))
 
 
-def interpolation(image, coordinates, order=3):
+def interpolation(image, coordinates):
     """
     Args:
         image (np.ndarary): gray scale image
@@ -37,9 +31,9 @@ def interpolation(image, coordinates, order=3):
     ndim = np.ndim(coordinates)
 
     if ndim == 1:
-        return interpolation_(image, np.atleast_2d(coordinates), order)[0]
+        return interpolation_(image, np.atleast_2d(coordinates))[0]
 
     if ndim == 2:
-        return interpolation_(image, coordinates, order)
+        return interpolation_(image, coordinates)
 
     raise ValueError("Coordinates have to be 1d or 2d array")
