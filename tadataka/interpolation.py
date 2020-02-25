@@ -1,9 +1,15 @@
-import numba
 import numpy as np
-from scipy.ndimage import map_coordinates
+
+from tadataka.decorator import allow_1d
 
 
-def interpolation_(image, C):
+@allow_1d(which_argument=1)
+def interpolation(image, C):
+    """
+    Args:
+        image (np.ndarary): gray scale image
+        coordinates (np.ndarray): coordinates of shape (n_coordinates, 2)
+    """
     L = np.floor(C)
     U = L + 1
     LI = L.astype(np.int64)
@@ -19,21 +25,3 @@ def interpolation_(image, C):
             image[LYI, UXI] * (CX - LX) * (UY - CY) +
             image[UYI, LXI] * (UX - CX) * (CY - LY) +
             image[UYI, UXI] * (CX - LX) * (CY - LY))
-
-
-def interpolation(image, coordinates):
-    """
-    Args:
-        image (np.ndarary): gray scale image
-        coordinates (np.ndarray): coordinates of shape (n_coordinates, 2)
-    """
-
-    ndim = np.ndim(coordinates)
-
-    if ndim == 1:
-        return interpolation_(image, np.atleast_2d(coordinates))[0]
-
-    if ndim == 2:
-        return interpolation_(image, coordinates)
-
-    raise ValueError("Coordinates have to be 1d or 2d array")
