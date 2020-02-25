@@ -3,7 +3,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 from tadataka.camera.distortion import (
-    FOV, fov_distort_factors, fov_undistort_factors, RadTan)
+    FOV, fov_distort_factors, fov_undistort_factors,
+    NoDistortion, RadTan)
 from tadataka.camera.model import CameraModel
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
@@ -19,6 +20,11 @@ X = np.array([
     [1.0 / np.sqrt(2), 1.0 / np.sqrt(2)],  # r = 1
     [1.0, np.sqrt(3)]  # r = 2
 ])
+
+
+def test_no_distortion():
+    assert_array_equal(X, NoDistortion().distort(X))
+    assert_array_equal(X, NoDistortion().undistort(X))
 
 
 def test_fov_undistort():

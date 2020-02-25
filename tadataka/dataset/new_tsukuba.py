@@ -47,7 +47,7 @@ class NewTsukubaDataset(BaseDataset):
 
         self.camera_model = CameraModel(
             CameraParameters(focal_length=[615, 615], offset=[320, 240]),
-            FOV(0.0)
+            distortion_model=None
         )
         groundtruth_dir = Path(dataset_root, "groundtruth")
         illumination_dir = Path(dataset_root, "illumination")

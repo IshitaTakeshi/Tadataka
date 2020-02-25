@@ -2,7 +2,7 @@ import re
 
 from tadataka.camera.normalizer import Normalizer
 from tadataka.camera.parameters import CameraParameters
-from tadataka.camera.distortion import FOV, RadTan
+from tadataka.camera.distortion import FOV, RadTan, NoDistortion
 
 
 def parse_(string):
@@ -26,7 +26,10 @@ class CameraModel(object):
     def __init__(self, camera_parameters, distortion_model):
         self.normalizer = Normalizer(camera_parameters)
         self.camera_parameters = camera_parameters
+
         self.distortion_model = distortion_model
+        if distortion_model is None:
+            self.distortion_model = NoDistortion()
 
     def normalize(self, keypoints):
         """

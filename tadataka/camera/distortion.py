@@ -43,6 +43,14 @@ class BaseDistortion(object):
         return C1 and C2
 
 
+class NoDistortion(BaseDistortion):
+    def distort(self, undistorted_keypoints):
+        return undistorted_keypoints
+
+    def undistort(self, distorted_keypoints):
+        return distorted_keypoints
+
+
 class FOV(BaseDistortion):
     """
     Devernay, Frederic, and Olivier D. Faugeras.
