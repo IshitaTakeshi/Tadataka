@@ -34,10 +34,10 @@ class Triangulation(object):
                                        keypoints)
 
 
-class DepthFromTriangulation(object):
+class DepthsFromTriangulation(object):
     def __init__(self, pose0, pose1):
-        self.R0, self.t0 = pose0.rotation.as_matrix(), pose0.t
-        self.R1, self.t1 = pose1.rotation.as_matrix(), pose1.t
+        self.R0, self.t0 = pose0.R, pose0.t
+        self.R1, self.t1 = pose1.R, pose1.t
 
     def __call__(self, keypoint0, keypoint1):
         """
@@ -69,3 +69,31 @@ class DepthFromTriangulation(object):
         b = np.dot(R0.T, t0) - np.dot(R1.T, t1)
         depths, residuals, rank, s = np.linalg.lstsq(A, b)
         return depths
+
+
+
+class DepthFromTriangulation(object):
+    """
+    Estimate the depth corresponding to the keypoint in the first view
+
+    Args:
+        pose01 (Pose): Relative pose from viewpoint 0 to viewpoint 1
+    """
+    def __init__(self, pose01):
+        self.R, self.t = pose01.R, pose01.t
+
+    def __call__(self, keypoint0, keypoint1):
+        """
+        Args:
+            keypoint0 (np.ndarray): Keypoint in the first viewpoint
+            keypoint1 (np.ndarray): Keypoint in the second viewpoint
+        Returns:
+            Depth corresponding to the first keypoint
+        """
+        R, t = self.R, self.t
+
+        index = np.argmax(t[0:2])
+        x0 = to_homogeneous(keypoint0)
+        n = t[index] - t[2] * keypoint1[index]
+        d = np.dot(R[2], x0) * keypoint1[index] - np.dot(R[index], x0)
+        return n / d

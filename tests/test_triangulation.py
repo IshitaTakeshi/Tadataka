@@ -12,7 +12,8 @@ from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation
 from tadataka.triangulation import (
-    Triangulation, TwoViewTriangulation, DepthFromTriangulation)
+    Triangulation, TwoViewTriangulation,
+    DepthFromTriangulation, DepthsFromTriangulation)
 
 # TODO add the case such that x[3] = 0
 
@@ -135,5 +136,26 @@ def test_depths_from_triangulation():
 
     pose0 = Pose(rotation0, t0)
     pose1 = Pose(rotation1, t1)
-    depths = DepthFromTriangulation(pose0, pose1)(keypoint0, keypoint1)
+    depths = DepthsFromTriangulation(pose0, pose1)(keypoint0, keypoint1)
     assert_array_almost_equal(depths, [p0[2], p1[2]])
+
+
+def test_depths_from_triangulation():
+    projection = PerspectiveProjection(
+        CameraParameters(focal_length=[1, 1], offset=[0, 0]),
+    )
+    point = np.array([0, 0, 5])
+
+    rotvec0 = np.random.uniform(-np.pi, np.pi, 3)
+    rotation1 = Rotation.from_rotvec(rotvec0)
+    t1 = np.array([4, 1, 6])
+    pose0 = Pose.identity()
+    pose1 = Pose(rotation1, t1)
+
+    p0 = transform(pose0.R, pose0.t, point)
+    p1 = transform(pose1.R, pose1.t, point)
+    keypoint0 = projection.compute(p0)
+    keypoint1 = projection.compute(p1)
+
+    depth = DepthFromTriangulation(pose1)(keypoint0, keypoint1)
+    assert_array_almost_equal(depth, p0[2])
