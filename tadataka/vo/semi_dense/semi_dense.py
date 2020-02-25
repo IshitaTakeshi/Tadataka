@@ -162,6 +162,12 @@ class InverseDepthEstimator(object):
         xs_key = self.key_coordinates(x_key, step_size_key)
         us_key = self.camera_model_key.unnormalize(xs_key)
 
+        if not is_in_image_range(us_key, self.image_key.shape).all():
+            return np.nan, np.nan
+
+        if len(us_ref) < len(us_key):
+            return np.nan, np.nan
+
         intensities_key = interpolation(self.image_key, us_key)
         intensities_ref = interpolation(self.image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
