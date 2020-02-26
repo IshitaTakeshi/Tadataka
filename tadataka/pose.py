@@ -15,6 +15,15 @@ from tadataka.se3 import exp_se3_t_
 from tadataka._triangulation import linear_triangulation
 
 
+def check_type_(pose1, pose2):
+    if type(pose1) == type(pose2):
+        return
+
+    name1 = type(pose1).__name__
+    name2 = type(pose2).__name__
+    raise ValueError(f"Type does not match: {name1} and {name2}")
+
+
 class _Pose(object):
     def __init__(self, rotation, translation):
         assert(isinstance(rotation, Rotation))
@@ -30,24 +39,28 @@ class _Pose(object):
         with np.printoptions(precision=3, suppress=True):
             return "rotvec = " + str(rotvec)  + "   t = " + str(self.t)
 
-    @staticmethod
-    def identity():
-        return _Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+    @classmethod
+    def identity(PoseClass):
+        return PoseClass(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
-    @staticmethod
-    def from_se3(xi):
+    @classmethod
+    def from_se3(PoseClass, xi):
         rotvec = xi[3:]
-        return _Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
+        return PoseClass(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
 
     def inv(self):
+        PoseClass = type(self)
         inv_rotation = self.rotation.inv()
-        return _Pose(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
+        return PoseClass(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
 
     def __mul__(self, other):
-        return _Pose(self.rotation * other.rotation,
-                    np.dot(self.rotation.as_matrix(), other.t) + self.t)
+        check_type_(self, other)
+        PoseClass = type(self)
+        return PoseClass(self.rotation * other.rotation,
+                         np.dot(self.rotation.as_matrix(), other.t) + self.t)
 
     def __eq__(self, other):
+        check_type_(self, other)
         self_rotvec = self.rotation.as_rotvec()
         other_rotvec = other.rotation.as_rotvec()
         return (np.isclose(self_rotvec, other_rotvec).all() and

@@ -258,3 +258,33 @@ def test_to_world():
          [-1, 0, 0]]
     )
     assert_array_almost_equal(world_pose.t, [1, 0, 0])
+
+
+def test_type():
+    assert(isinstance(LocalPose.identity(), LocalPose))
+    assert(isinstance(WorldPose.identity(), WorldPose))
+
+    xi = np.random.random(6)
+    assert(isinstance(LocalPose.from_se3(xi), LocalPose))
+    assert(isinstance(WorldPose.from_se3(xi), WorldPose))
+
+    rotvec = Rotation.from_rotvec(np.random.random(3))
+    t = np.random.random(3)
+    assert(isinstance(LocalPose(rotvec, t).inv(), LocalPose))
+    assert(isinstance(WorldPose(rotvec, t).inv(), WorldPose))
+    assert(isinstance(LocalPose(rotvec, t) * LocalPose(rotvec, t), LocalPose))
+    assert(isinstance(WorldPose(rotvec, t) * WorldPose(rotvec, t), WorldPose))
+
+    message = "Type does not match: LocalPose and WorldPose"
+    with pytest.raises(ValueError, match=message):
+        LocalPose(rotvec, t) * WorldPose(rotvec, t)
+
+    with pytest.raises(ValueError, match=message):
+        LocalPose(rotvec, t) == WorldPose(rotvec, t)
+
+    message = "Type does not match: WorldPose and LocalPose"
+    with pytest.raises(ValueError, match=message):
+        WorldPose(rotvec, t) * LocalPose(rotvec, t)
+
+    with pytest.raises(ValueError, match=message):
+        WorldPose(rotvec, t) == LocalPose(rotvec, t)
