@@ -1,12 +1,13 @@
 import numpy as np
 import numba
-
+from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.interpolation import interpolation
 from tadataka.triangulation import DepthFromTriangulation
 from tadataka.rigid_transform import Transform
+from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.epipolar import (
     ReferenceCoordinates, EpipolarDirection, KeyCoordinates
 )
@@ -148,21 +149,27 @@ class InverseDepthEstimator(object):
         geo_var = self.geo_variance(x_key, self.image_grad(u_key))
         photo_var = self.photo_variance(epipolar_gradient)
         variance = calc_observation_variance(alpha, geo_var, photo_var)
+
         return invert_depth(key_depth), variance
 
 
-def estimate(self, inv_depth_map, variance_map):
-    us_key = image_coordinates(image_shape)
-    xs_key = self.camera_model_key.normalize(us_key)
+def estimate_inverse_depth_map(estimator,
+                               prior_inv_depth_map, prior_variance_map):
+    assert(prior_inv_depth_map.shape == prior_variance_map.shape)
+    search_range = InverseDepthSearchRange(min_inv_depth=1e-16,
+                                           max_inv_depth=20.0)
 
-    for x_key, u_key in zip(xs_key, us_key):
-        u, v = u_key
-        inv_depth1 = inv_depth_map[v, u]
-        variance1 = variance_map[v, u]
+    image_shape = prior_inv_depth_map.shape
+    inv_depth_map = np.empty(image_shape)
+    variance_map = np.empty(image_shape)
+    for u_key in image_coordinates(image_shape):
+        x, y = u_key
+        prior_inv_depth = prior_inv_depth_map[y, x]
+        prior_variance = prior_variance_map[y, x]
 
-        inv_depth2, variance2 = self._estimate(x_key, u_key, inv_depth1)
-        inv_depth, variance = update(inv_depth1, inv_depth2,
-                                     variance1, variance2)
-        inv_depth_map[v, u] = inv_depth
-        variance_map[v, u] = variance
+        inv_depth_range = search_range(prior_inv_depth, prior_variance)
+        inv_depth, variance = estimator(u_key, prior_inv_depth, inv_depth_range)
+
+        inv_depth_map[y, x] = inv_depth
+        variance_map[y, x] = variance
     return inv_depth_map, variance_map
