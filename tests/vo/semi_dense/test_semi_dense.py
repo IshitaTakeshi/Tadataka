@@ -94,25 +94,3 @@ def test_gradient_image():
                   0.7 * 0.1 * image_grad_y[v+1, u] +
                   0.3 * 0.1 * image_grad_y[v+1, u+1])
     assert_almost_equal(gy, expected_y)
-
-
-def test_inverse_depth_estimator():
-    prior_inv_depth = 0.15
-    variance = 0.05
-    dataset = NewTsukubaDataset(new_tsukuba)
-    keyframe, refframe = dataset[0]
-    pose_key_to_ref = calc_relative_pose(keyframe.pose, refframe.pose)
-    sigma_i = 0.01
-    sigma_l = 0.02
-    estimator = InverseDepthEstimator(
-        pose_key_to_ref, rgb2gray(keyframe.image), rgb2gray(refframe.image),
-        keyframe.camera_model, refframe.camera_model,
-        sigma_i, sigma_l,
-        step_size_ref=0.01
-    )
-    u_key = [320, 200]
-    x_key = keyframe.camera_model.normalize(np.atleast_2d(u_key))[0]
-
-    inv_depth, variance = estimator(x_key, u_key, prior_inv_depth, variance)
-    # print(keyframe.depth_map[u_key[1], u_key[0]])
-    # print(1 / inv_depth, variance)
