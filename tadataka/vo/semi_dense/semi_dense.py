@@ -101,7 +101,6 @@ class InverseDepthEstimator(object):
         self.transform = Transform(R, t)
         epipolar_direction = EpipolarDirection(t)
         self.alpha = Alpha(R, t)
-        self.inv_depth_search_range = InverseDepthSearchRange()
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
         self.key_coordinates = KeyCoordinates(epipolar_direction)
         self.photo_variance = PhotometricVariance(sigma_i)
@@ -110,13 +109,10 @@ class InverseDepthEstimator(object):
         self.calc_depth = DepthFromTriangulation(pose_key_to_ref)
         self.step_size_key = KeyStepSize(self.transform, step_size_ref)
 
-    def __call__(self, u_key, prior_inv_depth, prior_variance):
+    def __call__(self, u_key, prior_inv_depth, inv_depth_search_range):
         x_key = self.camera_model_key.normalize(u_key)
 
-        inv_depth_range = self.inv_depth_search_range(
-            prior_inv_depth, prior_variance
-        )
-        depth_range = depth_search_range(inv_depth_range)
+        depth_range = depth_search_range(inv_depth_search_range)
         x_range_ref = epipolar_search_range(self.transform, x_key, depth_range)
 
         xs_ref = self.ref_coordinates(x_range_ref)
