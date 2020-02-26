@@ -12,7 +12,7 @@ from tadataka.camera.distortion import RadTan
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.model import CameraModel
 from tadataka.matrix import get_rotation_translation, motion_matrix
-from tadataka.pose import Pose
+from tadataka.pose import WorldPose
 
 
 def camera_dir(dataset_root, camera_index):
@@ -102,8 +102,8 @@ class EurocDataset(BaseDataset):
         R0, position0 = get_rotation_translation(np.dot(T, self.T0))
         R1, position1 = get_rotation_translation(np.dot(T, self.T1))
 
-        pose0 = Pose(Rotation.from_matrix(R0), position0)
-        pose1 = Pose(Rotation.from_matrix(R1), position1)
+        pose0 = WorldPose(Rotation.from_matrix(R0), position0)
+        pose1 = WorldPose(Rotation.from_matrix(R1), position1)
 
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])

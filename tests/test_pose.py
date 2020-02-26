@@ -9,8 +9,8 @@ from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
 from tadataka.pose import (
-    calc_relative_pose, n_triangulated, Pose, pose_change_from_stereo,
-    solve_pnp, triangulation_indices
+    calc_relative_pose, estimate_pose_change, n_triangulated,
+    _Pose, LocalPose, solve_pnp, triangulation_indices
 )
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
@@ -78,25 +78,25 @@ def test_eq():
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
-    assert(Pose(rotaiton0, t0) == Pose(rotaiton0, t0))
-    assert(Pose(rotaiton1, t1) == Pose(rotaiton1, t1))
-    assert(Pose(rotaiton0, t0) != Pose(rotaiton0, t1))
-    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t0))
-    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t1))
+    assert(_Pose(rotaiton0, t0) == _Pose(rotaiton0, t0))
+    assert(_Pose(rotaiton1, t1) == _Pose(rotaiton1, t1))
+    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton0, t1))
+    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton1, t0))
+    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton1, t1))
 
 
 def test_identity():
-    pose = Pose.identity()
+    pose = _Pose.identity()
     assert_array_equal(pose.rotation.as_rotvec(), np.zeros(3))
     assert_array_equal(pose.t, np.zeros(3))
 
 
 def test_R():
-    pose = Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+    pose = _Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
     assert_array_almost_equal(pose.R, np.identity(3))
 
     rotvec, t = np.array([np.pi, 0, 0]), np.zeros(3)
-    pose = Pose(Rotation.from_rotvec(rotvec), t)
+    pose = _Pose(Rotation.from_rotvec(rotvec), t)
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
 
 
@@ -107,7 +107,7 @@ def test_inv():
 
         t = np.random.uniform(-10, 10, 3)
 
-        p = Pose(rotation, t)
+        p = _Pose(rotation, t)
 
         q = p * p.inv()
         assert_array_almost_equal(q.rotation.as_rotvec(), np.zeros(3))
@@ -116,8 +116,8 @@ def test_inv():
 
 def test_mul():
     # case1
-    pose1 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
-    pose2 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose1 = _Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose2 = _Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
     pose3 = pose1 * pose2
     assert_array_equal(pose3.rotation.as_rotvec(), np.zeros(3))
     assert_array_equal(pose3.t, 2 * np.ones(3))
@@ -128,8 +128,8 @@ def test_mul():
     rotvec2 = 0.4 * axis
     t1 = np.array([0.2, 0.4, -0.1])
     t2 = np.array([-0.1, 2.0, 0.1])
-    pose1 = Pose(Rotation.from_rotvec(rotvec1), t1)
-    pose2 = Pose(Rotation.from_rotvec(rotvec2), t2)
+    pose1 = _Pose(Rotation.from_rotvec(rotvec1), t1)
+    pose2 = _Pose(Rotation.from_rotvec(rotvec2), t2)
     pose3 = pose1 * pose2
 
     assert_array_almost_equal(pose3.rotation.as_rotvec(), 0.5 * axis)
@@ -178,12 +178,12 @@ def test_estimate_pose_change():
         P1 = transform(R_true, t_true, X_true)
         keypoints0 = projection.compute(P0)
         keypoints1 = projection.compute(P1)
-        R, t = pose_change_from_stereo(keypoints0, keypoints1)
+        pose = estimate_pose_change(keypoints0, keypoints1)
 
-        assert_array_almost_equal(R, R_true)
+        assert_array_almost_equal(pose.R, R_true)
         # test if t and t_true are parallel
         # because we cannot know the scale
-        assert_array_almost_equal(np.cross(t, t_true), np.zeros(3))
+        assert_array_almost_equal(np.cross(pose.t, t_true), np.zeros(3))
 
     def case2():
         # 5 points are behind cameras
@@ -195,7 +195,7 @@ def test_estimate_pose_change():
 
         message = "Most of points are behind cameras. Maybe wrong matches?"
         with pytest.warns(RuntimeWarning, match=message):
-            pose_change_from_stereo(keypoints0, keypoints1)
+            estimate_pose_change(keypoints0, keypoints1)
 
     case1()
     case2()
@@ -206,8 +206,8 @@ def test_calc_relative_pose():
     rotation1 = Rotation.from_rotvec([-0.1, -1.1, 1.4])
     t0 = np.array([3.0, 0.0, 2.1])
     t1 = np.array([-4.3, 6.1, -1.1])
-    pose0 = Pose(rotation0, t0)
-    pose1 = Pose(rotation1, t1)
+    pose0 = LocalPose(rotation0, t0)
+    pose1 = LocalPose(rotation1, t1)
 
     pose01 = calc_relative_pose(pose0, pose1)
 

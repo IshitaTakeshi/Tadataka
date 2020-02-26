@@ -6,7 +6,6 @@ from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.interpolation import interpolation
 from tadataka.triangulation import DepthFromTriangulation
-from tadataka.pose import Pose
 from tadataka.rigid_transform import Transform
 from tadataka.vo.semi_dense.epipolar import (
     ReferenceCoordinates, EpipolarDirection, KeyCoordinates

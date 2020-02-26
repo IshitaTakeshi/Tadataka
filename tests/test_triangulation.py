@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraParameters
 from tadataka.dataset.observations import generate_translations
-from tadataka.pose import Pose
+from tadataka.pose import LocalPose
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation
@@ -72,8 +72,8 @@ def test_linear_triangulation():
 
 def test_two_view_triangulation():
     triangulator = TwoViewTriangulation(
-        Pose(Rotation.from_matrix(R0), t0),
-        Pose(Rotation.from_matrix(R1), t1)
+        LocalPose(Rotation.from_matrix(R0), t0),
+        LocalPose(Rotation.from_matrix(R1), t1)
     )
 
     points, depths = triangulator.triangulate(keypoints0, keypoints1)
@@ -92,9 +92,9 @@ def test_two_view_triangulation():
 
 def test_triangulation():
     triangulator = Triangulation(
-        [Pose(Rotation.from_matrix(R0), t0),
-         Pose(Rotation.from_matrix(R1), t1),
-         Pose(Rotation.from_matrix(R2), t2)]
+        [LocalPose(Rotation.from_matrix(R0), t0),
+         LocalPose(Rotation.from_matrix(R1), t1),
+         LocalPose(Rotation.from_matrix(R2), t2)]
     )
 
     keypoints = np.stack((
@@ -134,8 +134,8 @@ def test_depths_from_triangulation():
     keypoint0 = projection.compute(p0)
     keypoint1 = projection.compute(p1)
 
-    pose0 = Pose(rotation0, t0)
-    pose1 = Pose(rotation1, t1)
+    pose0 = LocalPose(rotation0, t0)
+    pose1 = LocalPose(rotation1, t1)
     depths = DepthsFromTriangulation(pose0, pose1)(keypoint0, keypoint1)
     assert_array_almost_equal(depths, [p0[2], p1[2]])
 
@@ -149,8 +149,8 @@ def test_depths_from_triangulation():
     rotvec0 = np.random.uniform(-np.pi, np.pi, 3)
     rotation1 = Rotation.from_rotvec(rotvec0)
     t1 = np.array([4, 1, 6])
-    pose0 = Pose.identity()
-    pose1 = Pose(rotation1, t1)
+    pose0 = LocalPose.identity()
+    pose1 = LocalPose(rotation1, t1)
 
     p0 = transform(pose0.R, pose0.t, point)
     p1 = transform(pose1.R, pose1.t, point)

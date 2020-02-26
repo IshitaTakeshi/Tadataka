@@ -29,7 +29,7 @@ def convert_coordinates(pose, f):
     return Pose(Rotation.from_rotvec(rotvec), t)
 
 
-class Pose(object):
+class _Pose(object):
     def __init__(self, rotation, translation):
         assert(isinstance(rotation, Rotation))
         self.rotation = rotation  # SciPy's Rotation object
@@ -44,27 +44,21 @@ class Pose(object):
         with np.printoptions(precision=3, suppress=True):
             return "rotvec = " + str(rotvec)  + "   t = " + str(self.t)
 
-    def world_to_local(self):
-        return convert_coordinates(self, world_to_local)
-
-    def local_to_world(self):
-        return convert_coordinates(self, local_to_world)
-
     @staticmethod
     def identity():
-        return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+        return _Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
     @staticmethod
     def from_se3(xi):
         rotvec = xi[3:]
-        return Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
+        return _Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
 
     def inv(self):
         inv_rotation = self.rotation.inv()
-        return Pose(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
+        return _Pose(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
 
     def __mul__(self, other):
-        return Pose(self.rotation * other.rotation,
+        return _Pose(self.rotation * other.rotation,
                     np.dot(self.rotation.as_matrix(), other.t) + self.t)
 
     def __eq__(self, other):
@@ -72,6 +66,18 @@ class Pose(object):
         other_rotvec = other.rotation.as_rotvec()
         return (np.isclose(self_rotvec, other_rotvec).all() and
                 np.isclose(self.t, other.t).all())
+
+
+class WorldPose(_Pose):
+    """Pose in the world coordinate system"""
+    def to_local(self):
+        return convert_coordinates(self, world_to_local)
+
+
+class LocalPose(_Pose):
+    """Pose in the local (camera) coordinate system"""
+    def to_world(self):
+        return convert_coordinates(self, local_to_world)
 
 
 def calc_reprojection_threshold(keypoints, k=2.0):
@@ -106,7 +112,7 @@ def solve_pnp(points, keypoints):
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")
 
-    return Pose(Rotation.from_rotvec(omega.flatten()), t.flatten())
+    return LocalPose(Rotation.from_rotvec(omega.flatten()), t.flatten())
 
 
 # We triangulate only subset of keypoints to determine valid
@@ -176,7 +182,7 @@ def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
     # regarding viewpoint 0 as identity (world origin)
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
-    return Pose(Rotation.from_matrix(R), t)
+    return LocalPose(Rotation.from_matrix(R), t)
 
 
 def calc_relative_pose(src, dst):

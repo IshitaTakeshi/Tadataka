@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from scipy.linalg import expm
 from tadataka.se3 import exp_se3, log_se3
-from tadataka.pose import Pose
+from tadataka.pose import _Pose
 
 
 def tangent_se3_(xi):
@@ -41,7 +41,7 @@ def test_log_se3():
 def test_from_se3():
     for i in range(10):
         xi = np.random.uniform(-2, 2, 6)
-        pose = Pose.from_se3(xi)
+        pose = _Pose.from_se3(xi)
         G = expm(tangent_se3_(xi))
         assert_array_almost_equal(pose.R, G[0:3, 0:3])
         assert_array_almost_equal(pose.t, G[0:3, 3])

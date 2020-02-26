@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 from tadataka import _triangulation as TR
-from tadataka.pose import Pose
 from tadataka.exceptions import InvalidDepthException
 from tadataka.feature import empty_match
 from tadataka.matrix import to_homogeneous

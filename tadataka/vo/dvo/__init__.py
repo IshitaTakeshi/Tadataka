@@ -15,7 +15,7 @@ from tadataka.se3 import exp_se3, get_rotation, get_translation
 from tadataka.vo.dvo.mask import compute_mask
 from tadataka.vo.dvo.projection import inverse_projection, projection
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
-from tadataka.pose import Pose
+from tadataka.pose import LocalPose
 from tadataka.robust.weights import (compute_weights_huber,
                                      compute_weights_student_t,
                                      compute_weights_tukey)
@@ -95,13 +95,13 @@ class PoseChangeEstimator(object):
     def estimate(self, n_coarse_to_fine=5):
         levels = list(reversed(range(n_coarse_to_fine)))
 
-        pose = Pose.identity()
+        pose = LocalPose.identity()
         for level in levels:
             try:
                 pose = self.estimate_motion_at(level, pose)
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
-                return Pose.identity()
+                return LocalPose.identity()
         # invert because 'pose' is representing the pose change from t1 to t0
         return pose.inv()
 
@@ -145,14 +145,14 @@ class PoseChangeEstimator(object):
             if norm(dxi) < self.epsilon:
                 break
 
-            dpose = Pose.from_se3(dxi)
+            dpose = LocalPose.from_se3(dxi)
             pose = pose * dpose
         return pose
 
 
 class DVO(object):
     def __init__(self):
-        self.pose = Pose.identity()
+        self.pose = LocalPose.identity()
         self.frames = []
 
     def estimate(self, frame1):
