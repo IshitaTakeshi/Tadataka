@@ -26,15 +26,17 @@ def calc_observation_variance(alpha, geo_variance, photo_variance):
 
 
 class InverseDepthSearchRange(object):
-    def __init__(self, factor=2.0, min_inv_depth=1e-16):
+    def __init__(self, min_inv_depth, max_inv_depth, factor=2.0):
         assert(min_inv_depth > 0.0)
+        assert(max_inv_depth > min_inv_depth)
         self.factor = factor
         self.min_inv_depth = min_inv_depth
+        self.max_inv_depth = max_inv_depth
 
     def __call__(self, inv_depth, variance):
         assert(variance >= 0.0)
         L = max(inv_depth - self.factor * variance, self.min_inv_depth)
-        U = inv_depth + self.factor * variance
+        U = min(inv_depth + self.factor * variance, self.max_inv_depth)
         return L, U
 
 

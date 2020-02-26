@@ -38,13 +38,19 @@ def test_depth_search_range():
 
 
 def test_inverse_depth_search_range():
-    inv_depth_range = InverseDepthSearchRange(factor=2.0, min_inv_depth=0.02)
+    inv_depth_range = InverseDepthSearchRange(
+        min_inv_depth=0.02, max_inv_depth=20.0, factor=2.0)
     assert_equal(inv_depth_range(1.0, 0.2), (0.6, 1.4))
     assert_equal(inv_depth_range(1.0, 1.5), (0.02, 4.0))
+    assert_equal(inv_depth_range(18.0, 1.5), (15.0, 20.0))
 
     with pytest.raises(AssertionError):
         # min_inv_depth must be positive
-        InverseDepthSearchRange(factor=2.0, min_inv_depth=-0.01)
+        InverseDepthSearchRange(min_inv_depth=-0.01, max_inv_depth=1.0)
+
+    with pytest.raises(AssertionError):
+        # max_inv_depth must be greater than min_inv_depth
+        InverseDepthSearchRange(min_inv_depth=1.0, max_inv_depth=0.9)
 
 
 def test_epipolar_search_range():
