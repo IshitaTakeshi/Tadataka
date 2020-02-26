@@ -90,10 +90,12 @@ def epipolar_search_range(transform, x_key, depth_range):
 class InverseDepthEstimator(object):
     def __init__(self, pose_key_to_ref, image_key, image_ref,
                  camera_model_key, camera_model_ref,
-                 sigma_i, sigma_l, step_size_ref):
+                 sigma_i, sigma_l, step_size_ref,
+                 min_gradient):
         self.image_key, self.image_ref = image_key, image_ref
         self.camera_model_key = camera_model_key
         self.camera_model_ref = camera_model_ref
+        self.min_gradient = min_gradient
 
         R, t = pose_key_to_ref.R, pose_key_to_ref.t
         self.transform = Transform(R, t)
@@ -133,6 +135,10 @@ class InverseDepthEstimator(object):
             return np.nan, np.nan
 
         intensities_key = interpolation(self.image_key, us_key)
+        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
+        if epipolar_gradient < self.min_gradient:
+            return np.nan, np.nan
+
         intensities_ref = interpolation(self.image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
@@ -143,7 +149,6 @@ class InverseDepthEstimator(object):
 
         alpha = self.alpha(x_key, x_ref, x_range_ref)
 
-        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         geo_var = self.geo_variance(x_key, self.image_grad(u_key))
         photo_var = self.photo_variance(epipolar_gradient)
         variance = calc_observation_variance(alpha, geo_var, photo_var)
