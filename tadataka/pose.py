@@ -6,7 +6,6 @@ from scipy.spatial.transform import Rotation
 # TODO make this independent from cv2
 import cv2
 
-from tadataka.coordinates import local_to_world, world_to_local
 from tadataka.depth import (depth_condition, warn_points_behind_cameras,
                             compute_depth_mask)
 from tadataka.exceptions import NotEnoughInliersException
@@ -14,19 +13,6 @@ from tadataka.matrix import estimate_fundamental, decompose_essential
 from tadataka.so3 import exp_so3, log_so3
 from tadataka.se3 import exp_se3_t_
 from tadataka._triangulation import linear_triangulation
-
-
-def convert_coordinates_(rotvec, t, f):
-    rotvec, t = rotvec.reshape(1, -1), t.reshape(1, -1)
-    rotvec, t = f(rotvec, t)
-    return rotvec[0], t[0]
-
-
-def convert_coordinates(pose, f):
-    rotation, t = pose.rotation, pose.t
-    rotvec = rotation.as_rotvec()
-    rotvec, t = convert_coordinates_(rotvec, t, f)
-    return Pose(Rotation.from_rotvec(rotvec), t)
 
 
 class _Pose(object):
@@ -68,16 +54,21 @@ class _Pose(object):
                 np.isclose(self.t, other.t).all())
 
 
+def convert_coordinate(rotation, t):
+    inv_rotation = rotation.inv()
+    return inv_rotation, -np.dot(inv_rotation.as_matrix(), t)
+
+
 class WorldPose(_Pose):
     """Pose in the world coordinate system"""
     def to_local(self):
-        return convert_coordinates(self, world_to_local)
+        return LocalPose(*convert_coordinate(self.rotation, self.t))
 
 
 class LocalPose(_Pose):
     """Pose in the local (camera) coordinate system"""
     def to_world(self):
-        return convert_coordinates(self, local_to_world)
+        return WorldPose(*convert_coordinate(self.rotation, self.t))
 
 
 def calc_reprojection_threshold(keypoints, k=2.0):

@@ -10,7 +10,7 @@ from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
 from tadataka.pose import (
     calc_relative_pose, estimate_pose_change, n_triangulated,
-    _Pose, LocalPose, solve_pnp, triangulation_indices
+    solve_pnp, triangulation_indices, _Pose, LocalPose, WorldPose
 )
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
@@ -219,3 +219,42 @@ def test_calc_relative_pose():
     p1_true = transform(pose1.R, pose1.t, point)
 
     assert_array_almost_equal(p1_true, p1_pred)
+
+
+def test_to_local():
+    rotation = Rotation.from_matrix([
+        [0, 0, 1],
+        [0, 1, 0],
+        [-1, 0, 0]
+    ])
+    t = np.array([1, 0, 0])
+    local_pose = WorldPose(rotation, t).to_local()
+    assert(isinstance(local_pose, LocalPose))
+
+    assert_array_almost_equal(
+        local_pose.R,
+        [[0, 0, -1],
+         [0, 1, 0],
+         [1, 0, 0]]
+    )
+    assert_array_almost_equal(local_pose.t, [0, 0, -1])
+
+
+def test_to_world():
+    rotation = Rotation.from_matrix([
+        [0, 0, -1],
+        [0, 1, 0],
+        [1, 0, 0]
+    ])
+    t = np.array([0, 0, -1])
+    world_pose = LocalPose(rotation, t).to_world()
+
+    assert(isinstance(world_pose, WorldPose))
+
+    assert_array_almost_equal(
+        world_pose.R,
+        [[0, 0, 1],
+         [0, 1, 0],
+         [-1, 0, 0]]
+    )
+    assert_array_almost_equal(world_pose.t, [1, 0, 0])
