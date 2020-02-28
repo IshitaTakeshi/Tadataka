@@ -81,6 +81,8 @@ def test_radtan_distort():
     r4 = np.array([1, 16, 1, 16, 25]).reshape(-1, 1)
     r6 = np.array([1, 64, 1, 64, 125]).reshape(-1, 1)
 
+    assert_array_equal(RadTan([0, 0, 0, 0]).distort(X), X)
+
     assert_array_equal(RadTan([2, 0, 0, 0]).distort(X),
                        X * (1 + 2 * r2))
 
@@ -125,7 +127,7 @@ def test_radtan_distort():
     assert_array_equal(RadTan([0, 0, 0, 0]).distort(X), X)
 
 
-def test_undistort():
+def test_radtan_undistort():
     X_true = np.array([
         [0, 0],
         [0, 1],
@@ -141,7 +143,7 @@ def test_undistort():
     Y = model.distort(X_true)
     X_pred = model.undistort(Y)
 
-    assert_array_almost_equal(X_true, X_pred, decimal=4)
+    assert_array_almost_equal(X_true, X_pred, decimal=20)
 
 
 def test_eq():

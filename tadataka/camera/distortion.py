@@ -2,8 +2,10 @@
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
 import numpy as np
-from autograd import jacobian
-from autograd import numpy as anp
+from tadataka.camera.radtan_codegen import distort as radtan_distort
+from tadataka.camera.radtan_codegen import (
+    distort_jacobian as radtan_distort_jacobian
+)
 
 EPSILON = 1e-4
 
@@ -94,30 +96,19 @@ class RadTan(BaseDistortion):
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
     def _distort(self, p):
-        k1, k2, p1, p2, k3 = self.dist_coeffs
-
-        r2 = anp.sum(anp.power(p, 2))
-        r4 = anp.power(r2, 2)
-        r6 = anp.power(r2, 3)
-        kr = 1 + k1 * r2 + k2 * r4 + k3 * r6
-
-        x, y = p
-        return anp.array([
-            x * kr + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x),
-            y * kr + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y)
-        ])
+        return radtan_distort(p, self.dist_coeffs).flatten()
 
     def distort(self, undistorted_keypoints):
-        N = undistorted_keypoints.shape[0]
-        Q = np.empty(undistorted_keypoints.shape)
-        for i in range(N):
-            Q[i] = self._distort(undistorted_keypoints[i])
+        P = undistorted_keypoints
+        Q = np.empty(P.shape)
+        for i in range(P.shape[0]):
+            Q[i] = self._distort(P[i])
         return Q
 
     def _undistort(self, q, max_iter=100, threshold=1e-10):
-        p = anp.array(q)
+        p = np.copy(q)
         for i in range(max_iter):
-            J = jacobian(self._distort)(p)
+            J = radtan_distort_jacobian(p, self.dist_coeffs)
             r = q - self._distort(p)
             d = np.linalg.solve(J, r)
 
@@ -128,10 +119,10 @@ class RadTan(BaseDistortion):
         return p
 
     def undistort(self, distorted_keypoints):
-        N = distorted_keypoints.shape[0]
-        P = np.empty(distorted_keypoints.shape)
-        for i in range(N):
-            P[i] = self._undistort(distorted_keypoints[i])
+        Q = distorted_keypoints
+        P = np.empty(Q.shape)
+        for i in range(Q.shape[0]):
+            P[i] = self._undistort(Q[i])
         return P
 
     @staticmethod
