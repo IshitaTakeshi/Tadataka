@@ -50,8 +50,7 @@ class _Pose(object):
 
     def inv(self):
         PoseClass = type(self)
-        inv_rotation = self.rotation.inv()
-        return PoseClass(inv_rotation, -np.dot(inv_rotation.as_matrix(), self.t))
+        return PoseClass(*convert_coordinate(self.rotation, self.t))
 
     def __mul__(self, other):
         check_type_(self, other)
@@ -184,7 +183,7 @@ def pose_change_from_stereo(keypoints0, keypoints1):
 
 def estimate_pose_change(keypoints0, keypoints1):
     # estimate pose change between viewpoint 0 and 1
-    # regarding viewpoint 0 as identity (world origin)
+    # regarding viewpoint 0 as identity
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
     return LocalPose(Rotation.from_matrix(R), t)
 
