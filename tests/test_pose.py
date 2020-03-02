@@ -206,19 +206,50 @@ def test_calc_relative_pose():
     rotation1 = Rotation.from_rotvec([-0.1, -1.1, 1.4])
     t0 = np.array([3.0, 0.0, 2.1])
     t1 = np.array([-4.3, 6.1, -1.1])
-    pose0 = LocalPose(rotation0, t0)
-    pose1 = LocalPose(rotation1, t1)
 
-    pose01 = calc_relative_pose(pose0, pose1)
+    point = np.array([4.0, 2.0, -5.0])  # point in the world coordinate
 
-    point = np.array([4.0, 2.0, -5.0])
+    def case_local():
+        # pose0 represents transformation from the world coordinate
+        # onto the 0th camera coordinate
+        # pose1 represents transformation from the world coordinate
+        # onto the 1st camera coordinate
+        # pose01 should be the transformation
+        # from the 0th camera coordinate
+        # onto the 1st camera coordinate
+        pose0 = LocalPose(rotation0, t0)
+        pose1 = LocalPose(rotation1, t1)
 
-    p0 = transform(pose0.R, pose0.t, point)
-    p1_pred = transform(pose01.R, pose01.t, p0)
+        pose01 = calc_relative_pose(pose0, pose1)
 
-    p1_true = transform(pose1.R, pose1.t, point)
+        p0 = transform(pose0.R, pose0.t, point)
+        p1_pred = transform(pose01.R, pose01.t, p0)
 
-    assert_array_almost_equal(p1_true, p1_pred)
+        p1_true = transform(pose1.R, pose1.t, point)
+
+        assert_array_almost_equal(p1_true, p1_pred)
+
+    def case_world():
+        # pose0 transforms a point in the world coordinate
+        # to another location (say this is the 0th location) in the world
+        # pose1 transforms a point in the world coordinate
+        # to another location (say this is the 1st location) in the world
+        # pose01 should be the transformation
+        # from the 0th location to the 1st location
+        pose0 = WorldPose(rotation0, t0)
+        pose1 = WorldPose(rotation1, t1)
+
+        pose01 = calc_relative_pose(pose0, pose1)
+
+        p0 = transform(pose0.R, pose0.t, point)
+        p1_pred = transform(pose01.R, pose01.t, p0)
+
+        p1_true = transform(pose1.R, pose1.t, point)
+
+        assert_array_almost_equal(p1_true, p1_pred)
+
+    case_local()
+    case_world()
 
 
 def test_to_local():
