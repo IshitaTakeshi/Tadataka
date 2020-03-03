@@ -1,18 +1,19 @@
 import numpy as np
 import numba
+
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.interpolation import interpolation
 from tadataka.triangulation import DepthFromTriangulation
-from tadataka.rigid_transform import Transform
+from tadataka.rigid_transform import transform
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.epipolar import (
-    ReferenceCoordinates, EpipolarDirection, KeyCoordinates
+    reference_coordinates, key_coordinates
 )
 from tadataka.vo.semi_dense.variance import (
-    PhotometricVariance, GeometricVariance, Alpha
+    photometric_variance, geometric_variance, Alpha
 )
 from tadataka.vo.semi_dense.intensities import search_intensities
 from tadataka.gradient import grad_x, grad_y
@@ -41,26 +42,16 @@ class InverseDepthSearchRange(object):
         return L, U
 
 
-def calc_depth_ref(transform, x_key, depth_key):
-    q = transform(depth_key * to_homogeneous(x_key))
+def calc_depth_ref(x_key, depth_key, R, t):
+    q = transform(R, t, depth_key * to_homogeneous(x_key))
     return q[2]
 
 
-def step_size_ratio(transform, x_key, inv_depth_key):
+def step_size_ratio(x_key, inv_depth_key, R, t):
     depth_key = invert_depth(inv_depth_key)
-    depth_ref = calc_depth_ref(transform, x_key, depth_key)
+    depth_ref = calc_depth_ref(x_key, depth_key, R, t)
     inv_depth_ref = invert_depth(depth_ref)
     return inv_depth_key / inv_depth_ref
-
-
-class KeyStepSize(object):
-    def __init__(self, transform, step_size_ref):
-        self.transform = transform
-        self.step_size_ref = step_size_ref
-
-    def __call__(self, x_key, inv_depth):
-        ratio = step_size_ratio(self.transform, x_key, inv_depth)
-        return ratio * self.step_size_ref
 
 
 class GradientImage(object):
@@ -81,73 +72,73 @@ def depth_search_range(inv_depth_range):
     return min_depth, max_depth
 
 
-def epipolar_search_range(transform, x_key, depth_range):
+def epipolar_search_range(x_key, depth_range, R, t):
     min_depth, max_depth = depth_range
-    x_ref_min = pi(transform(to_homogeneous(x_key) * min_depth))
-    x_ref_max = pi(transform(to_homogeneous(x_key) * max_depth))
+    x_ref_min = pi(transform(R, t, to_homogeneous(x_key) * min_depth))
+    x_ref_max = pi(transform(R, t, to_homogeneous(x_key) * max_depth))
     return x_ref_min, x_ref_max
 
 
 class InverseDepthEstimator(object):
-    def __init__(self, pose_key_to_ref, image_key, image_ref,
-                 camera_model_key, camera_model_ref,
+    def __init__(self, image_key, camera_model_key,
                  sigma_i, sigma_l, step_size_ref,
                  min_gradient):
-        self.image_key, self.image_ref = image_key, image_ref
+        self.sigma_l = sigma_l
+        self.sigma_i = sigma_i
+        self.image_key = image_key
         self.camera_model_key = camera_model_key
-        self.camera_model_ref = camera_model_ref
         self.min_gradient = min_gradient
 
-        R, t = pose_key_to_ref.R, pose_key_to_ref.t
-        self.transform = Transform(R, t)
-        epipolar_direction = EpipolarDirection(t)
-        self.alpha = Alpha(R, t)
+        self.step_size_ref = step_size_ref
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
-        self.key_coordinates = KeyCoordinates(epipolar_direction)
-        self.photo_variance = PhotometricVariance(sigma_i)
-        self.geo_variance = GeometricVariance(epipolar_direction, sigma_l)
-        self.ref_coordinates = ReferenceCoordinates(step_size_ref)
-        self.calc_depth = DepthFromTriangulation(pose_key_to_ref)
-        self.step_size_key = KeyStepSize(self.transform, step_size_ref)
 
-    def __call__(self, u_key, prior_inv_depth, inv_depth_search_range):
+    def __call__(self, pose_key_to_ref, camera_model_ref, image_ref, u_key,
+                 prior_inv_depth, inv_depth_search_range):
+        R, t = pose_key_to_ref.R, pose_key_to_ref.t
+
+        # image of reference camera center on the keyframe
+        pi_t = pi(t)
+
         x_key = self.camera_model_key.normalize(u_key)
-
-        depth_range = depth_search_range(inv_depth_search_range)
-        x_range_ref = epipolar_search_range(self.transform, x_key, depth_range)
-
-        xs_ref = self.ref_coordinates(x_range_ref)
-        us_ref = self.camera_model_ref.unnormalize(xs_ref)
-        mask = is_in_image_range(us_ref, self.image_ref.shape)
-        xs_ref, us_ref = xs_ref[mask], us_ref[mask]
-
-        step_size_key = self.step_size_key(x_key, prior_inv_depth)
-        xs_key = self.key_coordinates(x_key, step_size_key)
+        ratio = step_size_ratio(x_key, prior_inv_depth, R, t)
+        step_size_key = ratio * self.step_size_ref
+        xs_key = key_coordinates(x_key, pi_t, step_size_key)
         us_key = self.camera_model_key.unnormalize(xs_key)
 
         if not is_in_image_range(us_key, self.image_key.shape).all():
             return np.nan, np.nan
 
-        if len(us_ref) < len(us_key):
+        depth_range = depth_search_range(inv_depth_search_range)
+        x_range_ref = epipolar_search_range(x_key, depth_range, R, t)
+
+        xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
+        us_ref = camera_model_ref.unnormalize(xs_ref)
+        mask = is_in_image_range(us_ref, image_ref.shape)
+        xs_ref, us_ref = xs_ref[mask], us_ref[mask]
+
+        if len(xs_ref) < len(xs_key):
             return np.nan, np.nan
 
+        print(us_key, self.image_key.shape,
+              is_in_image_range(us_key, self.image_key.shape).all())
         intensities_key = interpolation(self.image_key, us_key)
         epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
             return np.nan, np.nan
 
-        intensities_ref = interpolation(self.image_ref, us_ref)
+        intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
 
-        u_ref = self.camera_model_ref.unnormalize(x_ref)
+        u_ref = camera_model_ref.unnormalize(x_ref)
 
-        key_depth = self.calc_depth(x_key, x_ref)
+        key_depth = DepthFromTriangulation(pose_key_to_ref)(x_key, x_ref)
 
-        alpha = self.alpha(x_key, x_ref, x_range_ref)
+        alpha = Alpha(R, t)(x_key, x_ref, x_range_ref)
 
-        geo_var = self.geo_variance(x_key, self.image_grad(u_key))
-        photo_var = self.photo_variance(epipolar_gradient)
+        image_grad = self.image_grad(u_key)
+        geo_var = geometric_variance(x_key, pi_t, image_grad, self.sigma_l)
+        photo_var = photometric_variance(epipolar_gradient, self.sigma_i)
         variance = calc_observation_variance(alpha, geo_var, photo_var)
 
         return invert_depth(key_depth), variance

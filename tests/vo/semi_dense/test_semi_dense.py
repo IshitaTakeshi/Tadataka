@@ -10,7 +10,6 @@ from tadataka.coordinates import image_coordinates
 from tadataka.vo.semi_dense.semi_dense import (
     step_size_ratio, depth_search_range, epipolar_search_range,
     GradientImage, InverseDepthEstimator, InverseDepthSearchRange)
-from tadataka.rigid_transform import Transform
 
 from tests.dataset.path import new_tsukuba
 
@@ -26,7 +25,7 @@ def test_step_size_ratio():
     inv_depth = 0.25
 
     assert_almost_equal(
-        step_size_ratio(Transform(R, t), x_key, inv_depth),
+        step_size_ratio(x_key, inv_depth, R, t),
         0.25 / (1 / -20)
     )
 
@@ -63,8 +62,7 @@ def test_epipolar_search_range():
     x_key = np.array([-1, 4])
     depth_range = (4, 8)
 
-    transform = Transform(R, t)
-    x_ref_min, x_ref_max = epipolar_search_range(transform, x_key, depth_range)
+    x_ref_min, x_ref_max = epipolar_search_range(x_key, depth_range, R, t)
 
     # 4 * [1  4  1] + [-1  4  2] = [4-1  16+4  4+2]
     # 8 * [1  4  1] + [-1  4  2] = [8-1  32+4  8+2]

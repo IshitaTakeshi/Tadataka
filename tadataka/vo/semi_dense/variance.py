@@ -4,32 +4,25 @@ from tadataka.vector import normalize_length
 from tadataka.matrix import to_homogeneous
 
 
-class PhotometricVariance(object):
-    def __init__(self, sigma_i):
-        self.sigma_i = sigma_i
-
-    def __call__(self, gradient_along_epipolar_line):
-        # Calculate photometric disparity error
-        sigma_i = self.sigma_i
-        return 2 * (sigma_i * sigma_i) / gradient_along_epipolar_line
+EPSILON = 1e-16
 
 
-class GeometricVariance(object):
-    def __init__(self, epipolar_direction, sigma_l):
-        self.epipolar_direction = epipolar_direction
-        self.sigma_l = sigma_l
+def photometric_variance(gradient_along_epipolar_line, sigma_i):
+    # Calculate photometric disparity error
+    return 2 * (sigma_i * sigma_i) / gradient_along_epipolar_line
 
-    def __call__(self, x, image_gradient):
-        direction = self.epipolar_direction(x)
-        # Calculate geometric disparity error
-        p = np.dot(direction, image_gradient)
 
-        # normalization terms
-        ng = np.dot(image_gradient, image_gradient)
-        nl = np.dot(direction, direction)
-        var = self.sigma_l * self.sigma_l
+def geometric_variance(x, pi_t, image_gradient, sigma_l):
+    direction = x - pi_t
+    # Calculate geometric disparity error
+    p = np.dot(direction, image_gradient)
 
-        return (var * ng * nl) / (p * p)
+    # normalization terms
+    ng = np.dot(image_gradient, image_gradient)
+    nl = np.dot(direction, direction)
+    var = sigma_l * sigma_l
+
+    return (var * ng * nl) / (p * p + EPSILON)
 
 
 def calc_alphas(x_key, x_ref, epipolar_direction_ref, R, t):

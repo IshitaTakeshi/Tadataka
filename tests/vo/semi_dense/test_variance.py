@@ -4,20 +4,19 @@ from numpy.linalg import norm
 
 from tadataka.vo.semi_dense.variance import (
     Alpha, alpha_index, calc_alphas,
-    GeometricVariance, PhotometricVariance
+    geometric_variance, photometric_variance
 )
-
-from tadataka.vo.semi_dense.epipolar import EpipolarDirection
 
 
 def test_geomteric_disparity_error():
     t = np.array([-8, 6, 2])
+    pi_t = t[0:2] / t[2]
     sigma_l = 0.5
 
     gradient = np.array([2, -3])
     x = np.array([2, 5])
 
-    variance = GeometricVariance(EpipolarDirection(t), sigma_l)(x, gradient)
+    variance = geometric_variance(x, pi_t, gradient, sigma_l)
 
     direction = np.array([6, 2])  # x - pi(t)
     d = np.dot(direction / norm(direction), gradient / norm(gradient))
@@ -27,7 +26,7 @@ def test_geomteric_disparity_error():
 def test_photometric_variance():
     sigma_i = 2.0
     gradient = 10.0
-    variance = PhotometricVariance(sigma_i)(gradient)
+    variance = photometric_variance(gradient, sigma_i)
     assert(variance == 0.8)
 
 
