@@ -83,11 +83,16 @@ class InverseDepthEstimator(object):
     def __init__(self, image_key, camera_model_key,
                  sigma_i, sigma_l, step_size_ref,
                  min_gradient):
+        assert(np.ndim(image_key) == 2)
+
         self.sigma_l = sigma_l
         self.sigma_i = sigma_i
         self.image_key = image_key
         self.camera_model_key = camera_model_key
         self.min_gradient = min_gradient
+        # -1 for bilinear interpolation
+        height, width = image_key.shape
+        self.coordinate_range = (height-1, width-1)
 
         self.step_size_ref = step_size_ref
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
@@ -105,7 +110,7 @@ class InverseDepthEstimator(object):
         xs_key = key_coordinates(x_key, pi_t, step_size_key)
         us_key = self.camera_model_key.unnormalize(xs_key)
 
-        if not is_in_image_range(us_key, self.image_key.shape).all():
+        if not is_in_image_range(us_key, self.coordinate_range).all():
             return np.nan, np.nan
 
         depth_range = depth_search_range(inv_depth_search_range)
@@ -113,14 +118,12 @@ class InverseDepthEstimator(object):
 
         xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
         us_ref = camera_model_ref.unnormalize(xs_ref)
-        mask = is_in_image_range(us_ref, image_ref.shape)
+        mask = is_in_image_range(us_ref, self.coordinate_range)
         xs_ref, us_ref = xs_ref[mask], us_ref[mask]
 
         if len(xs_ref) < len(xs_key):
             return np.nan, np.nan
 
-        print(us_key, self.image_key.shape,
-              is_in_image_range(us_key, self.image_key.shape).all())
         intensities_key = interpolation(self.image_key, us_key)
         epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
