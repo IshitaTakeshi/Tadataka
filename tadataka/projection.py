@@ -28,5 +28,22 @@ class PerspectiveProjection(object):
 
 
 def warp(coordinates, depths, R, t):
+    """
+    Warp from a normalized image plane to the other normalized image plane
+    """
     P = to_homogeneous(coordinates) * depths.reshape(-1, 1)
     return pi(transform(R, t, P))
+
+
+class Warp(object):
+    def __init__(self, camera_model0, camera_model1, local_pose01):
+        self.camera_model0 = camera_model0
+        self.camera_model1 = camera_model1
+        self.pose01 = local_pose01
+
+    def __call__(self, us0, depths0):
+        xs0 = self.camera_model0.normalize(us0)
+        xs1 = warp(xs0, depths0, self.pose01.R, self.pose01.t)
+        us1 = self.camera_model1.unnormalize(xs1)
+        us1 = np.round(us1).astype(np.int64)
+        return us1

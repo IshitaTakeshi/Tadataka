@@ -143,7 +143,7 @@ def test_radtan_undistort():
     Y = model.distort(X_true)
     X_pred = model.undistort(Y)
 
-    assert_array_almost_equal(X_true, X_pred, decimal=20)
+    assert_array_almost_equal(X_true, X_pred, decimal=4)
 
 
 def test_eq():
