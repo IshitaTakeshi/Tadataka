@@ -1,7 +1,11 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import pytest
+from scipy.spatial.transform import Rotation
 
-from tadataka.projection import pi, warp
+from tadataka.camera import CameraModel, CameraParameters
+from tadataka.pose import LocalPose, WorldPose
+from tadataka.projection import pi, warp, Warp
 
 
 def test_pi():
@@ -50,3 +54,15 @@ def test_warp():
          [-7 / 3, -3 / 3],
          [10 / -1, -4 / -1]]
     )
+
+
+def test_warp_class():
+    cm = CameraModel(
+        CameraParameters(focal_length=[1, 1], offset=[0, 0]),
+        distortion_model=None
+    )
+
+    Warp(cm, cm, LocalPose(Rotation.identity(), np.zeros(3)))
+
+    with pytest.raises(ValueError):
+        Warp(cm, cm, WorldPose(Rotation.identity(), np.zeros(3)))

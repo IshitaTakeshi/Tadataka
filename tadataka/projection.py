@@ -3,7 +3,7 @@ import numpy as np
 from tadataka.optimization.functions import Function
 from tadataka.matrix import to_homogeneous
 from tadataka.rigid_transform import transform
-
+from tadataka.pose import LocalPose
 
 EPSILON = 1e-16
 
@@ -37,6 +37,8 @@ def warp(coordinates, depths, R, t):
 
 class Warp(object):
     def __init__(self, camera_model0, camera_model1, local_pose01):
+        if not isinstance(local_pose01, LocalPose):
+            raise ValueError("Pose must be an instance of LocalPose")
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
         self.pose01 = local_pose01
