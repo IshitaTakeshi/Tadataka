@@ -96,9 +96,12 @@ class InverseDepthEstimator(object):
 
         self.step_size_ref = step_size_ref
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
+        self.search_range = InverseDepthSearchRange(
+            min_inv_depth=0.05, max_inv_depth=10.0
+        )
 
     def __call__(self, pose_key_to_ref, camera_model_ref, image_ref, u_key,
-                 prior_inv_depth, inv_depth_search_range):
+                 prior_inv_depth, prior_variance):
         R, t = pose_key_to_ref.R, pose_key_to_ref.t
 
         # image of reference camera center on the keyframe
@@ -111,9 +114,11 @@ class InverseDepthEstimator(object):
         us_key = self.camera_model_key.unnormalize(xs_key)
 
         if not is_in_image_range(us_key, self.coordinate_range).all():
-            return np.nan, np.nan
+            return prior_inv_depth, prior_variance
 
-        depth_range = depth_search_range(inv_depth_search_range)
+        depth_range = depth_search_range(
+            self.search_range(prior_inv_depth, prior_variance)
+        )
         x_range_ref = epipolar_search_range(x_key, depth_range, R, t)
 
         xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
@@ -122,12 +127,13 @@ class InverseDepthEstimator(object):
         xs_ref, us_ref = xs_ref[mask], us_ref[mask]
 
         if len(xs_ref) < len(xs_key):
-            return np.nan, np.nan
+            return prior_inv_depth, prior_variance
 
         intensities_key = interpolation(self.image_key, us_key)
-        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
+        epipolar_gradient = intensity_gradient(intensities_key,
+                                               np.abs(step_size_key))
         if epipolar_gradient < self.min_gradient:
-            return np.nan, np.nan
+            return prior_inv_depth, prior_variance
 
         intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
