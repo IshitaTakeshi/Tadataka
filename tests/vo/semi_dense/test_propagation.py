@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from tadataka.vo.semi_dense.propagation import (
-    calc_new_inv_depth_map, propagate_inv_depth_map)
+    new_inverse_depth_map, new_variance_map)
 
 
 def test_calc_new_inv_depth_map():
@@ -11,7 +11,7 @@ def test_calc_new_inv_depth_map():
     ])
     tz = 1.5
     assert_array_almost_equal(
-        calc_new_inv_depth_map(inv_depth_map, tz),
+        new_inverse_depth_map(inv_depth_map, tz),
         [[1.0 / (4.0 - 1.5), 1.0 / (10.0 - 1.5)],
          [1.0 / (5.0 - 1.5), 1.0 / (20.0 - 1.5)]]
     )
@@ -31,15 +31,11 @@ def test_propaget_inv_depth_map():
         [6.0, 0.8],
         [1.2, 3.0]
     ])
-    uncertaintity_map = np.array([
-        [2.0, 4.0],
-        [5.0, 1.0]
-    ])
 
-    V = propagate_inv_depth_map(inv_depth_map, new_inv_depth_map,
-                                variance_map, uncertaintity_map)
+    V = new_variance_map(inv_depth_map, new_inv_depth_map,
+                         variance_map, uncertaintity=1.0)
     assert_array_almost_equal(
         V,
-        [[pow(5.0 / 2.5, 4) * 6.0 + 2.0, pow(2.0 / 1.0, 4) * 0.8 + 4.0],
-         [pow(3.0 / 2.0, 4) * 1.2 + 5.0, pow(0.4 / 0.5, 4) * 3.0 + 1.0]]
+        [[pow(5.0 / 2.5, 4) * 6.0 + 1.0, pow(2.0 / 1.0, 4) * 0.8 + 1.0],
+         [pow(3.0 / 2.0, 4) * 1.2 + 1.0, pow(0.4 / 0.5, 4) * 3.0 + 1.0]]
     )
