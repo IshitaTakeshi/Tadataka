@@ -72,11 +72,22 @@ def depth_search_range(inv_depth_range):
     return min_depth, max_depth
 
 
-def epipolar_search_range(x_key, depth_range, R, t):
+def epipolar_search_range_(x_key, depth_range, R, t):
     min_depth, max_depth = depth_range
     x_ref_min = pi(transform(R, t, to_homogeneous(x_key) * min_depth))
     x_ref_max = pi(transform(R, t, to_homogeneous(x_key) * max_depth))
     return x_ref_min, x_ref_max
+
+
+def epipolar_search_range(x_key, inv_depth_range, R, t):
+    depth_range = depth_search_range(inv_depth_range)
+    return epipolar_search_range_(x_key, depth_range, R, t)
+
+
+def unnormalize_in_image(camera_model, xs, coordinate_range):
+    us = camera_model.unnormalize(xs)
+    mask = is_in_image_range(us, coordinate_range)
+    return xs[mask], us[mask]
 
 
 class InverseDepthEstimator(object):
@@ -116,22 +127,18 @@ class InverseDepthEstimator(object):
         if not is_in_image_range(us_key, self.coordinate_range).all():
             return prior_inv_depth, prior_variance
 
-        depth_range = depth_search_range(
-            self.search_range(prior_inv_depth, prior_variance)
-        )
-        x_range_ref = epipolar_search_range(x_key, depth_range, R, t)
+        inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
+        x_range_ref = epipolar_search_range(x_key, inv_depth_range, R, t)
 
         xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
-        us_ref = camera_model_ref.unnormalize(xs_ref)
-        mask = is_in_image_range(us_ref, self.coordinate_range)
-        xs_ref, us_ref = xs_ref[mask], us_ref[mask]
+        xs_ref, us_ref = unnormalize_in_image(camera_model_ref, xs_ref,
+                                              self.coordinate_range)
 
         if len(xs_ref) < len(xs_key):
             return prior_inv_depth, prior_variance
 
         intensities_key = interpolation(self.image_key, us_key)
-        epipolar_gradient = intensity_gradient(intensities_key,
-                                               np.abs(step_size_key))
+        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
             return prior_inv_depth, prior_variance
 
