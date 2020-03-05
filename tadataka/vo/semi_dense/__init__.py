@@ -13,7 +13,7 @@ from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.vo.semi_dense.frame import Frame
 
 
-def plot():
+def plot(image, pixel_age, inv_depth_map, variance_map):
     from matplotlib import pyplot as plt
     import matplotlib
 
@@ -21,19 +21,19 @@ def plot():
         cax = ax.imshow(image, cmap=matplotlib.cm.gray)
         ticks = np.linspace(np.nanmin(image), np.nanmax(image), n_ticks)
         cbar = fig.colorbar(cax, ticks=ticks)
-        cbar.ax.set_yticklabels([str(np.round(e, 3)) for e in ticks])
+        cbar.ax.set_yticklabels(["{:.3f}".format(e) for e in ticks])
 
     fig = plt.figure()
 
-    ax = fig.add_subplot(231)
+    ax = fig.add_subplot(131)
     ax.set_title("Keyframe")
-    ax.imshow(image_key, cmap="gray")
+    ax.imshow(image, cmap="gray")
 
     ax = fig.add_subplot(232)
     ax.set_title("Pixel age")
     image_with_bar(fig, ax, pixel_age, n_ticks=3)
 
-    ax = fig.add_subplot(234)
+    ax = fig.add_subplot(233)
     ax.set_title("Keyframe inverse depth")
     image_with_bar(fig, ax, inv_depth_map)
 
@@ -59,6 +59,7 @@ class DepthMapUpdate(object):
                                                      prior_variance_map)
         return fusion(inv_depth_map, prior_inv_depth_map,
                       variance_map, prior_variance_map)
+
 
 class DepthMapPropagation(object):
     def __init__(self, pose01):
@@ -92,6 +93,10 @@ class SemiDenseVO(object):
             self.age = np.zeros(image_shape, dtype=np.int64)
             self.inv_depth_map = np.ones(image_shape)
             self.variance_map = np.ones(image_shape)
+
+            plot(keyframe.image, self.age,
+                 self.inv_depth_map, self.variance_map)
+
             return
 
         inv_depth_map, variance_map = self.inv_depth_map, self.variance_map
@@ -110,6 +115,9 @@ class SemiDenseVO(object):
 
         self.inv_depth_map, self.variance_map = inv_depth_map, variance_map
         self.refframes.append(keyframe)
+
+        plot(keyframe.image, self.age,
+             self.inv_depth_map, self.variance_map)
 
 
 class InverseDepthMapEstimator(object):
