@@ -1,6 +1,7 @@
 import numpy as np
 import numba
 
+from tadataka.vector import normalize_length
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
@@ -13,7 +14,7 @@ from tadataka.vo.semi_dense.epipolar import (
     reference_coordinates, key_coordinates
 )
 from tadataka.vo.semi_dense.variance import (
-    photometric_variance, geometric_variance, Alpha
+    photometric_variance, geometric_variance, calc_alpha
 )
 from tadataka.vo.semi_dense.intensities import search_intensities
 from tadataka.gradient import grad_x, grad_y
@@ -90,14 +91,26 @@ def unnormalize_in_image(camera_model, xs, coordinate_range):
     return xs[mask], us[mask]
 
 
+class Uncertaintity(object):
+    def __init__(self, sigma_i, sigma_l):
+        self.sigma_l = sigma_l
+        self.sigma_i = sigma_i
+
+    def __call__(self, x_key, x_ref, x_range_ref, R, t,
+                 image_grad, epipolar_gradient):
+        x_min_ref, x_max_ref = x_range_ref
+        direction = normalize_length(x_max_ref - x_min_ref)
+        alpha = calc_alpha(x_key, x_ref, direction, R, t)
+        geo_var = geometric_variance(x_key, pi(t), image_grad, self.sigma_l)
+        photo_var = photometric_variance(epipolar_gradient, self.sigma_i)
+        return calc_observation_variance(alpha, geo_var, photo_var)
+
+
 class InverseDepthEstimator(object):
     def __init__(self, image_key, camera_model_key,
                  sigma_i, sigma_l, step_size_ref,
                  min_gradient):
         assert(np.ndim(image_key) == 2)
-
-        self.sigma_l = sigma_l
-        self.sigma_i = sigma_i
         self.image_key = image_key
         self.camera_model_key = camera_model_key
         self.min_gradient = min_gradient
@@ -105,6 +118,7 @@ class InverseDepthEstimator(object):
         height, width = image_key.shape
         self.coordinate_range = (height-1, width-1)
 
+        self.uncertaintity = Uncertaintity(sigma_i, sigma_l)
         self.step_size_ref = step_size_ref
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
         self.search_range = InverseDepthSearchRange(
@@ -116,12 +130,10 @@ class InverseDepthEstimator(object):
         R, t = pose_key_to_ref.R, pose_key_to_ref.t
 
         # image of reference camera center on the keyframe
-        pi_t = pi(t)
-
         x_key = self.camera_model_key.normalize(u_key)
         ratio = step_size_ratio(x_key, prior_inv_depth, R, t)
         step_size_key = ratio * self.step_size_ref
-        xs_key = key_coordinates(x_key, pi_t, step_size_key)
+        xs_key = key_coordinates(x_key, pi(t), step_size_key)
         us_key = self.camera_model_key.unnormalize(xs_key)
 
         if not is_in_image_range(us_key, self.coordinate_range).all():
@@ -146,17 +158,11 @@ class InverseDepthEstimator(object):
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
 
-        u_ref = camera_model_ref.unnormalize(x_ref)
-
         key_depth = DepthFromTriangulation(pose_key_to_ref)(x_key, x_ref)
-
-        alpha = Alpha(R, t)(x_key, x_ref, x_range_ref)
-
         image_grad = self.image_grad(u_key)
-        geo_var = geometric_variance(x_key, pi_t, image_grad, self.sigma_l)
-        photo_var = photometric_variance(epipolar_gradient, self.sigma_i)
-        variance = calc_observation_variance(alpha, geo_var, photo_var)
 
+        variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
+                                      image_grad, epipolar_gradient)
         return invert_depth(key_depth), variance
 
 
