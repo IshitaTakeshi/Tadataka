@@ -1,8 +1,5 @@
 import numpy as np
 
-from tadataka.vector import normalize_length
-from tadataka.matrix import to_homogeneous
-
 
 EPSILON = 1e-16
 
@@ -25,26 +22,20 @@ def geometric_variance(x, pi_t, image_gradient, sigma_l):
     return (var * ng * nl) / (p * p + EPSILON)
 
 
-def calc_alphas(x_key, x_ref, epipolar_direction_ref, R, t):
-    rot_x = np.dot(R, to_homogeneous(x_key))
+def calc_alpha_(x_key, x_ref_i, direction_i, ri, rz, ti, tz):
+    x = np.append(x_key, 1)
 
-    d = rot_x[2] * t[0:2] - rot_x[0:2] * t[2]
-    n = x_ref[0:2] * t[2] - t[0:2]
+    d = np.dot(rz, x) * ti - np.dot(ri, x) * tz
+    n = x_ref_i * tz - ti
 
-    return epipolar_direction_ref * d / (n * n)
+    return direction_i * d / (n * n)
 
 
 def alpha_index(search_step):
     return np.argmax(np.abs(search_step))
 
 
-class Alpha(object):
-    def __init__(self, R, t):
-        self.R, self.t = R, t
-
-    def __call__(self, x_key, x_ref, x_range_ref):
-        x_min_ref, x_max_ref = x_range_ref
-        direction = normalize_length(x_max_ref - x_min_ref)
-        alphas = calc_alphas(x_key, x_ref, direction, self.R, self.t)
-        index = alpha_index(direction)
-        return alphas[index]
+def calc_alpha(x_key, x_ref, direction, R, t):
+    index = alpha_index(direction)
+    return calc_alpha_(x_key, x_ref[index], direction[index],
+                       R[index], R[2], t[index], t[2])

@@ -3,7 +3,7 @@ import numpy as np
 from numpy.linalg import norm
 
 from tadataka.vo.semi_dense.variance import (
-    Alpha, alpha_index, calc_alphas,
+    alpha_index, calc_alpha_,
     geometric_variance, photometric_variance
 )
 
@@ -30,7 +30,7 @@ def test_photometric_variance():
     assert(variance == 0.8)
 
 
-def test_calc_alphas():
+def test_calc_alpha():
     R = np.array([
         [0, -1, 0],
         [1, 0, 0],
@@ -38,29 +38,23 @@ def test_calc_alphas():
     ])
     t = np.array([2, 4, -3])
 
-    search_step = np.array([0.1, 0.3])
+    direction = np.array([0.1, 0.3])
     x_key = np.array([0.3, 0.9])
     x_ref = np.array([-0.6, 0.4])
-    alphas = calc_alphas(x_key, x_ref, search_step, R, t)
 
     X = np.append(x_key, 1)
 
+    alpha = calc_alpha_(x_key, x_ref[0], direction[0], R[0], R[2], t[0], t[2])
+
     n = t[0] * np.dot(R[2], X) - t[2] * np.dot(R[0], X)
     d = t[0] - x_ref[0] * t[2]
-    assert(alphas[0] == search_step[0] * n / (d * d))
+    assert(alpha == direction[0] * n / (d * d))
+
+    alpha = calc_alpha_(x_key, x_ref[1], direction[1], R[1], R[2], t[1], t[2])
 
     n = t[1] * np.dot(R[2], X) - t[2] * np.dot(R[1], X)
     d = t[1] - x_ref[1] * t[2]
-    assert(alphas[1] == search_step[1] * n / (d * d))
-
-    x_min_ref = np.array([-1, 2])
-    x_max_ref = np.array([2, 6])
-    direction = [0.6, 0.8]
-    xrange_ref = x_min_ref, x_max_ref
-    assert_almost_equal(
-        Alpha(R, t)(x_key, x_ref, (x_min_ref, x_max_ref)),
-        calc_alphas(x_key, x_ref, direction, R, t)[1]
-    )
+    assert(alpha == direction[1] * n / (d * d))
 
 
 def test_alpha_index():
