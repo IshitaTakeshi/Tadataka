@@ -1,21 +1,22 @@
 import numpy as np
+import numba
 
 
-def calc_error(v1, v2):
-    d = (v2 - v1).flatten()
-    return np.dot(d, d)
-
-
-# TODO use numba for acceleration
-def convolve(a, b, error_func):
-    # reverese b because the second argument is reversed in the computation
-    N = len(b)
-    return np.array([error_func(a[i:i+N], b) for i in range(len(a)-N+1)])
+@numba.njit
+def search_(sequence, kernel):
+    min_error = np.inf
+    N = len(kernel)
+    argmin = None
+    for i in range(len(sequence)-N+1):
+        d = sequence[i:i+N] - kernel
+        error = np.dot(d, d)
+        if error < min_error:
+            min_error = error
+            argmin = i
+    return argmin
 
 
 def search_intensities(intensities_key, intensities_ref):
-    intensities_key = intensities_key
+    argmin = search_(intensities_ref, intensities_key)
     offset = len(intensities_key) // 2
-    errors = convolve(intensities_ref, intensities_key, calc_error)
-    argmin = np.argmin(errors)
     return argmin + offset
