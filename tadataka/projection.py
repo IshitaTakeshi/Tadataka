@@ -2,7 +2,7 @@ import numpy as np
 
 from tadataka.optimization.functions import Function
 from tadataka.matrix import to_homogeneous
-from tadataka.rigid_transform import transform
+from tadataka.rigid_transform import transform, Warp3D
 from tadataka.pose import LocalPose
 
 EPSILON = 1e-16
@@ -39,14 +39,11 @@ class Warp(object):
     def __init__(self, camera_model0, camera_model1, pose0, pose1):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
-        self.pose0 = pose0
-        self.pose1 = pose1
+        self.warp01 = Warp3D(pose0, pose1)
 
     def __call__(self, u0, depth0):
         x0 = self.camera_model0.normalize(u0)
-        p = depth0 * np.append(x0, 1)
-        p = np.dot(self.pose0.R, p) + self.pose0.t
-        p = np.dot(self.pose1.R.T, p - self.pose1.t)
-        x1 = pi(p)
+        p = depth0 * to_homogeneous(x0)
+        x1 = pi(self.warp01(p))
         u1 = self.camera_model1.unnormalize(x1)
         return u1
