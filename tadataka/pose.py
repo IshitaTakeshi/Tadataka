@@ -21,7 +21,7 @@ def check_type_(pose1, pose2):
 
     name1 = type(pose1).__name__
     name2 = type(pose2).__name__
-    raise ValueError(f"Type does not match: {name1} and {name2}")
+    raise ValueError(f"Types do not match: {name1} and {name2}")
 
 
 class _Pose(object):

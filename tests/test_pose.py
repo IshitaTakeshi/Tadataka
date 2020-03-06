@@ -306,14 +306,14 @@ def test_type():
     assert(isinstance(LocalPose(rotvec, t) * LocalPose(rotvec, t), LocalPose))
     assert(isinstance(WorldPose(rotvec, t) * WorldPose(rotvec, t), WorldPose))
 
-    message = "Type does not match: LocalPose and WorldPose"
+    message = "Types do not match: LocalPose and WorldPose"
     with pytest.raises(ValueError, match=message):
         LocalPose(rotvec, t) * WorldPose(rotvec, t)
 
     with pytest.raises(ValueError, match=message):
         LocalPose(rotvec, t) == WorldPose(rotvec, t)
 
-    message = "Type does not match: WorldPose and LocalPose"
+    message = "Types do not match: WorldPose and LocalPose"
     with pytest.raises(ValueError, match=message):
         WorldPose(rotvec, t) * LocalPose(rotvec, t)
 
