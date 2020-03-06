@@ -13,7 +13,7 @@ from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation
 from tadataka.triangulation import (
     Triangulation, TwoViewTriangulation,
-    DepthFromTriangulation, DepthsFromTriangulation)
+    depth_from_triangulation, DepthsFromTriangulation)
 
 # TODO add the case such that x[3] = 0
 
@@ -157,5 +157,5 @@ def test_depths_from_triangulation():
     keypoint0 = projection.compute(p0)
     keypoint1 = projection.compute(p1)
 
-    depth = DepthFromTriangulation(pose1)(keypoint0, keypoint1)
+    depth = depth_from_triangulation(pose1.R, pose1.t, keypoint0, keypoint1)
     assert_array_almost_equal(depth, p0[2])

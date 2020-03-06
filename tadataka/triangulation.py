@@ -70,31 +70,21 @@ class DepthsFromTriangulation(object):
         return depths
 
 
-
-class DepthFromTriangulation(object):
+def depth_from_triangulation(R, t, keypoint0, keypoint1):
     """
     Estimate the depth corresponding to the keypoint in the first view
 
     Args:
-        pose01 (Pose): Relative pose from viewpoint 0 to viewpoint 1
+        R, t: Pose change from viewpoint 0 to viewpoint 1
+        keypoint0 (np.ndarray): Keypoint on the normalized image plane
+            in the 0th viewpoint
+        keypoint1 (np.ndarray): Keypoint on the normalized image plane
+            in the 1st viewpoint
+    Returns:
+        Depth corresponding to the first keypoint
     """
-    def __init__(self, pose01):
-        self.R, self.t = pose01.R, pose01.t
-
-    def __call__(self, keypoint0, keypoint1):
-        """
-        Args:
-            keypoint0 (np.ndarray): Keypoint on the normalized image plane
-                in the first viewpoint
-            keypoint1 (np.ndarray): Keypoint on the normalized image plane
-                in the second viewpoint
-        Returns:
-            Depth corresponding to the first keypoint
-        """
-        R, t = self.R, self.t
-
-        index = np.argmax(t[0:2])
-        x0 = to_homogeneous(keypoint0)
-        n = t[index] - t[2] * keypoint1[index]
-        d = np.dot(R[2], x0) * keypoint1[index] - np.dot(R[index], x0)
-        return n / d
+    index = np.argmax(t[0:2])
+    x0 = to_homogeneous(keypoint0)
+    n = t[index] - t[2] * keypoint1[index]
+    d = np.dot(R[2], x0) * keypoint1[index] - np.dot(R[index], x0)
+    return n / d
