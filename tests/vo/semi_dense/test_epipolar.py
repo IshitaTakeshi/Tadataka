@@ -36,10 +36,10 @@ def test_reference_coordinates():
 
 
 def test_normalized_key_intensities():
-    t = np.array([-4, -8, 2])  # pi(t) == [-2, -4]
+    t = np.array([-4.0, -8.0, 2.0])  # pi(t) == [-2, -4]
     pi_t = t[0:2] / t[2]
-    x = [7, 8]
-    step_size = 5
+    x = np.array([7.0, 8.0])
+    step_size = 5.0
     sampling_steps = [-2, -1, 0, 1, 2]
 
     # step should be [3, 4]
