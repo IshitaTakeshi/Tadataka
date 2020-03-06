@@ -57,12 +57,29 @@ def test_warp():
 
 
 def test_warp_class():
-    cm = CameraModel(
+    cm0 = CameraModel(
+        CameraParameters(focal_length=[1, 1], offset=[0, 0]),
+        distortion_model=None
+    )
+    cm1 = CameraModel(
         CameraParameters(focal_length=[1, 1], offset=[0, 0]),
         distortion_model=None
     )
 
-    Warp(cm, cm, LocalPose(Rotation.identity(), np.zeros(3)))
+    # rotate pi / 4 around the y-axis
+    rotation0 = Rotation.from_rotvec([0, np.pi/4, 0])
+    t0 = np.array([0, 0, 3])
+    pose0 = WorldPose(rotation0, t0)
 
-    with pytest.raises(ValueError):
-        Warp(cm, cm, WorldPose(Rotation.identity(), np.zeros(3)))
+    u0 = np.array([0, 0])
+    depth0 = 2 * np.sqrt(2)
+
+    # world point should be at [2, 0, 5]
+
+    # rotate - pi / 2 around the y-axis
+    rotation1 = Rotation.from_rotvec([0, -np.pi/2, 0])
+    t1 = np.array([4, 0, 3])
+    pose1 = WorldPose(rotation1, t1)
+
+    warp01 = Warp(cm0, cm1, pose0, pose1)
+    assert_array_almost_equal(warp01(u0, depth0), [1, 0])

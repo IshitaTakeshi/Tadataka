@@ -36,16 +36,17 @@ def warp(coordinates, depths, R, t):
 
 
 class Warp(object):
-    def __init__(self, camera_model0, camera_model1, local_pose01):
-        if not isinstance(local_pose01, LocalPose):
-            raise ValueError("Pose must be an instance of LocalPose")
+    def __init__(self, camera_model0, camera_model1, pose0, pose1):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
-        self.pose01 = local_pose01
+        self.pose0 = pose0
+        self.pose1 = pose1
 
-    def __call__(self, us0, depths0):
-        xs0 = self.camera_model0.normalize(us0)
-        xs1 = warp(xs0, depths0, self.pose01.R, self.pose01.t)
-        us1 = self.camera_model1.unnormalize(xs1)
-        us1 = np.round(us1).astype(np.int64)
-        return us1
+    def __call__(self, u0, depth0):
+        x0 = self.camera_model0.normalize(u0)
+        p = depth0 * np.append(x0, 1)
+        p = np.dot(self.pose0.R, p) + self.pose0.t
+        p = np.dot(self.pose1.R.T, p - self.pose1.t)
+        x1 = pi(p)
+        u1 = self.camera_model1.unnormalize(x1)
+        return u1
