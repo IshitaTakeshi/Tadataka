@@ -119,3 +119,18 @@ def transform(R, t, P):
 def inv_transform(R, t, P):
     P = P - t
     return np.dot(R.T, P.T).T
+
+
+def warp3d(R0, R1, t0, t1, p):
+    p = np.dot(R0, p) + t0
+    p = np.dot(R1.T, p - t1)
+    return p
+
+
+class Warp3D(object):
+    def __init__(self, pose0, pose1):
+        self.R0, self.t0 = pose0.R, pose0.t
+        self.R1, self.t1 = pose1.R, pose1.t
+
+    def __call__(self, p):
+        return warp3d(self.R0, self.R1, self.t0, self.t1, p)

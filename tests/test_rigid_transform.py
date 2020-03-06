@@ -1,8 +1,10 @@
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
+from scipy.spatial.transform import Rotation
+from tadataka.pose import WorldPose
 from tadataka.rigid_transform import (inv_transform_all, transform_all,
-                                      transform_each, Transform)
+                                      transform_each, Transform, Warp3D)
 
 
 def test_transform_each():
@@ -145,3 +147,21 @@ def test_transform():
         [[1.1, 1.5, 3.2],    # [   0.1  -0.5   0.2] + [   1   2   3]
          [1.4, 1.7, 2.8]]    # [   0.4  -0.3  -0.2] + [   1   2   3]
     )
+
+
+def test_warp3d():
+    # rotate (3 / 4) * pi around the y-axis
+    rotation0 = Rotation.from_rotvec([0, (3 / 4) * np.pi, 0])
+    t0 = np.array([0, 0, 3])
+    pose0 = WorldPose(rotation0, t0)
+
+    p0 = np.array([0, 0, 2 * np.sqrt(2)])
+
+    # world point should be at [2, 0, 1]
+
+    # rotate - pi / 2 around the y-axis
+    rotation1 = Rotation.from_rotvec([0, -np.pi / 2, 0])
+    t1 = np.array([4, 0, 3])
+    pose1 = WorldPose(rotation1, t1)
+
+    assert_array_almost_equal(Warp3D(pose0, pose1)(p0), [-2, 0, 2])
