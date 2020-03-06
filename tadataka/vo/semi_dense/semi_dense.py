@@ -7,7 +7,7 @@ from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
 from tadataka.projection import pi
 from tadataka.interpolation import interpolation
-from tadataka.triangulation import DepthFromTriangulation
+from tadataka.triangulation import depth_from_triangulation
 from tadataka.rigid_transform import transform
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.epipolar import (
@@ -158,7 +158,7 @@ class InverseDepthEstimator(object):
         argmin = search_intensities(intensities_key, intensities_ref)
         x_ref = xs_ref[argmin]
 
-        key_depth = DepthFromTriangulation(pose_key_to_ref)(x_key, x_ref)
+        key_depth = depth_from_triangulation(R, t, x_key, x_ref)
         image_grad = self.image_grad(u_key)
 
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
