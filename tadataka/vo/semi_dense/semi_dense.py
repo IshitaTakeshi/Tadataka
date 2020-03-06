@@ -164,25 +164,3 @@ class InverseDepthEstimator(object):
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
                                       image_grad, epipolar_gradient)
         return invert_depth(key_depth), variance
-
-
-def estimate_inverse_depth_map(estimator,
-                               prior_inv_depth_map, prior_variance_map):
-    assert(prior_inv_depth_map.shape == prior_variance_map.shape)
-    search_range = InverseDepthSearchRange(min_inv_depth=1e-16,
-                                           max_inv_depth=20.0)
-
-    image_shape = prior_inv_depth_map.shape
-    inv_depth_map = np.empty(image_shape)
-    variance_map = np.empty(image_shape)
-    for u_key in image_coordinates(image_shape):
-        x, y = u_key
-        prior_inv_depth = prior_inv_depth_map[y, x]
-        prior_variance = prior_variance_map[y, x]
-
-        inv_depth_range = search_range(prior_inv_depth, prior_variance)
-        inv_depth, variance = estimator(u_key, prior_inv_depth, inv_depth_range)
-
-        inv_depth_map[y, x] = inv_depth
-        variance_map[y, x] = variance
-    return inv_depth_map, variance_map
