@@ -87,12 +87,6 @@ def epipolar_search_range(warp_key_to_ref, x_key, inv_depth_range):
     return epipolar_search_range_(warp_key_to_ref, x_key, depth_range)
 
 
-def unnormalize_in_image(camera_model, xs, coordinate_range):
-    us = camera_model.unnormalize(xs)
-    mask = is_in_image_range(us, coordinate_range)
-    return xs[mask], us[mask]
-
-
 class Uncertaintity(object):
     def __init__(self, sigma_i, sigma_l):
         self.sigma_l = sigma_l
@@ -130,40 +124,33 @@ class InverseDepthEstimator(object):
             min_inv_depth=0.1, max_inv_depth=5.0
         )
 
+    def _world_to_key(self, point):
+        # bring a world point to the keyframe coordinate
+        return np.dot(self.pose_key.R.T, point - self.pose_key.t)
+
+    def _unnormalize_if_in_image(self, camera_model, xs):
+        us = camera_model.unnormalize(xs)
+        mask = is_in_image_range(us, self.coordinate_range)
+        return xs[mask], us[mask]
+
     def __call__(self, refframe, u_key, prior_inv_depth, prior_variance):
         pose_ref = refframe.pose
         camera_model_ref = refframe.camera_model
         image_ref = refframe.image
 
-        from matplotlib import pyplot as plt
-
         # assert(isinstance(pose_key_to_ref, LocalPose))
         warp = Warp3D(self.pose_key, pose_ref)
 
         x_key = self.camera_model_key.normalize(u_key)
-        x_ref = pi(warp(invert_depth(prior_inv_depth) * to_homogeneous(x_key)))
+        prior_depth = invert_depth(prior_inv_depth)
+        x_ref = pi(warp(prior_depth * to_homogeneous(x_key)))
         u_ref = camera_model_ref.unnormalize(x_ref)
-
-        if False:
-            fig = plt.figure()
-
-            ax = fig.add_subplot(121)
-            ax.set_title("keyframe")
-            ax.imshow(self.image_key, cmap="gray")
-            ax.scatter(u_key[0], u_key[1], c="red")
-
-            ax = fig.add_subplot(122)
-            ax.set_title("reference frame")
-            ax.imshow(image_ref, cmap="gray")
-            ax.scatter(u_ref[0], u_ref[1], c="red")
-            plt.show()
 
         ratio = step_size_ratio(warp, prior_inv_depth, x_key)
         step_size_key = ratio * self.step_size_ref
 
-        # image of reference camera center on the keyframe
-        x_ref = pi(np.dot(self.pose_key.R.T, pose_ref.t - self.pose_key.t))
-        xs_key = key_coordinates(x_key, x_ref, step_size_key)
+        xs_key = key_coordinates(x_key, pi(self._world_to_key(pose_ref.t)),
+                                 step_size_key)
         us_key = self.camera_model_key.unnormalize(xs_key)
 
         if not is_in_image_range(us_key, self.coordinate_range).all():
@@ -172,9 +159,10 @@ class InverseDepthEstimator(object):
         inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
         x_range_ref = epipolar_search_range(warp, x_key, inv_depth_range)
 
-        xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
-        xs_ref, us_ref = unnormalize_in_image(camera_model_ref, xs_ref,
-                                              self.coordinate_range)
+        xs_ref, us_ref = self._unnormalize_if_in_image(
+            camera_model_ref,
+            reference_coordinates(x_range_ref, self.step_size_ref)
+        )
 
         if len(xs_ref) < len(xs_key):
             return prior_inv_depth # , prior_variance
@@ -195,6 +183,7 @@ class InverseDepthEstimator(object):
 
         return invert_depth(depth_key)
 
+        # image_grad = self.image_grad(u_key)
         # R = np.dot(pose_ref.R.T, self.pose_key.R)
         # t = np.dot(pose_ref.R.T, self.pose_key.t - pose_ref.t)
         # variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
