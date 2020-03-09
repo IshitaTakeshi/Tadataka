@@ -102,6 +102,10 @@ class Uncertaintity(object):
         return calc_observation_variance(alpha, geo_var, photo_var)
 
 
+def warp2d(warp, prior_depth, x):
+    return pi(warp(prior_depth * to_homogeneous(x)))
+
+
 class InverseDepthEstimator(object):
     def __init__(self, keyframe, sigma_i, sigma_l, step_size_ref,
                  min_gradient):
@@ -143,8 +147,7 @@ class InverseDepthEstimator(object):
 
         x_key = self.camera_model_key.normalize(u_key)
         prior_depth = invert_depth(prior_inv_depth)
-        x_ref = pi(warp(prior_depth * to_homogeneous(x_key)))
-        u_ref = camera_model_ref.unnormalize(x_ref)
+        x_ref = warp2d(warp, invert_depth(prior_inv_depth), x_key)
 
         ratio = step_size_ratio(warp, prior_inv_depth, x_key)
         step_size_key = ratio * self.step_size_ref
