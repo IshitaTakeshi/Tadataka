@@ -186,11 +186,13 @@ class InverseDepthEstimator(object):
 
         intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
-        x_ref = xs_ref[argmin]
 
-        depths = DepthsFromTriangulation(self.pose_key, pose_ref)
-        depth_key, depth_ref = depths(x_key, x_ref)
-        image_grad = self.image_grad(u_key)
+        R0, t0 = self.pose_key.R, self.pose_key.t
+        R1, t1 = pose_ref.R, pose_ref.t
+        R = np.dot(R1.T, R0)
+        t = np.dot(R1.T, t0 - t1)
+        depth_key = depth_from_triangulation(R, t, x_key, xs_ref[argmin])
+
         return invert_depth(depth_key)
 
         # R = np.dot(pose_ref.R.T, self.pose_key.R)
