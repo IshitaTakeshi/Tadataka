@@ -17,6 +17,7 @@ from tadataka.vo.semi_dense.epipolar import (
 from tadataka.vo.semi_dense.variance import (
     photometric_variance, geometric_variance, calc_alpha
 )
+from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.vo.semi_dense.intensities import search_intensities
 from tadataka.gradient import grad_x, grad_y
 
@@ -143,13 +144,13 @@ class InverseDepthEstimator(object):
         image_ref = refframe.image
 
         # assert(isinstance(pose_key_to_ref, LocalPose))
-        warp = Warp3D(self.pose_key, pose_ref)
+        warp3d = Warp3D(self.pose_key, pose_ref)
 
         x_key = self.camera_model_key.normalize(u_key)
         prior_depth = invert_depth(prior_inv_depth)
-        x_ref = warp2d(warp, invert_depth(prior_inv_depth), x_key)
+        x_ref = warp2d(warp3d, invert_depth(prior_inv_depth), x_key)
 
-        ratio = step_size_ratio(warp, prior_inv_depth, x_key)
+        ratio = step_size_ratio(warp3d, prior_inv_depth, x_key)
         step_size_key = ratio * self.step_size_ref
 
         xs_key = key_coordinates(x_key, pi(self._world_to_key(pose_ref.t)),
@@ -157,7 +158,7 @@ class InverseDepthEstimator(object):
         us_key = self.camera_model_key.unnormalize(xs_key)
 
         if not is_in_image_range(us_key, self.coordinate_range).all():
-            return prior_inv_depth # , prior_variance
+            return prior_inv_depth, FLAG.KEY_OUT_OF_RANGE
 
         inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
         x_range_ref = epipolar_search_range(warp, x_key, inv_depth_range)
@@ -168,12 +169,12 @@ class InverseDepthEstimator(object):
         )
 
         if len(xs_ref) < len(xs_key):
-            return prior_inv_depth # , prior_variance
+            return prior_inv_depth, FLAG.EPIPOLAR_TOO_SHORT
 
         intensities_key = interpolation(self.image_key, us_key)
         epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
-            return prior_inv_depth # , prior_variance
+            return prior_inv_depth, FLAG.INSUFFICIENT_GRADIENT
 
         intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
@@ -184,7 +185,7 @@ class InverseDepthEstimator(object):
         t = np.dot(R1.T, t0 - t1)
         depth_key = depth_from_triangulation(R, t, x_key, xs_ref[argmin])
 
-        return invert_depth(depth_key)
+        return invert_depth(depth_key), FLAG.SUCCESS
 
         # image_grad = self.image_grad(u_key)
         # R = np.dot(pose_ref.R.T, self.pose_key.R)
