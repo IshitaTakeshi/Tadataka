@@ -40,7 +40,7 @@ def flag_to_color(flag):
     if flag == FLAG.SUCCESS:
         return np.array([0, 1, 0])  # green
     if flag == FLAG.KEY_OUT_OF_RANGE:
-        return np.array([1, 1, 1])  # white
+        return np.array([0, 0, 0])  # black
     if flag == FLAG.EPIPOLAR_TOO_SHORT:
         return np.array([1, 0, 0])  # red
     if flag == FLAG.INSUFFICIENT_GRADIENT:
@@ -140,7 +140,7 @@ ax.imshow(flag_map)
 patches = [Patch(facecolor=flag_to_color(f), label=f.name) for f in FLAG]
 ax.legend(handles=patches, loc='upper center', bbox_to_anchor=(0.5, -0.05))
 
-cmap = 'coolwarm'
+cmap = 'RdBu'
 
 ax = fig.add_subplot(235)
 ax.set_title("predicted depth map")
