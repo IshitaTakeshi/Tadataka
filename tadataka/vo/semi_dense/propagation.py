@@ -1,23 +1,30 @@
 import numpy as np
 
+from tadataka.pose import WorldPose
 from tadataka.vo.semi_dense.common import invert_depth
 
 
-def new_inverse_depth_map(inv_depth_map, pose01_tz):
-    depth_map = invert_depth(inv_depth_map) - pose01_tz
-    return invert_depth(depth_map)
+def calc_depth_offset(pose0, pose1):
+    # we assume few rotation change between timestamp 0 and timestamp 1
+    # TODO accept the case rotations significantly change between 0 and 1
+    assert(isinstance(pose0, WorldPose))
+    assert(isinstance(pose1, WorldPose))
+    R0, t0 = pose0.R, pose0.t
+    R1, t1 = pose1.R, pose1.t
+    t = np.dot(R1.T, t0 - t1)
+    return t[2]
 
 
-def new_variance_map(inv_depth_map, new_inv_depth_map,
-                     variance_map, uncertaintity=0.0):
-    """
-    Propagate inverse depth map from t0 to t1
-    """
-    # the equations corresponding to this part in the thesis may be wrong
-    # eq. 14 should be
-    #   d1^{-1}(d0^{-1}) = (d0 - tz)^{-1}
-    # eq. 15 should be
-    #   sigma_d1^2 = (d1^{-1} / d0^{-1})^4 * sigma_d0^2 + sigma_p^2
+class DepthMapPropagation(object):
+    def __init__(self, tz01, uncertaintity):
+        self.tz = tz01
+        self.uncertaintity = uncertaintity
 
-    variance_ratio = np.power(new_inv_depth_map / inv_depth_map, 4)
-    return variance_ratio * variance_map + uncertaintity
+    def __call__(self, inv_depth_map0, variance_map0):
+        depth_map0 = invert_depth(inv_depth_map0)
+        depth_map1 = depth_map0 + self.tz
+        inv_depth_map1 = invert_depth(depth_map1)
+
+        ratio = inv_depth_map1 / inv_depth_map0
+        variance_map1 = np.power(ratio, 4) * variance_map0 + self.uncertaintity
+        return inv_depth_map1, variance_map1

@@ -1,41 +1,36 @@
 import numpy as np
-from numpy.testing import assert_array_almost_equal
-from tadataka.vo.semi_dense.propagation import (
-    new_inverse_depth_map, new_variance_map)
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
+from scipy.spatial.transform import Rotation
+
+from tadataka.pose import WorldPose
+from tadataka.vo.semi_dense.propagation import DepthMapPropagation, calc_depth_offset
 
 
-def test_calc_new_inv_depth_map():
-    inv_depth_map = np.array([
-        [0.25, 0.10],
-        [0.20, 0.05]
-    ])
-    tz = 1.5
-    assert_array_almost_equal(
-        new_inverse_depth_map(inv_depth_map, tz),
-        [[1.0 / (4.0 - 1.5), 1.0 / (10.0 - 1.5)],
-         [1.0 / (5.0 - 1.5), 1.0 / (20.0 - 1.5)]]
-    )
+def test_calc_depth_offset():
+    # rotate 90 degrees around the y-axis
+    rotation = Rotation.from_rotvec([0, np.pi / 2, 0])
+    # forward 2 along the x axis
+    t0 = np.array([0, 0, 1])
+    t1 = np.array([2, 0, 1])
+    # depth1 = depth0 - 2
+    pose0 = WorldPose(rotation, t0)
+    pose1 = WorldPose(rotation, t1)
+    tz01 = calc_depth_offset(pose0, pose1)
+    assert_almost_equal(tz01, -2.0)
 
+    uncertaintity = 1.0
 
-def test_propaget_inv_depth_map():
-    inv_depth_map = np.array([
-        [2.5, 1.0],
-        [2.0, 0.5]
-    ])
+    shape = (4, 3)
+    depth0 = 4.0
+    variance0 = 3.0
+    inv_depth_map0 = (1 / depth0) * np.ones(shape)
+    variance_map0 = variance0 * np.ones(shape)
 
-    new_inv_depth_map = np.array([
-        [5.0, 2.0],
-        [3.0, 0.4]
-    ])
-    variance_map = np.array([
-        [6.0, 0.8],
-        [1.2, 3.0]
-    ])
+    propagate = DepthMapPropagation(tz01, uncertaintity)
+    inv_depth_map1, variance_map1 = propagate(inv_depth_map0, variance_map0)
 
-    V = new_variance_map(inv_depth_map, new_inv_depth_map,
-                         variance_map, uncertaintity=1.0)
-    assert_array_almost_equal(
-        V,
-        [[pow(5.0 / 2.5, 4) * 6.0 + 1.0, pow(2.0 / 1.0, 4) * 0.8 + 1.0],
-         [pow(3.0 / 2.0, 4) * 1.2 + 1.0, pow(0.4 / 0.5, 4) * 3.0 + 1.0]]
-    )
+    depth1 = depth0 - 2.0
+    assert_array_almost_equal(inv_depth_map1, (1 / depth1) * np.ones(shape))
+
+    variance1 = pow((1 / depth1) / (1 / depth0), 4) * variance0 + 1.0
+    assert_array_almost_equal(variance_map1, variance1 * np.ones(shape))
