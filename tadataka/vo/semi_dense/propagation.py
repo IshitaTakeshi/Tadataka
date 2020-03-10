@@ -4,15 +4,12 @@ from tadataka.pose import WorldPose
 from tadataka.vo.semi_dense.common import invert_depth
 
 
-def calc_depth_offset(pose0, pose1):
+def propagate_variance(inv_depths0, inv_depths1, variances0, uncertaintity):
     # we assume few rotation change between timestamp 0 and timestamp 1
     # TODO accept the case rotations significantly change between 0 and 1
-    assert(isinstance(pose0, WorldPose))
-    assert(isinstance(pose1, WorldPose))
-    R0, t0 = pose0.R, pose0.t
-    R1, t1 = pose1.R, pose1.t
-    t = np.dot(R1.T, t0 - t1)
-    return t[2]
+    ratio = inv_depths1 / inv_depths0
+    variances1 = np.power(ratio, 4) * variances0 + uncertaintity
+    return variances1
 
 
 class DepthMapPropagation(object):
