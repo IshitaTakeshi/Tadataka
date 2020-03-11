@@ -1,9 +1,7 @@
 import numpy as np
 
-from tadataka.optimization.functions import Function
 from tadataka.matrix import to_homogeneous
-from tadataka.rigid_transform import transform, Warp3D
-from tadataka.pose import LocalPose
+
 
 EPSILON = 1e-16
 
@@ -25,25 +23,3 @@ class PerspectiveProjection(object):
         K = self.camera_parameters.matrix
         P = np.dot(K, P.T).T
         return pi(P)
-
-
-def warp(coordinates, depths, R, t):
-    """
-    Warp from a normalized image plane to the other normalized image plane
-    """
-    P = to_homogeneous(coordinates) * depths.reshape(-1, 1)
-    return pi(transform(R, t, P))
-
-
-class Warp(object):
-    def __init__(self, camera_model0, camera_model1, pose0, pose1):
-        self.camera_model0 = camera_model0
-        self.camera_model1 = camera_model1
-        self.warp01 = Warp3D(pose0, pose1)
-
-    def __call__(self, u0, depth0):
-        x0 = self.camera_model0.normalize(u0)
-        p = depth0 * to_homogeneous(x0)
-        x1 = pi(self.warp01(p))
-        u1 = self.camera_model1.unnormalize(x1)
-        return u1

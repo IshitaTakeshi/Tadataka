@@ -120,18 +120,3 @@ def transform(R, t, P):
 def inv_transform(R, t, P):
     P = P - t
     return np.dot(R.T, P.T).T
-
-
-class Warp3D(object):
-    def __init__(self, pose0, pose1):
-        camera0_to_world = pose0
-        world_to_camera1 = pose1.to_local()
-
-        self.R0, self.t0 = camera0_to_world.R, camera0_to_world.t
-        self.R1, self.t1 = world_to_camera1.R, world_to_camera1.t
-
-    @allow_1d(which_argument=1)
-    def __call__(self, P):
-        P = transform(self.R0, self.t0, P)
-        P = transform(self.R1, self.t1, P)
-        return P
