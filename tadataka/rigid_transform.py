@@ -1,4 +1,5 @@
 import numpy as np
+from tadataka.decorator import allow_1d
 
 
 def transform_each(rotations, translations, points):
@@ -121,16 +122,16 @@ def inv_transform(R, t, P):
     return np.dot(R.T, P.T).T
 
 
-def warp3d(R0, R1, t0, t1, p):
-    p = np.dot(R0, p) + t0
-    p = np.dot(R1.T, p - t1)
-    return p
-
-
 class Warp3D(object):
     def __init__(self, pose0, pose1):
-        self.R0, self.t0 = pose0.R, pose0.t
-        self.R1, self.t1 = pose1.R, pose1.t
+        camera0_to_world = pose0
+        world_to_camera1 = pose1.to_local()
 
-    def __call__(self, p):
-        return warp3d(self.R0, self.R1, self.t0, self.t1, p)
+        self.R0, self.t0 = camera0_to_world.R, camera0_to_world.t
+        self.R1, self.t1 = world_to_camera1.R, world_to_camera1.t
+
+    @allow_1d(which_argument=1)
+    def __call__(self, P):
+        P = transform(self.R0, self.t0, P)
+        P = transform(self.R1, self.t1, P)
+        return P

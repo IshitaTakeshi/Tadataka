@@ -155,7 +155,6 @@ def test_warp3d():
     t0 = np.array([0, 0, 3])
     pose0 = WorldPose(rotation0, t0)
 
-
     # rotate - pi / 2 around the y-axis
     rotation1 = Rotation.from_rotvec([0, -np.pi / 2, 0])
     t1 = np.array([4, 0, 3])
@@ -163,9 +162,16 @@ def test_warp3d():
 
     warp01 = Warp3D(pose0, pose1)
 
-    p0 = np.array([0, 0, 2 * np.sqrt(2)])
-    # world point should be at [2, 0, 1]
-    assert_array_almost_equal(warp01(p0), [-2, 0, 2])
+    P0 = np.array([
+        [0, 0, 2 * np.sqrt(2)],
+        [0, 0, 4 * np.sqrt(2)]
+    ])
 
+    # world point should be at
+    # [[2, 0, 1], [4, 0, 7]]
+    # [[2, 0, -2], [0, 0, 4]]
+    assert_array_almost_equal(warp01(P0), [[-2, 0, 2], [-4, 0, 0]])
+
+    # accept 1d input
     # center of camera 0 seen from camera 1
     assert_array_almost_equal(warp01(np.zeros(3)), [0, 0, 4])
