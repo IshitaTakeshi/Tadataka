@@ -15,6 +15,10 @@ def pi(P):
     return XY / (Z + EPSILON)
 
 
+def inv_pi(xs, depths):
+    return depths.reshape(-1, 1) * to_homogeneous(xs)
+
+
 class PerspectiveProjection(object):
     def __init__(self, camera_parameters):
         self.camera_parameters = camera_parameters
