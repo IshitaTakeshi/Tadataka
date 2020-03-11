@@ -26,10 +26,10 @@ def warp(warp3d, xs0, depths0):
 
 
 class Warp2D(object):
-    def __init__(self, camera_model0, camera_model1, warp3d):
+    def __init__(self, camera_model0, camera_model1, pose0, pose1):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
-        self.warp3d = warp3d
+        self.warp3d = Warp3D(pose0, pose1)
 
     def __call__(self, us0, depths0):
         xs0 = self.camera_model0.normalize(us0)

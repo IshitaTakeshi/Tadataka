@@ -8,7 +8,7 @@ from tadataka.warp import warp, Warp2D, Warp3D
 from tadataka.pose import WorldPose
 
 
-def test_warp2d():
+def test_warp3d():
     # rotate (3 / 4) * pi around the y-axis
     rotation0 = Rotation.from_rotvec([0, (3 / 4) * np.pi, 0])
     t0 = np.array([0, 0, 3])
@@ -36,7 +36,7 @@ def test_warp2d():
     assert_array_almost_equal(warp3d(np.zeros(3)), [0, 0, 4])
 
 
-def test_warp3d():
+def test_warp2d():
     rotation = Rotation.from_rotvec([0, np.pi/2, 0])
 
     t0 = np.array([0, 0, 3])
@@ -68,6 +68,6 @@ def test_warp3d():
     )
 
     us0 = 2.0 * xs0
-    warp2d = Warp2D(camera_model0, camera_model1, warp3d)
+    warp2d = Warp2D(camera_model0, camera_model1, pose0, pose1)
     us1, depths1 = warp2d(us0, depths0)
     assert_array_almost_equal(us1, 3.0 * xs1)
