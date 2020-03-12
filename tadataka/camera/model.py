@@ -11,9 +11,9 @@ def parse_(string):
     params = re.split(r"\s+", string)
     distortion_type = params[0]
     params = [float(v) for v in params[1:]]
-    camera_parameters = CameraParameters.from_params(params[0:6])
+    camera_parameters = CameraParameters.from_params(params[0:4])
 
-    dist_params = params[6:]
+    dist_params = params[4:]
     if distortion_type == "FOV":
         distortion_model = FOV.from_params(dist_params)
     elif distortion_type == "RadTan":

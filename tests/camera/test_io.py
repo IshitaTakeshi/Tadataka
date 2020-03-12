@@ -18,7 +18,6 @@ def test_load():
     assert(set(camera_models.keys()) == {1, 2})
 
     camera_parameters = camera_models[1].camera_parameters
-    assert_array_equal(camera_parameters.image_shape, [320, 240])
     assert_array_equal(camera_parameters.focal_length, [200.0, 300.1])
     assert_array_equal(camera_parameters.offset, [350.4, 250.1])
 
@@ -27,7 +26,6 @@ def test_load():
     assert_array_equal(distortion_model.params, [0.01])
 
     camera_parameters = camera_models[2].camera_parameters
-    assert_array_equal(camera_parameters.image_shape, [640, 360])
     assert_array_equal(camera_parameters.focal_length, [210.3, 320.2])
     assert_array_equal(camera_parameters.offset, [340.0, 230.0])
 
@@ -38,14 +36,12 @@ def test_load():
 
 def test_save():
 
-    camera_parameters = CameraParameters(image_shape=[320, 180],
-                                         focal_length=[123.4, 200.8],
+    camera_parameters = CameraParameters(focal_length=[123.4, 200.8],
                                          offset=[250.1, 150.0])
     distortion_model = FOV(0.02)
     camera_model1 = CameraModel(camera_parameters, distortion_model)
 
-    camera_parameters = CameraParameters(image_shape=[240, 135],
-                                         focal_length=[400.3, 500.0],
+    camera_parameters = CameraParameters(focal_length=[400.3, 500.0],
                                          offset=[248.0, 152.0])
     distortion_model = FOV(-0.01)
     camera_model2 = CameraModel(camera_parameters, distortion_model)
@@ -55,8 +51,8 @@ def test_save():
     camera_models = {1: camera_model1, 2: camera_model2}
     save(path, camera_models)
 
-    expected = ('1 FOV 320 180 123.4 200.8 250.1 150.0 0.02\n'
-                '2 FOV 240 135 400.3 500.0 248.0 152.0 -0.01\n')
+    expected = ('1 FOV 123.4 200.8 250.1 150.0 0.02\n'
+                '2 FOV 400.3 500.0 248.0 152.0 -0.01\n')
 
     with open(path, 'r') as f:
         s = f.read()
