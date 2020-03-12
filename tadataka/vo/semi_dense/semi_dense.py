@@ -149,7 +149,6 @@ class InverseDepthEstimator(object):
 
         x_key = self.camera_model_key.normalize(u_key)
         prior_depth = invert_depth(prior_inv_depth)
-        x_ref = warp2d(warp3d, invert_depth(prior_inv_depth), x_key)
 
         ratio = step_size_ratio(warp3d, prior_inv_depth, x_key)
         step_size_key = ratio * self.step_size_ref
@@ -160,6 +159,11 @@ class InverseDepthEstimator(object):
 
         if not is_in_image_range(us_key, self.coordinate_range).all():
             return prior_inv_depth, prior_variance, FLAG.KEY_OUT_OF_RANGE
+
+        intensities_key = interpolation(self.image_key, us_key)
+        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
+        if epipolar_gradient < self.min_gradient:
+            return prior_inv_depth, prior_variance, FLAG.INSUFFICIENT_GRADIENT
 
         inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
         x_range_ref = epipolar_search_range(warp3d, x_key, inv_depth_range)
@@ -172,12 +176,6 @@ class InverseDepthEstimator(object):
         if len(xs_ref) < len(xs_key):
             return prior_inv_depth, prior_variance, FLAG.EPIPOLAR_TOO_SHORT
 
-        intensities_key = interpolation(self.image_key, us_key)
-        epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
-        # TODO return earlier
-        if epipolar_gradient < self.min_gradient:
-            return prior_inv_depth, prior_variance, FLAG.INSUFFICIENT_GRADIENT
-
         intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
 
@@ -188,6 +186,7 @@ class InverseDepthEstimator(object):
 
         depth_key = depth_from_triangulation(R, t, x_key, xs_ref[argmin])
 
+        x_ref = warp2d(warp3d, invert_depth(prior_inv_depth), x_key)
         image_grad = self.image_grad(u_key)
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
                                       image_grad, epipolar_gradient)
