@@ -95,21 +95,17 @@ class RadTan(BaseDistortion):
         self.dist_coeffs = [0] * 5
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
-    def _distort(self, p):
-        return radtan_distort(p, self.dist_coeffs).flatten()
-
-    def distort(self, undistorted_keypoints):
-        P = undistorted_keypoints
-        Q = np.empty(P.shape)
-        for i in range(P.shape[0]):
-            Q[i] = self._distort(P[i])
-        return Q
+    def distort(self, keypoints):
+        return radtan_distort(keypoints, self.dist_coeffs)
 
     def _undistort(self, q, max_iter=100, threshold=1e-10):
+        def residual(p):
+            return q - self.distort(np.atleast_2d(p)).squeeze()
+
         p = np.copy(q)
         for i in range(max_iter):
             J = radtan_distort_jacobian(p, self.dist_coeffs)
-            r = q - self._distort(p)
+            r = residual(p)
             d = np.linalg.solve(J, r)
 
             if np.dot(d, d) < threshold:
