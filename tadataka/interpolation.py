@@ -5,24 +5,41 @@ from tadataka.decorator import allow_1d
 from tadataka.utils import is_in_image_range
 
 
+@njit
+def interpolation__(image, c):
+    cx, cy = c
+
+    l = np.floor(c)
+    lx, ly = l
+    lxi, lyi = l.astype(np.int64)
+
+    if lx == cx and ly == cy:
+        return image[lyi, lxi]
+
+    u = l + 1.0
+    ux, uy = u
+    uxi, uyi = u.astype(np.int64)
+
+    if lx == cx:
+        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+                image[uyi, lxi] * (ux - cx) * (cy - ly))
+
+    if ly == cy:
+        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+                image[lyi, uxi] * (cx - lx) * (uy - cy))
+
+    return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+            image[lyi, uxi] * (cx - lx) * (uy - cy) +
+            image[uyi, lxi] * (ux - cx) * (cy - ly) +
+            image[uyi, uxi] * (cx - lx) * (cy - ly))
+
+
+@njit
 def interpolation_(image, C):
-    image = np.pad(image, ((0, 1), (0, 1)), mode='edge')
-
-    L = np.floor(C)
-    U = L + 1
-
-    LI = L.astype(np.int64)
-    UI = U.astype(np.int64)
-
-    CX, CY = C[:, 0], C[:, 1]
-    LX, LY = L[:, 0], L[:, 1]
-    UX, UY = U[:, 0], U[:, 1]
-    LXI, LYI = LI[:, 0], LI[:, 1]
-    UXI, UYI = UI[:, 0], UI[:, 1]
-    return (image[LYI, LXI] * (UX - CX) * (UY - CY) +
-            image[LYI, UXI] * (CX - LX) * (UY - CY) +
-            image[UYI, LXI] * (UX - CX) * (CY - LY) +
-            image[UYI, UXI] * (CX - LX) * (CY - LY))
+    U = np.empty(C.shape)
+    for i in range(C.shape[0]):
+        U[i] = interpolation__(image, C[i])
+    return U
 
 
 @allow_1d(which_argument=1)
