@@ -15,6 +15,12 @@ def test_interpolation():
     ], dtype=np.float64)
     # width, height = (3, 4)
 
+    coordinates = np.array([[0.1, 1.2], [1.1, 2.1], [2.0, 2.3]])
+    assert(interpolation(image, coordinates).shape == (3,))
+
+    coordinate = np.array([0.1, 1.2])
+    assert(interpolation(image, coordinate).dtype == np.float64)
+
     # ordinary
     expected = (image[2, 1] * (2.0 - 1.3) * (3.0 - 2.6) +
                 image[2, 2] * (1.3 - 1.0) * (3.0 - 2.6) +

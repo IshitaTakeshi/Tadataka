@@ -6,7 +6,7 @@ from tadataka.utils import is_in_image_range
 
 
 @njit
-def interpolation__(image, c):
+def interpolation1d_(image, c):
     cx, cy = c
 
     l = np.floor(c)
@@ -35,11 +35,12 @@ def interpolation__(image, c):
 
 
 @njit
-def interpolation_(image, C):
-    U = np.empty(C.shape)
-    for i in range(C.shape[0]):
-        U[i] = interpolation__(image, C[i])
-    return U
+def interpolation2d_(image, C):
+    N = C.shape[0]
+    intensities = np.empty(N)
+    for i in range(N):
+        intensities[i] = interpolation1d_(image, C[i])
+    return intensities
 
 
 @allow_1d(which_argument=1)
@@ -59,4 +60,4 @@ def interpolation(image, C):
             "Coordinates {} out of image range".format(C[~mask])
         )
 
-    return interpolation_(image, C)
+    return interpolation2d_(image, C)
