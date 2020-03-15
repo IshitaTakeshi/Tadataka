@@ -15,40 +15,49 @@ def test_interpolation():
     ], dtype=np.float64)
     # width, height = (3, 4)
 
-    coordinates = np.array([
-    #      x    y
-        [0.0, 0.0],
-        [1.3, 2.6],  # ordinary
-        [2.0, 2.9],  # maximum x
-        [1.9, 3.0],  # maximum y
-        [2.0, 3.0],  # possible maximum coordinate
-    ])
-    intensities = interpolation(image, coordinates)
+    # ordinary
+    expected = (image[2, 1] * (2.0 - 1.3) * (3.0 - 2.6) +
+                image[2, 2] * (1.3 - 1.0) * (3.0 - 2.6) +
+                image[3, 1] * (2.0 - 1.3) * (2.6 - 2.0) +
+                image[3, 2] * (1.3 - 1.0) * (2.6 - 2.0))
+    # 2d input
+    coordinates = np.array([[1.3, 2.6]])
+    assert_almost_equal(interpolation(image, coordinates).squeeze(), expected)
+    # 1d input
+    coordinate = np.array([1.3, 2.6])
+    assert_almost_equal(interpolation(image, coordinate), expected)
 
-    assert_almost_equal(intensities[0], image[0, 0])
+    # minimum coordinate
+    coordinate = np.array([0.0, 0.0])
+    assert_almost_equal(interpolation(image, coordinate), image[0, 0])
 
-    #                  y  x
-    expected1 = (image[2, 1] * (2.0 - 1.3) * (3.0 - 2.6) +
-                 image[2, 2] * (1.3 - 1.0) * (3.0 - 2.6) +
-                 image[3, 1] * (2.0 - 1.3) * (2.6 - 2.0) +
-                 image[3, 2] * (1.3 - 1.0) * (2.6 - 2.0))
-    assert_almost_equal(intensities[1], expected1)
+    # minimum x
+    coordinate = np.array([0.0, 0.1])
+    expected = (image[0, 0] * (1.0 - 0.0) * (1.0 - 0.1) +
+                image[1, 0] * (1.0 - 0.0) * (0.1 - 0.0))
+    assert_almost_equal(interpolation(image, coordinate), expected)
 
-    #                  y  x
-    expected2 = (image[2, 2] * (3.0 - 2.0) * (3.0 - 2.9) +
-                 image[3, 2] * (3.0 - 2.0) * (2.9 - 2.0))
-    assert_almost_equal(intensities[2], expected2)
+    # minimum y
+    coordinate = np.array([0.1, 0.0])
+    expected = (image[0, 0] * (1.0 - 0.1) * (1.0 - 0.0) +
+                image[0, 1] * (0.1 - 0.0) * (1.0 - 0.0))
+    assert_almost_equal(interpolation(image, coordinate), expected)
 
-    #                  y  x
-    expected3 = (image[3, 1] * (2.0 - 1.9) * (4.0 - 3.0) +
-                 image[3, 2] * (1.9 - 1.0) * (4.0 - 3.0))
-    assert_almost_equal(intensities[3], expected3)
+    # maximum x
+    coordinate = np.array([2.0, 2.9])
+    expected = (image[2, 2] * (3.0 - 2.0) * (3.0 - 2.9) +
+                image[3, 2] * (3.0 - 2.0) * (2.9 - 2.0))
+    assert_almost_equal(interpolation(image, coordinate), expected)
 
-    assert_almost_equal(intensities[4], image[3, 2])
+    coordinate = np.array([1.9, 3.0])  # maximum y
+    expected = (image[3, 1] * (2.0 - 1.9) * (4.0 - 3.0) +
+                image[3, 2] * (1.9 - 1.0) * (4.0 - 3.0))
+    assert_almost_equal(interpolation(image, coordinate), expected)
 
-    # 1d coordinate input
-    intensity = interpolation(image, coordinates[2])
-    assert_almost_equal(intensity, expected2)
+    # maximum coordinate
+    coordinate = np.array([2.0, 3.0])
+    assert_almost_equal(interpolation(image, coordinate), image[3, 2])
+
 
     with pytest.raises(ValueError):
         interpolation(image, [3.0, 2.01])
