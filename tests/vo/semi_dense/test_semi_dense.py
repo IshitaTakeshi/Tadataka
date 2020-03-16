@@ -1,33 +1,19 @@
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import (assert_almost_equal, assert_equal,
+                           assert_array_almost_equal)
 import pytest
 from skimage.color import rgb2gray
+from scipy.spatial.transform import Rotation
 
 from tadataka.pose import calc_relative_pose
 from tadataka.dataset import NewTsukubaDataset
 from tadataka.coordinates import image_coordinates
 
 from tadataka.vo.semi_dense.semi_dense import (
-    step_size_ratio, depth_search_range, epipolar_search_range,
+    step_size_ratio, depth_search_range, epipolar_search_range_,
     GradientImage, InverseDepthEstimator, InverseDepthSearchRange)
 
 from tests.dataset.path import new_tsukuba
-
-
-def test_step_size_ratio():
-    R = np.array([
-        [0, 0, 1],
-        [0, 1, 0],
-        [-1, 0, 0]
-    ])
-    t = np.array([-1, 4, -4])
-    x_key = np.array([4, -3])
-    inv_depth = 0.25
-
-    assert_almost_equal(
-        step_size_ratio(x_key, inv_depth, R, t),
-        0.25 / (1 / -20)
-    )
 
 
 def test_depth_search_range():
@@ -53,30 +39,31 @@ def test_inverse_depth_search_range():
 
 
 def test_epipolar_search_range():
-    R = np.array([
-        [0, 0, 1],
-        [0, 1, 0],
-        [-1, 0, 0]
-    ])
-    t = np.array([-1, 4, 2])
-    x_key = np.array([-1, 4])
-    depth_range = (4, 8)
+    R_key = np.identity(3)
+    t_key = np.array([0, 0, -2])
 
-    x_ref_min, x_ref_max = epipolar_search_range(x_key, depth_range, R, t)
+    R_ref = Rotation.from_rotvec([0, -np.pi/2, 0]).as_matrix()
+    t_ref = np.array([1, 0, 0])
 
-    # 4 * [1  4  1] + [-1  4  2] = [4-1  16+4  4+2]
-    # 8 * [1  4  1] + [-1  4  2] = [8-1  32+4  8+2]
-    assert_almost_equal(x_ref_min, [3 / 6, 20 / 6])
-    assert_almost_equal(x_ref_max, [7 / 10, 36 / 10])
+    x_key = np.zeros(2)
+    depth_range = [1, 3]
+    x_ref_min, x_ref_max = epipolar_search_range_(
+        (R_key, t_key), (R_ref, t_ref),
+        x_key, depth_range
+    )
+
+    assert_array_almost_equal(x_ref_min, [-1, 0])
+    assert_array_almost_equal(x_ref_max, [1, 0])
 
 
 def test_gradient_image():
     width, height = 6, 4
     image_grad_x = np.arange(0, 24).reshape(height, width)
     image_grad_y = np.arange(24, 48).reshape(height, width)
-    gradient_image = GradientImage(image_grad_x, image_grad_y)
+    gradient_image = GradientImage(image_grad_x.astype(np.float64),
+                                   image_grad_y.astype(np.float64))
 
-    u_key = [4.3, 2.1]
+    u_key = np.array([4.3, 2.1])
     gx, gy = gradient_image(u_key)
 
     u, v = 4, 2
