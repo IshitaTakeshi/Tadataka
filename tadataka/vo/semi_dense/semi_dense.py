@@ -1,16 +1,15 @@
 import numpy as np
-import numba
+from numba import njit
 
-from tadataka.pose import LocalPose
 from tadataka.vector import normalize_length
-from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
-from tadataka.projection import pi
-from tadataka.interpolation import interpolation
-from tadataka.triangulation import depth_from_triangulation, DepthsFromTriangulation
-from tadataka.rigid_transform import transform
-from tadataka.warp import Warp3D
+from tadataka.camera.table import NoramlizationMapTable
+from tadataka.projection import inv_pi, pi
+from tadataka.rigid_transform import inv_transform
+from tadataka.interpolation import interpolation1d_, interpolation2d_
+from tadataka.triangulation import depth_from_triangulation
+from tadataka.warp import warp2d, warp3d
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.epipolar import (
     reference_coordinates, key_coordinates
@@ -46,14 +45,15 @@ class InverseDepthSearchRange(object):
         return L, U
 
 
-def calc_depth_ref(warp_key_to_ref, x_key, depth_key):
-    q = warp_key_to_ref(depth_key * to_homogeneous(x_key))
-    return q[2]
+def calc_depth_ref(T_key, T_ref, x_key, depth_key):
+    p_key = inv_pi(x_key, depth_key)
+    p_ref = warp3d(T_key, T_ref, p_key)
+    return p_ref[2]
 
 
-def step_size_ratio(warp_key_to_ref, inv_depth_key, x_key):
+def step_size_ratio(T_key, T_ref, x_key, inv_depth_key):
     depth_key = invert_depth(inv_depth_key)
-    depth_ref = calc_depth_ref(warp_key_to_ref, x_key, depth_key)
+    depth_ref = calc_depth_ref(T_key, T_ref, x_key, depth_key)
     inv_depth_ref = invert_depth(depth_ref)
     return inv_depth_key / inv_depth_ref
 
@@ -64,11 +64,12 @@ class GradientImage(object):
         self.grad_y = image_grad_y
 
     def __call__(self, u_key):
-        gx = interpolation(self.grad_x, u_key)
-        gy = interpolation(self.grad_y, u_key)
+        gx = interpolation1d_(self.grad_x, u_key)
+        gy = interpolation1d_(self.grad_y, u_key)
         return np.array([gx, gy])
 
 
+@njit
 def depth_search_range(inv_depth_range):
     min_inv_depth, max_inv_depth = inv_depth_range
     min_depth = invert_depth(max_inv_depth)
@@ -76,17 +77,20 @@ def depth_search_range(inv_depth_range):
     return min_depth, max_depth
 
 
-def epipolar_search_range_(warp_key_to_ref, x_key, depth_range):
+@njit
+def epipolar_search_range_(T_key, T_ref, x_key, depth_range):
     min_depth, max_depth = depth_range
-    x = to_homogeneous(x_key)
-    x_ref_min = pi(warp_key_to_ref(x * min_depth))
-    x_ref_max = pi(warp_key_to_ref(x * max_depth))
+
+    x_ref_min = warp2d(T_key, T_ref, x_key, min_depth)
+    x_ref_max = warp2d(T_key, T_ref, x_key, max_depth)
+
     return x_ref_min, x_ref_max
 
 
-def epipolar_search_range(warp_key_to_ref, x_key, inv_depth_range):
+@njit
+def epipolar_search_range(T_key, T_ref, x_key, inv_depth_range):
     depth_range = depth_search_range(inv_depth_range)
-    return epipolar_search_range_(warp_key_to_ref, x_key, depth_range)
+    return epipolar_search_range_(T_key, T_ref, x_key, depth_range)
 
 
 class Uncertaintity(object):
@@ -104,12 +108,10 @@ class Uncertaintity(object):
         return calc_observation_variance(alpha, geo_var, photo_var)
 
 
-def warp2d(warp, prior_depth, x):
-    return pi(warp(prior_depth * to_homogeneous(x)))
-
-
-def _world_to_local(pose, point):
-    return np.dot(pose.R.T, point - pose.t)
+def _unnormalize_if_in_image(camera_model, xs, shape):
+    us = camera_model.unnormalize(xs)
+    mask = is_in_image_range(us, shape)
+    return xs[mask], us[mask]
 
 
 class InverseDepthEstimator(object):
@@ -118,14 +120,10 @@ class InverseDepthEstimator(object):
         assert(np.ndim(keyframe.image) == 2)
         self.keyframe = keyframe
 
-        self.pose_key = keyframe.pose
+        self.T_key = (keyframe.pose.R, keyframe.pose.t)
         self.min_gradient = min_gradient
 
         image_key = keyframe.image
-
-        # -1 for bilinear interpolation
-        height, width = image_key.shape
-        self.coordinate_range = (height-1, width-1)
 
         self.uncertaintity = Uncertaintity(sigma_i, sigma_l)
         self.step_size_ref = step_size_ref
@@ -134,58 +132,59 @@ class InverseDepthEstimator(object):
             min_inv_depth=0.1, max_inv_depth=10.0
         )
 
-    def _unnormalize_if_in_image(self, camera_model, xs):
-        us = camera_model.unnormalize(xs)
-        mask = is_in_image_range(us, self.coordinate_range)
-        return xs[mask], us[mask]
-
     def __call__(self, refframe, u_key, prior_inv_depth, prior_variance):
-        ref = refframe
         key = self.keyframe
+        ref = refframe
 
-        warp3d = Warp3D(key.pose, ref.pose)
+        T_key = self.T_key  # key to world
+        t_ref = ref.pose.t
+        T_ref = (ref.pose.R, ref.pose.t)  # ref to world
 
         x_key = key.camera_model.normalize(u_key)
         prior_depth = invert_depth(prior_inv_depth)
 
-        ratio = step_size_ratio(warp3d, prior_inv_depth, x_key)
+        ratio = step_size_ratio(T_key, T_ref, x_key, prior_inv_depth)
         step_size_key = ratio * self.step_size_ref
 
-        xs_key = key_coordinates(x_key,
-                                 pi(_world_to_local(key.pose, ref.pose.t)),
-                                 step_size_key)
+        # t_ref is the position of ref camera center in the world coordinate
+        # inv_transform(*T_key, t_ref) brings the ref camera center onto
+        # the key camera coordinate
+        # pi project it onto the key image plane
+        t_image_ref = pi(inv_transform(*T_key, t_ref))
+        xs_key = key_coordinates(x_key, t_image_ref, step_size_key)
         us_key = key.camera_model.unnormalize(xs_key)
 
-        if not is_in_image_range(us_key, self.coordinate_range).all():
+        if not is_in_image_range(us_key, key.image.shape).all():
             return prior_inv_depth, prior_variance, FLAG.KEY_OUT_OF_RANGE
 
-        intensities_key = interpolation(key.image, us_key)
+        intensities_key = interpolation2d_(key.image, us_key)
         epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
             return prior_inv_depth, prior_variance, FLAG.INSUFFICIENT_GRADIENT
 
         inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
-        x_range_ref = epipolar_search_range(warp3d, x_key, inv_depth_range)
+        x_range_ref = epipolar_search_range(T_key, T_ref, x_key, inv_depth_range)
 
-        xs_ref, us_ref = self._unnormalize_if_in_image(
-            ref.camera_model,
-            reference_coordinates(x_range_ref, self.step_size_ref)
-        )
+        xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
+        xs_ref, us_ref = _unnormalize_if_in_image(ref.camera_model, xs_ref,
+                                                  ref.image.shape)
 
         if len(xs_ref) < len(xs_key):
             return prior_inv_depth, prior_variance, FLAG.EPIPOLAR_TOO_SHORT
 
-        intensities_ref = interpolation(ref.image, us_ref)
+        intensities_ref = interpolation2d_(ref.image, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
 
-        R0, t0 = key.pose.R, key.pose.t
-        R1, t1 = ref.pose.R, ref.pose.t
-        R = np.dot(R1.T, R0)
-        t = np.dot(R1.T, t0 - t1)
+        R_ref, t_ref = T_ref
+        R_key, t_key = T_key
+
+        # transformation from key camera coordinate to ref camera coordinate
+        R = np.dot(R_ref.T, R_key)
+        t = np.dot(R_ref.T, t_key - t_ref)
 
         depth_key = depth_from_triangulation(R, t, x_key, xs_ref[argmin])
 
-        x_ref = warp2d(warp3d, invert_depth(prior_inv_depth), x_key)
+        x_ref = warp2d(T_key, T_ref, x_key, invert_depth(prior_inv_depth))
         image_grad = self.image_grad(u_key)
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
                                       image_grad, epipolar_gradient)
