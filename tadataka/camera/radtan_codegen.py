@@ -47,7 +47,13 @@ def distort_jacobian(keypoint, dist_coeffs):
     return distort_jacobian_(k1, k2, k3, p1, p2, x, y)
 
 
+def codegen_(name_expr, prefix):
+    codegen(name_expr, prefix=prefix, language="C", to_files=True)
+
+
 def generate():
-    codegen(("distort_jacobian", jacobian_symbols_),
-            language="C", to_files=True,
-            prefix="tadataka/camera/_radtan_distort_jacobian")
+    codegen_(("distort", distort_symbols_),
+             prefix="tadataka/camera/_radtan_distort")
+
+    codegen_(("distort_jacobian", jacobian_symbols_),
+             prefix="tadataka/camera/_radtan_distort_jacobian")

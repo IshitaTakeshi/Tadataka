@@ -2,10 +2,7 @@
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
 import numpy as np
-from tadataka.camera.radtan_codegen import distort as radtan_distort
-from tadataka.camera.radtan_codegen import (
-    distort_jacobian as radtan_distort_jacobian
-)
+
 
 EPSILON = 1e-4
 
@@ -92,13 +89,20 @@ class RadTan(BaseDistortion):
     def __init__(self, dist_coeffs):
         assert(len(dist_coeffs) <= 5)
 
-        self.dist_coeffs = [0] * 5
+        self.dist_coeffs = np.zeros(5)
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
     def distort(self, keypoints):
-        return radtan_distort(keypoints, self.dist_coeffs)
+        from tadataka.camera._radtan import radtan_distort
+        P = np.copy(keypoints.astype(np.float64))
+        Q = np.empty(P.shape)
+        for i in range(Q.shape[0]):
+            Q[i] = radtan_distort(P[i], self.dist_coeffs)
+        return Q
 
     def _undistort(self, q, max_iter=100, threshold=1e-10):
+        from tadataka.camera._radtan import radtan_distort_jacobian
+
         def residual(p):
             return q - self.distort(np.atleast_2d(p)).squeeze()
 

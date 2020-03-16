@@ -47,6 +47,7 @@ setup(
     ext_modules=[
         Extension('tadataka.camera._radtan',
                   sources=["tadataka/camera/_radtan.pyx",
+                           "tadataka/camera/_radtan_distort.c",
                            "tadataka/camera/_radtan_distort_jacobian.c"]),
     ],
     cmdclass = {'build_ext': CustomBuildExt},
