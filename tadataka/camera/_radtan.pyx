@@ -54,11 +54,24 @@ def inv2x2(cnp.ndarray[cnp.double_t, ndim=2] X):
     return out
 
 
+def dot(cnp.ndarray[cnp.double_t, ndim=2] A,
+        cnp.ndarray[cnp.double_t, ndim=1] b,
+        cnp.ndarray[cnp.double_t, ndim=1] out):
+    out[0] = A[0, 0] * b[0] + A[0, 1] * b[1]
+    out[1] = A[1, 0] * b[0] + A[1, 1] * b[1]
+    return out
+
+
+def error(cnp.ndarray[cnp.float64_t, ndim=1] d):
+    return d[0] * d[0] + d[1] * d[1]
+
+
 def undistort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
                cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs,
                int max_iter, float threshold):
     cdef cnp.ndarray[cnp.float64_t, ndim=2] J
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] r, d
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] r
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] d = np.empty(2)
     cdef cnp.ndarray[cnp.float64_t, ndim=1] p = np.copy(keypoint)
 
     for i in range(max_iter):
@@ -69,9 +82,9 @@ def undistort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
         # J * d = r
         # if J is a square matrix
         # d = inv(J) * r
-        d = np.dot(inv2x2(J), r)
+        dot(inv2x2(J), r, d)
 
-        if np.dot(d, d) < threshold:
+        if error(d) < threshold:
             break
 
         p = p + d
