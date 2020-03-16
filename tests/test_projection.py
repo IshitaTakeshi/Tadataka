@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.pose import LocalPose, WorldPose
-from tadataka.projection import pi, inv_pi, warp
+from tadataka.projection import pi, inv_pi
 
 
 def test_pi():
@@ -36,3 +36,7 @@ def test_inv_pi():
         [[1.0, 4.0, 2.0],
          [-1.0, 3.0, 5.0]]
     )
+
+    x = np.array([0.5, 2.0])
+    depth = 2.0
+    assert_array_almost_equal(inv_pi(x, depth), [1.0, 4.0, 2.0])
