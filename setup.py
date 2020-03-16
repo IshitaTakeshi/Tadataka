@@ -1,4 +1,20 @@
-from setuptools import setup, find_packages
+from setuptools import setup, Extension, find_packages
+from setuptools.command.build_ext import build_ext
+
+
+def sympy_codegen():
+    from tadataka.camera import radtan_codegen
+    radtan_codegen.generate()
+
+
+class CustomBuildExt(build_ext):
+    def run(self):
+        import numpy as np
+
+        sympy_codegen()
+
+        self.include_dirs.append(np.get_include())
+        build_ext.run(self)
 
 
 setup(
@@ -12,7 +28,7 @@ setup(
     install_requires=[
         'autograd',
         'bidict',
-        'Cython',
+        'cython',
         'matplotlib',
         'numba',
         'numpy',
@@ -22,9 +38,17 @@ setup(
         'pandas',
         'scikit-image',
         'scikit-learn',
+        'setuptools>=18.0',  # >= 18.0 can handle cython
         'scipy>=1.4.1',
         'sympy',
         'sparseba',
         'pyyaml>=5.3'
-    ]
+    ],
+    ext_modules=[
+        Extension('tadataka.camera._radtan',
+                  sources=["tadataka/camera/_radtan.pyx",
+                           "tadataka/camera/_radtan_distort_jacobian.c"]),
+    ],
+    cmdclass = {'build_ext': CustomBuildExt},
+
 )
