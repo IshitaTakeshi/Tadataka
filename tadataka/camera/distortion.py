@@ -1,6 +1,9 @@
 # reference
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
+from tadataka.camera._radtan import radtan_distort
+from tadataka.camera._radtan import radtan_undistort
+
 import numpy as np
 
 
@@ -93,12 +96,11 @@ class RadTan(BaseDistortion):
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
     def distort(self, keypoints):
-        from tadataka.camera._radtan import radtan_distort
         return radtan_distort(keypoints.astype(np.float64), self.dist_coeffs)
 
     def undistort(self, keypoints, max_iter=100, threshold=1e-6):
-        from tadataka.camera._radtan import radtan_undistort
-        return radtan_undistort(keypoints, self.dist_coeffs, max_iter, threshold)
+        return radtan_undistort(keypoints, self.dist_coeffs,
+                                max_iter, threshold)
 
     @staticmethod
     def from_params(params):
