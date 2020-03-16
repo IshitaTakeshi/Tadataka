@@ -1,3 +1,4 @@
+from numba import njit
 import numpy as np
 
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
@@ -45,6 +46,7 @@ def homogeneous_matrix(A, b):
     return W
 
 
+@njit
 def to_homogeneous(X):
     """
     Args:
@@ -52,7 +54,7 @@ def to_homogeneous(X):
     Returns:
         Homogeneous coordinates of shape (n_points, dim + 1)
     """
-    if np.ndim(X) == 1:
+    if X.ndim == 1:
         return np.append(X, 1)
 
     ones = np.ones((X.shape[0], 1))
