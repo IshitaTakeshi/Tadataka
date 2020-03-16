@@ -3,50 +3,30 @@ cimport numpy as cnp
 
 
 cdef extern from "_radtan_distort_jacobian.h":
-    void distort_jacobian(double k1, double k2, double k3,
-                          double p1, double p2,
-                          double x, double y, double *out)
+    void distort_jacobian(double *dist_coeffs, double *keypoint, double *out)
 
 
 cdef extern from "_radtan_distort.h":
-    void distort(double k1, double k2, double k3,
-                 double p1, double p2,
-                 double x, double y, double *out)
+    void distort(double *dist_coeffs, double *keypoint, double *out)
 
 
 def radtan_distort_jacobian(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
                             cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs):
-    cdef double x = keypoint[0]
-    cdef double y = keypoint[1]
-    cdef double k1 = dist_coeffs[0]
-    cdef double k2 = dist_coeffs[1]
-    cdef double p1 = dist_coeffs[2]
-    cdef double p2 = dist_coeffs[3]
-    cdef double k3 = dist_coeffs[4]
-
     cdef cnp.ndarray[cnp.float64_t, ndim=1] out
 
     out = np.empty(4, dtype=np.float64)
 
-    distort_jacobian(k1, k2, k3, p1, p2, x, y, &out[0])
+    distort_jacobian(&dist_coeffs[0], &keypoint[0], &out[0])
     return out.reshape((2, 2))
 
 
 def distort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
              cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs):
-    cdef double x = keypoint[0]
-    cdef double y = keypoint[1]
-    cdef double k1 = dist_coeffs[0]
-    cdef double k2 = dist_coeffs[1]
-    cdef double p1 = dist_coeffs[2]
-    cdef double p2 = dist_coeffs[3]
-    cdef double k3 = dist_coeffs[4]
-
     cdef cnp.ndarray[cnp.float64_t, ndim=1] out
 
     out = np.empty(2, dtype=np.float64)
 
-    distort(k1, k2, k3, p1, p2, x, y, &out[0])
+    distort(&dist_coeffs[0], &keypoint[0], &out[0])
     return out
 
 
