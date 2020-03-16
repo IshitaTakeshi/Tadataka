@@ -1,3 +1,4 @@
+from numba import njit
 import numpy as np
 from tadataka.decorator import allow_1d
 
@@ -106,6 +107,7 @@ class Transform(object):
         return s * np.dot(R, P.T).T + t
 
 
+@njit
 def transform(R, t, P):
     """
     R: rotation matrix
@@ -117,6 +119,7 @@ def transform(R, t, P):
     return np.dot(R, P.T).T + t
 
 
+@njit
 def inv_transform(R, t, P):
     P = P - t
     return np.dot(R.T, P.T).T
