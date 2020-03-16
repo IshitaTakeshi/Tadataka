@@ -134,7 +134,7 @@ class LocalBundleAdjustment(object):
 
 
 def run_ba(viewpoint_indices, point_indices,
-                poses, points, keypoints_true):
+           poses, points, keypoints_true):
     ba = LocalBundleAdjustment(viewpoint_indices, point_indices,
                                keypoints_true)
 
