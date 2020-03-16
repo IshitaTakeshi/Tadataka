@@ -15,10 +15,11 @@ def test_merge_dicts():
 
 
 def test_is_in_image_range():
-    height, width = 30, 20
+    width, height = 20, 30
     image_shape = (height, width)
 
     keypoints = np.array([
+    #     x   y
         [19, 29],
         [19, 0],
         [0, 29],
@@ -38,6 +39,7 @@ def test_is_in_image_range():
 
     # case if keypoints are in float
     keypoints = np.array([
+        #    x      y
         [19.00, 29.00],
         [19.01, 29.00],
         [19.00, 29.01],
