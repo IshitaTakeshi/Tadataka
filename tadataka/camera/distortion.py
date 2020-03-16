@@ -89,41 +89,16 @@ class RadTan(BaseDistortion):
     def __init__(self, dist_coeffs):
         assert(len(dist_coeffs) <= 5)
 
-        self.dist_coeffs = np.zeros(5)
+        self.dist_coeffs = np.zeros(5, dtype=np.float64)
         self.dist_coeffs[:len(dist_coeffs)] = dist_coeffs
 
     def distort(self, keypoints):
         from tadataka.camera._radtan import radtan_distort
-        P = np.copy(keypoints.astype(np.float64))
-        Q = np.empty(P.shape)
-        for i in range(Q.shape[0]):
-            Q[i] = radtan_distort(P[i], self.dist_coeffs)
-        return Q
+        return radtan_distort(keypoints.astype(np.float64), self.dist_coeffs)
 
-    def _undistort(self, q, max_iter=100, threshold=1e-10):
-        from tadataka.camera._radtan import radtan_distort_jacobian
-
-        def residual(p):
-            return q - self.distort(np.atleast_2d(p)).squeeze()
-
-        p = np.copy(q)
-        for i in range(max_iter):
-            J = radtan_distort_jacobian(p, self.dist_coeffs)
-            r = residual(p)
-            d = np.linalg.solve(J, r)
-
-            if np.dot(d, d) < threshold:
-                break
-
-            p = p + d
-        return p
-
-    def undistort(self, distorted_keypoints):
-        Q = distorted_keypoints
-        P = np.empty(Q.shape)
-        for i in range(Q.shape[0]):
-            P[i] = self._undistort(Q[i])
-        return P
+    def undistort(self, keypoints, max_iter=100, threshold=1e-6):
+        from tadataka.camera._radtan import radtan_undistort
+        return radtan_undistort(keypoints, self.dist_coeffs, max_iter, threshold)
 
     @staticmethod
     def from_params(params):
