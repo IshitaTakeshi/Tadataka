@@ -109,8 +109,8 @@ depths_pred = []
 flag_map = np.zeros((*image_shape, 3))
 for u_key in tqdm(image_coordinates(image_shape)):
     x, y = u_key
-    inv_depth, flag = estimator(refframe, u_key,
-                                prior_depth[y, x], prior_variance[y, x])
+    inv_depth, _, flag = estimator(refframe, u_key,
+                                   prior_depth[y, x], prior_variance[y, x])
     if flag == FLAG.SUCCESS:
         depths_pred.append([x, y, invert_depth(inv_depth)])
     flag_map[y, x] = flag_to_color(flag)
