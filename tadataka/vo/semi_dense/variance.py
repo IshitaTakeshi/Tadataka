@@ -1,25 +1,26 @@
 import numpy as np
 
 
-EPSILON = 1e-16
-
-
 def photometric_variance(gradient_along_epipolar_line, sigma_i):
     # Calculate photometric disparity error
     return 2 * (sigma_i * sigma_i) / gradient_along_epipolar_line
 
 
-def geometric_variance(x, pi_t, image_gradient, sigma_l):
-    direction = x - pi_t
-    # Calculate geometric disparity error
-    p = np.dot(direction, image_gradient)
-
-    # normalization terms
+def geometric_variance(epipolar_direction, image_gradient, sigma_l, epsilon):
     ng = np.dot(image_gradient, image_gradient)
-    nl = np.dot(direction, direction)
-    var = sigma_l * sigma_l
+    nl = np.dot(epipolar_direction, epipolar_direction)
+    normalizer = ng * nl
 
-    return (var * ng * nl) / (p * p + EPSILON)
+    if normalizer < epsilon:
+        return (sigma_l * sigma_l) / epsilon
+
+    p = np.dot(epipolar_direction, image_gradient)
+    product = (p * p) / normalizer
+
+    if product < epsilon:
+        return (sigma_l * sigma_l) / epsilon
+
+    return (sigma_l * sigma_l) / product
 
 
 def calc_alpha_(x_key, x_ref_i, direction_i, ri, rz, ti, tz):

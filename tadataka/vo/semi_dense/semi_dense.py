@@ -100,10 +100,14 @@ class Uncertaintity(object):
 
     def __call__(self, x_key, x_ref, x_range_ref, R, t,
                  image_grad, epipolar_gradient):
+        geo_epsilon = 1e-4
         x_min_ref, x_max_ref = x_range_ref
+
         direction = normalize_length(x_max_ref - x_min_ref)
         alpha = calc_alpha(x_key, x_ref, direction, R, t)
-        geo_var = geometric_variance(x_key, pi(t), image_grad, self.sigma_l)
+
+        geo_var = geometric_variance(x_key - pi(t), image_grad,
+                                     self.sigma_l, geo_epsilon)
         photo_var = photometric_variance(epipolar_gradient, self.sigma_i)
         return calc_observation_variance(alpha, geo_var, photo_var)
 

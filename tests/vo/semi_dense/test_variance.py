@@ -8,19 +8,30 @@ from tadataka.vo.semi_dense.variance import (
 )
 
 
-def test_geomteric_disparity_error():
-    t = np.array([-8, 6, 2])
-    pi_t = t[0:2] / t[2]
+def test_geomteric_variance():
     sigma_l = 0.5
+    epsilon = 1e-4
 
-    gradient = np.array([2, -3])
-    x = np.array([2, 5])
+    gradient = np.array([20, -30])
+    direction = np.array([6, 2])  # epipolar line direction
 
-    variance = geometric_variance(x, pi_t, gradient, sigma_l)
+    # smoke
+    variance = geometric_variance(direction, gradient, sigma_l, epsilon)
+    p = np.dot(direction / norm(direction), gradient / norm(gradient))
+    assert_almost_equal(variance, (sigma_l * sigma_l) / (p * p))
 
-    direction = np.array([6, 2])  # x - pi(t)
-    d = np.dot(direction / norm(direction), gradient / norm(gradient))
-    assert_almost_equal(variance, (sigma_l * sigma_l) / (d * d))
+    # zero epipolar direction
+    variance = geometric_variance(np.zeros(2), gradient, sigma_l, epsilon)
+    assert_almost_equal(variance, (sigma_l * sigma_l) / epsilon)
+
+    # zero gradient
+    variance = geometric_variance(direction, np.zeros(2), sigma_l, epsilon)
+    assert_almost_equal(variance, (sigma_l * sigma_l) / epsilon)
+
+    # the case gradient is orthogonal to epipolar direction (max variance)
+    gradient = np.array([direction[1], -direction[0]])
+    variance = geometric_variance(direction, gradient, sigma_l, epsilon)
+    assert_almost_equal(variance, (sigma_l * sigma_l) / epsilon)
 
 
 def test_photometric_variance():
