@@ -103,8 +103,8 @@ def plot_propagation(image0, image1, depth_map0, depth_map1,
     plt.show()
 
 
-def plot_depth(image_key, image_ref, depth_map_true, depth_map_pred,
-               flag_map, cmap='RdBu'):
+def plot_depth(image_key, image_ref, flag_map,
+               depth_map_true, depth_map_pred, variance_map, cmap='RdBu'):
     fig = plt.figure()
 
     ax = fig.add_subplot(231)
@@ -115,11 +115,11 @@ def plot_depth(image_key, image_ref, depth_map_true, depth_map_pred,
     ax.set_title("reference frame")
     ax.imshow(image_ref)
 
-    ax = fig.add_subplot(234)
+    ax = fig.add_subplot(233)
     ax.set_title("flag map")
     ax.imshow(flag_to_color_map(flag_map))
     patches = [Patch(facecolor=flag_to_color(f), label=f.name) for f in FLAG]
-    ax.legend(handles=patches, loc='upper center', bbox_to_anchor=(0.5, -0.05))
+    ax.legend(handles=patches, loc='lower left', bbox_to_anchor=(0.6, 1.05))
 
     mask = flag_map==FLAG.SUCCESS
     depths_pred = depth_map_pred[mask]
@@ -130,7 +130,7 @@ def plot_depth(image_key, image_ref, depth_map_true, depth_map_pred,
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
     mapper = ScalarMappable(norm=norm, cmap=cmap)
 
-    ax = fig.add_subplot(235)
+    ax = fig.add_subplot(234)
     ax.set_title("predicted depth map")
     ax.imshow(image_key)
     height, width = image_key.shape[0:2]
@@ -139,9 +139,16 @@ def plot_depth(image_key, image_ref, depth_map_true, depth_map_pred,
     ax.scatter(us[:, 0], us[:, 1],
                s=1.0, c=mapper.to_rgba(depths_pred))
 
-    ax = fig.add_subplot(236)
-    ax.set_title("ground truth")
+    ax = fig.add_subplot(235)
+    ax.set_title("ground truth depth")
     im = ax.imshow(depth_map_true, norm=norm, cmap=cmap)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
+
+    ax = fig.add_subplot(236)
+    ax.set_title("variance map")
+    im = ax.imshow(variance_map)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
