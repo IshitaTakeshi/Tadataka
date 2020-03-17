@@ -199,26 +199,21 @@ class InverseDepthEstimator(object):
 
 
 class InverseDepthMapEstimator(object):
-    def __init__(self, keyframe):
-        self._estimator = InverseDepthEstimator(
-            keyframe,
-            sigma_l=0.005, sigma_i=0.04,
-            step_size_ref=0.005, min_gradient=10.0
-        )
+    def __init__(self, *args, **kwargs):
+        self._estimator = InverseDepthEstimator(*args, **kwargs)
 
     def __call__(self, refframe,
                  prior_inv_depth_map, prior_variance_map):
         image_shape = prior_inv_depth_map.shape
 
         inv_depth_map = np.zeros(image_shape)
-        variance_map = np.zeros(image_shape)
         flag_map = np.zeros(image_shape)
+        variance_map = np.zeros(image_shape)
         for u_key in tqdm(image_coordinates(image_shape)):
             x, y = u_key
             inv_depth, variance, flag = self._estimator(
                 refframe, u_key,
-                prior_inv_depth_map[y, x],
-                prior_variance_map[y, x]
+                prior_inv_depth_map[y, x], prior_variance_map[y, x]
             )
             inv_depth_map[y, x] = inv_depth
             variance_map[y, x] = variance
