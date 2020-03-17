@@ -7,7 +7,6 @@ from tadataka.dataset import TumRgbdDataset
 from tadataka.vo.semi_dense import SemiDenseVO
 from tadataka.vo.semi_dense.frame import Frame
 from tadataka.vo.semi_dense.common import invert_depth
-from tadataka.projection import pi, Warp
 from tadataka.matrix import to_homogeneous
 from tadataka.rigid_transform import transform
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
@@ -96,7 +95,6 @@ rf = dataset[5]
 keyframe = Frame(kf.camera_model, rgb2gray(kf.image), kf.pose)
 refframe = Frame(rf.camera_model, rgb2gray(rf.image), rf.pose)
 
-from tadataka.rigid_transform import Warp3D
 estimator = InverseDepthEstimator(
     keyframe,
     sigma_i=0.01, sigma_l=0.02,
