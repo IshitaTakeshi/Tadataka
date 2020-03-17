@@ -12,9 +12,7 @@ cdef extern from "_radtan_distort.h":
 
 def radtan_distort_jacobian(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
                             cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs):
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] out
-
-    out = np.empty(4, dtype=np.float64)
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] out = np.empty(4, dtype=np.float64)
 
     distort_jacobian(&dist_coeffs[0], &keypoint[0], &out[0])
     return out.reshape((2, 2))
@@ -22,9 +20,7 @@ def radtan_distort_jacobian(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
 
 def distort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
              cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs):
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] out
-
-    out = np.empty(2, dtype=np.float64)
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] out = np.empty(2, dtype=np.float64)
 
     distort(&dist_coeffs[0], &keypoint[0], &out[0])
     return out
@@ -59,7 +55,7 @@ def dot(cnp.ndarray[cnp.double_t, ndim=2] A,
         cnp.ndarray[cnp.double_t, ndim=1] out):
     out[0] = A[0, 0] * b[0] + A[0, 1] * b[1]
     out[1] = A[1, 0] * b[0] + A[1, 1] * b[1]
-    return out
+    return  # void
 
 
 def error(cnp.ndarray[cnp.float64_t, ndim=1] d):
