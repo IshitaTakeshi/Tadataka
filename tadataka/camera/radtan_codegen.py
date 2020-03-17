@@ -26,19 +26,18 @@ def distort_(dist_coeffs, keypoint):
     ])
 
 
-dist_coeffs_ = MatrixSymbol('dist_coeffs', 5, 1)
-keypoint_ = MatrixSymbol('keypoint', 2, 1)
-
-distort_symbols_ = distort_(dist_coeffs_, keypoint_)
-# jacobian should be 2x2
-jacobian_symbols_ = distort_symbols_.jacobian(keypoint_)
-
-
 def codegen_(name_expr, prefix):
     codegen(name_expr, prefix=prefix, language="C", to_files=True)
 
 
 def generate():
+    dist_coeffs_ = MatrixSymbol('dist_coeffs', 5, 1)
+    keypoint_ = MatrixSymbol('keypoint', 2, 1)
+
+    # jacobian should be 2x2
+    distort_symbols_ = distort_(dist_coeffs_, keypoint_)
+    jacobian_symbols_ = distort_symbols_.jacobian(keypoint_)
+
     codegen_(("distort", distort_symbols_),
              prefix="tadataka/camera/_radtan_distort")
 
