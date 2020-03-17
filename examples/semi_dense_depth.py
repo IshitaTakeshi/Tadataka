@@ -20,69 +20,6 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def replace_nan(array, value):
-    array[np.isnan(array)] = value
-    return array
-
-
-def as_uint8(array):
-    return np.round(array, 0).astype(np.uint8)
-
-
-def scale(image, srange, trange):
-    smin, smax = srange
-    tmin, tmax = trange
-    ratio = (tmax - tmin) / (smax - smin)
-    return ratio * (image - smin) + tmin
-
-
-def flag_to_color(flag):
-    if flag == FLAG.SUCCESS:
-        return np.array([0, 1, 0])  # green
-    if flag == FLAG.KEY_OUT_OF_RANGE:
-        return np.array([0, 0, 0])  # black
-    if flag == FLAG.EPIPOLAR_TOO_SHORT:
-        return np.array([1, 0, 0])  # red
-    if flag == FLAG.INSUFFICIENT_GRADIENT:
-        return np.array([0, 0, 1])  # blue
-    raise ValueError
-
-
-class PlotWarp(object):
-    def __init__(self, image_key, image_ref,
-                 camera_model_key, camera_model_ref,
-                 pose_key, pose_ref):
-        self.image_key = image_key
-        self.image_ref = image_ref
-        self.warp = Warp(camera_model_key, camera_model_ref,
-                         pose_key, pose_ref)
-
-    def __call__(self, u_key, depth_key):
-        u_ref = self.warp(u_key, depth_key)
-
-        fig = plt.figure()
-
-        ax = fig.add_subplot(121)
-        ax.set_title("keyframe")
-        ax.imshow(self.image_key)
-        ax.scatter(u_key[0], u_key[1], c="red")
-
-        ax = fig.add_subplot(122)
-        ax.set_title("reference frame")
-        ax.imshow(self.image_ref)
-        ax.scatter(u_ref[0], u_ref[1], c="red")
-
-        plt.show()
-
-
-def plot_with_bar(ax, image, vrange):
-    vmin, vmax = vrange
-    im = ax.imshow(image, vmin=vmin, vmax=vmax)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(im, cax=cax)
-
-
 dataset = TumRgbdDataset(
     "datasets/rgbd_dataset_freiburg1_xyz",
     which_freiburg=1
