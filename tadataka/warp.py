@@ -3,6 +3,7 @@ from tadataka.rigid_transform import transform
 from tadataka.decorator import allow_1d
 from tadataka.projection import inv_pi, pi
 from tadataka.rigid_transform import transform, inv_transform
+from tadataka.pose import WorldPose
 
 
 @njit
@@ -24,6 +25,8 @@ def warp2d(T0, T1, x, depth):
 
 class Warp3D(object):
     def __init__(self, pose0, pose1):
+        assert(isinstance(pose0, WorldPose))
+        assert(isinstance(pose1, WorldPose))
         self.T0 = pose0.R, pose0.t
         self.T1 = pose1.R, pose1.t
 
