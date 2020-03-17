@@ -19,60 +19,41 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 dataset = TumRgbdDataset(
-    "datasets/rgbd_dataset_freiburg1_xyz",
+    "datasets/rgbd_dataset_freiburg1_desk",
     which_freiburg=1
 )
 
 from tadataka.vo.semi_dense.semi_dense import InverseDepthEstimator
 
-def estimate(estimator, refframe,
-             prior_depth_map, prior_variance_map):
-    image_shape = prior_depth_map.shape
-
-    depth_map = np.zeros(image_shape)
-    variance_map = np.zeros(image_shape)
-    flag_map = np.zeros(image_shape)
-    for u_key in tqdm(image_coordinates(image_shape)):
-        x, y = u_key
-        inv_depth, variance, flag = estimator(
-            refframe, u_key,
-            prior_depth_map[y, x],
-            prior_variance_map[y, x]
-        )
-        depth_map[y, x] = invert_depth(inv_depth)
-        variance_map[y, x] = variance
-        flag_map[y, x] = flag
-
-    return depth_map, variance_map, flag_map
-
-
-kf = dataset[187]
-rf = dataset[194]
+kf = dataset[0]
+rf = dataset[5]
 
 keyframe = Frame(kf.camera_model, rgb2gray(kf.image), kf.pose)
 refframe = Frame(rf.camera_model, rgb2gray(rf.image), rf.pose)
 
 estimator = InverseDepthEstimator(
     keyframe,
-    sigma_l=0.005, sigma_i=0.04,
+    sigma_i=0.01, sigma_l=0.02,
     step_size_ref=0.005, min_gradient=10.0
 )
+image_shape = keyframe.image.shape
 
-prior_depth_map = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
-prior_variance_map = 1.0 * np.ones(kf.depth_map.shape)
+prior_depth = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
+prior_variance = 1.0 * np.ones(image_shape)
 
-depth_map, variance_map, flag_map = estimate(
-    estimator, refframe,
-    prior_depth_map, prior_variance_map
-)
+depth_map = np.zeros(image_shape)
+flag_map = np.zeros(image_shape)
+variance_map = np.zeros(image_shape)
+for u_key in tqdm(image_coordinates(image_shape)):
+    x, y = u_key
+    inv_depth, variance, flag = estimator(
+        refframe, u_key,
+        prior_depth[y, x], prior_variance[y, x]
+    )
+    depth_map[y, x] = invert_depth(inv_depth)
+    variance_map[y, x] = variance
+    flag_map[y, x] = flag
 
-plot_depth(kf.image, rf.image,
-           flag_map, kf.depth_map,
-           depth_map, variance_map)
 
-depth_map, variance_map = fusion(prior_depth_map, depth_map,
-                                 prior_variance_map, variance_map)
-
-plot_depth(kf.image, rf.image,
-           flag_map, kf.depth_map,
-           depth_map, variance_map)
+plot_depth(kf.image, rf.image, flag_map,
+           kf.depth_map, depth_map, variance_map)
