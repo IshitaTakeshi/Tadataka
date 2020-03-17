@@ -28,12 +28,12 @@ def distort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
 
 def radtan_distort(cnp.ndarray[cnp.double_t, ndim=2] keypoints,
                    cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs):
-    cdef cnp.ndarray[cnp.float64_t, ndim=2] out
 
-    out = np.empty((keypoints.shape[0], keypoints.shape[1]), dtype=np.float64)
+    keypoints = np.ascontiguousarray(keypoints, dtype=np.float64)
+
     for i in range(keypoints.shape[0]):
-        out[i] = distort_(keypoints[i], dist_coeffs)
-    return out
+        keypoints[i] = distort_(keypoints[i], dist_coeffs)
+    return keypoints
 
 
 def inv2x2(cnp.ndarray[cnp.double_t, ndim=2] X):
@@ -90,9 +90,9 @@ def undistort_(cnp.ndarray[cnp.double_t, ndim=1] keypoint,
 def radtan_undistort(cnp.ndarray[cnp.double_t, ndim=2] keypoints,
                      cnp.ndarray[cnp.double_t, ndim=1] dist_coeffs,
                      int max_iter, float threshold):
-    cdef cnp.ndarray[cnp.float64_t, ndim=2] out
 
-    out = np.empty((keypoints.shape[0], keypoints.shape[1]), dtype=np.float64)
+    keypoints = np.ascontiguousarray(keypoints, dtype=np.float64)
+
     for i in range(keypoints.shape[0]):
-        out[i] = undistort_(keypoints[i], dist_coeffs, max_iter, threshold)
-    return out
+        keypoints[i] = undistort_(keypoints[i], dist_coeffs, max_iter, threshold)
+    return keypoints
