@@ -35,7 +35,7 @@ class Warp3D(object):
         return warp3d(self.T0, self.T1, P)
 
 
-def warp(warp3d_, xs0, depths0):
+def warp_(warp3d_, xs0, depths0):
     P0 = inv_pi(xs0, depths0)
     P1 = warp3d_(P0)
     xs1, depths1 = pi(P1), P1[:, 2]
@@ -51,7 +51,7 @@ class Warp2D(object):
     def __call__(self, us0, depths0):
         xs0 = self.camera_model0.normalize(us0)
 
-        xs1, depths1 = warp(self.warp3d, xs0, depths0)
+        xs1, depths1 = warp_(self.warp3d, xs0, depths0)
 
         us1 = self.camera_model1.unnormalize(xs1)
         return us1, depths1
