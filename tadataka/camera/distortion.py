@@ -98,7 +98,7 @@ class RadTan(BaseDistortion):
     def distort(self, keypoints):
         return radtan_distort(keypoints.astype(np.float64), self.dist_coeffs)
 
-    def undistort(self, keypoints, max_iter=100, threshold=1e-6):
+    def undistort(self, keypoints, max_iter=1000, threshold=1e-10):
         return radtan_undistort(keypoints, self.dist_coeffs,
                                 max_iter, threshold)
 

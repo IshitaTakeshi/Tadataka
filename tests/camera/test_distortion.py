@@ -136,14 +136,22 @@ def test_radtan_undistort():
         [2, 0],
         [1, 2],
         [-3, -5],
-        [9, -3]
+        [9, -3],
+        [320, 240],
+        [-320, -240]
     ])
 
-    model = RadTan([0.5, 0.2, -0.3, 0.1, 0.02])
+    # model = RadTan([0.5, 0.2, -0.3, 0.1, 0.02])
+    # Y = model.distort(X_true)
+    # X_pred = model.undistort(Y)
+
+    # assert_array_almost_equal(X_true, X_pred, decimal=4)
+
+    model = RadTan([0.2624, -0.9531, -0.0054, 0.0026, 1.1633])
     Y = model.distort(X_true)
     X_pred = model.undistort(Y)
 
-    assert_array_almost_equal(X_true, X_pred, decimal=4)
+    assert_array_almost_equal(X_true, X_pred, decimal=6)
 
 
 def test_eq():
