@@ -220,8 +220,7 @@ class InverseDepthMapEstimator(object):
                 prior_inv_depth_map[y, x],
                 prior_variance_map[y, x]
             )
-            inv_depth_map[y, x] = invert_depth(inv_depth)
+            inv_depth_map[y, x] = inv_depth
             variance_map[y, x] = variance
             flag_map[y, x] = flag
-
         return inv_depth_map, variance_map, flag_map
