@@ -27,13 +27,29 @@ def get(array2d, us):
 
 
 def coordinates(warp01, depth_map0):
-    image_shape = depth_map0.shape
-
-    us0 = image_coordinates(image_shape)
-    depths0 = get(depth_map0, us0)
-
+    us0 = image_coordinates(depth_map0.shape)
+    depths0 = depth_map0.flatten()
     us1, depths1 = warp01(us0, depths0)
+    return us0, us1, depths0, depths1
+
+
+def propagate(warp01, depth_map0, variance_map0, uncertaintity_bias=0.01):
+    assert(depth_map0.shape == variance_map0.shape)
+    shape = depth_map0.shape
+
+    us0, us1, depths0, depths1 = coordinates(warp01, depth_map0)
+
     us1 = np.round(us1).astype(np.int64)
 
-    mask = is_in_image_range(us1, image_shape)
-    return us0[mask], us1[mask], depths0[mask], depths1[mask]
+    mask = is_in_image_range(us1, depth_map0.shape)
+    us0, depths0 = us0[mask], depths0[mask]
+    us1, depths1 = us1[mask], depths1[mask]
+
+    variances0 = variance_map0[us0[:, 1], us0[:, 0]]
+    variances1 = propagate_variance(invert_depth(depths0),
+                                    invert_depth(depths1),
+                                    variances0, uncertaintity_bias)
+
+    depth_map1 = substitute(np.ones(shape), us1, depths1)
+    variance_map1 = substitute(np.ones(shape), us1, variances1)
+    return depth_map1, variance_map1
