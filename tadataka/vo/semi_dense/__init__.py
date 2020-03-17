@@ -1,13 +1,11 @@
 import numpy as np
 
 from skimage.color import rgb2gray
-from tadataka.projection import Warp
+# from tadataka.projection import Warp
 from tadataka.pose import calc_relative_pose
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.semi_dense import InverseDepthEstimator, InverseDepthSearchRange
 from tadataka.vo.semi_dense.age import increment_age
-from tadataka.vo.semi_dense.propagation import (
-    new_inverse_depth_map, new_variance_map)
 from tadataka.coordinates import image_coordinates
 from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.vo.semi_dense.frame import Frame
