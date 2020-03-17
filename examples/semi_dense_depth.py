@@ -38,22 +38,22 @@ estimator = InverseDepthEstimator(
 )
 image_shape = keyframe.image.shape
 
-prior_depth = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
+prior_inv_depth = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
 prior_variance = 1.0 * np.ones(image_shape)
 
-depth_map = np.zeros(image_shape)
+inv_depth_map = np.zeros(image_shape)
 flag_map = np.zeros(image_shape)
 variance_map = np.zeros(image_shape)
 for u_key in tqdm(image_coordinates(image_shape)):
     x, y = u_key
     inv_depth, variance, flag = estimator(
         refframe, u_key,
-        prior_depth[y, x], prior_variance[y, x]
+        prior_inv_depth[y, x], prior_variance[y, x]
     )
-    depth_map[y, x] = invert_depth(inv_depth)
+    inv_depth_map[y, x] = inv_depth
     variance_map[y, x] = variance
     flag_map[y, x] = flag
 
 
 plot_depth(kf.image, rf.image, flag_map,
-           kf.depth_map, depth_map, variance_map)
+           kf.depth_map, invert_depth(inv_depth_map), variance_map)
