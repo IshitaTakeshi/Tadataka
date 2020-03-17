@@ -23,7 +23,7 @@ dataset = TumRgbdDataset(
     which_freiburg=1
 )
 
-from tadataka.vo.semi_dense.semi_dense import InverseDepthEstimator
+from tadataka.vo.semi_dense.semi_dense import InverseDepthMapEstimator
 
 kf = dataset[0]
 rf = dataset[5]
@@ -31,28 +31,19 @@ rf = dataset[5]
 keyframe = Frame(kf.camera_model, rgb2gray(kf.image), kf.pose)
 refframe = Frame(rf.camera_model, rgb2gray(rf.image), rf.pose)
 
-estimator = InverseDepthEstimator(
+estimator = InverseDepthMapEstimator(
     keyframe,
     sigma_i=0.01, sigma_l=0.02,
     step_size_ref=0.005, min_gradient=10.0
 )
 image_shape = keyframe.image.shape
 
-prior_inv_depth = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
-prior_variance = 1.0 * np.ones(image_shape)
+prior_inv_depth_map = np.random.uniform(0.8, 1.2, size=kf.depth_map.shape)
+prior_variance_map = 1.0 * np.ones(image_shape)
 
-inv_depth_map = np.zeros(image_shape)
-flag_map = np.zeros(image_shape)
-variance_map = np.zeros(image_shape)
-for u_key in tqdm(image_coordinates(image_shape)):
-    x, y = u_key
-    inv_depth, variance, flag = estimator(
-        refframe, u_key,
-        prior_inv_depth[y, x], prior_variance[y, x]
-    )
-    inv_depth_map[y, x] = inv_depth
-    variance_map[y, x] = variance
-    flag_map[y, x] = flag
+inv_depth_map, variance_map, flag_map = estimator(
+    refframe, prior_inv_depth_map, prior_variance_map
+)
 
 
 plot_depth(kf.image, rf.image, flag_map,
