@@ -10,6 +10,7 @@ from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.matrix import to_homogeneous
 from tadataka.rigid_transform import transform
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
+from tadataka.vo.semi_dense.fusion import fusion
 from tests.dataset.path import new_tsukuba
 
 from examples.plot import plot_depth
@@ -44,8 +45,9 @@ def estimate(estimator, refframe,
 
     return depth_map, variance_map, flag_map
 
+
 kf = dataset[187]
-rf = dataset[192]
+rf = dataset[194]
 
 keyframe = Frame(kf.camera_model, rgb2gray(kf.image), kf.pose)
 refframe = Frame(rf.camera_model, rgb2gray(rf.image), rf.pose)
@@ -63,6 +65,13 @@ depth_map, variance_map, flag_map = estimate(
     estimator, refframe,
     prior_depth_map, prior_variance_map
 )
+
+plot_depth(kf.image, rf.image,
+           flag_map, kf.depth_map,
+           depth_map, variance_map)
+
+depth_map, variance_map = fusion(prior_depth_map, depth_map,
+                                 prior_variance_map, variance_map)
 
 plot_depth(kf.image, rf.image,
            flag_map, kf.depth_map,
