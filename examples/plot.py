@@ -55,46 +55,42 @@ class PlotWarp(object):
         plt.show()
 
 
-def plot_propagation(image0, image1, depth_map0, depth_map1,
-                     us1, depths_pred1):
+def plot_propagation(image0, image1,
+                     depth_map_true0, depth_map_true1,
+                     depth_map_pred1):
     cmap='RdBu'
 
     fig = plt.figure()
+
+    vmin = min(np.min(depth_map_true0),
+               np.min(depth_map_true1),
+               np.min(depth_map_pred1))
+    vmax = max(np.max(depth_map_true0),
+               np.max(depth_map_true1),
+               np.max(depth_map_pred1))
+
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    mapper = ScalarMappable(norm=norm, cmap=cmap)
 
     ax = fig.add_subplot(231)
     ax.set_title("frame 0")
     ax.imshow(image0)
 
     ax = fig.add_subplot(232)
+    ax.set_title("ground truth depth map 0")
+    im = ax.imshow(depth_map_true0, norm=norm, cmap=cmap)
+
+    ax = fig.add_subplot(234)
     ax.set_title("frame 1")
     ax.imshow(image1)
 
-    vmin = min(np.min(depth_map0),
-               np.min(depth_map1),
-               np.min(depths_pred1))
-    vmax = max(np.max(depth_map0),
-               np.max(depth_map1),
-               np.max(depths_pred1))
-
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-    mapper = ScalarMappable(norm=norm, cmap=cmap)
-
-    ax = fig.add_subplot(234)
-    ax.set_title("depth map 0")
-    im = ax.imshow(depth_map0, norm=norm, cmap=cmap)
-
     ax = fig.add_subplot(235)
-    ax.set_title("predicted depth map 1")
-    ax.imshow(image1)
-    height, width = image1.shape[0:2]
-    ax.set_xlim(0, width)
-    ax.set_ylim(height, 0)
-    ax.scatter(us1[:, 0], us1[:, 1],
-               s=1.0, c=mapper.to_rgba(depths_pred1))
+    ax.set_title("ground truth depth map 1")
+    im = ax.imshow(depth_map_true1, norm=norm, cmap=cmap)
 
     ax = fig.add_subplot(236)
-    ax.set_title("ground truth depth map 1")
-    im = ax.imshow(depth_map1, norm=norm, cmap=cmap)
+    ax.set_title("predicted depth map 1")
+    im = ax.imshow(depth_map_pred1, norm=norm, cmap=cmap)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -137,7 +133,7 @@ def plot_depth(image_key, image_ref, flag_map,
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
     ax.scatter(us[:, 0], us[:, 1],
-               s=1.0, c=mapper.to_rgba(depths_pred))
+               s=0.5, c=mapper.to_rgba(depths_pred))
 
     ax = fig.add_subplot(235)
     ax.set_title("ground truth depth")
