@@ -1,6 +1,9 @@
 import numpy as np
 from numba import njit
 
+from tqdm import tqdm
+
+from tadataka.coordinates import image_coordinates
 from tadataka.vector import normalize_length
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import to_homogeneous
@@ -145,7 +148,6 @@ class InverseDepthEstimator(object):
         T_ref = (ref.pose.R, ref.pose.t)  # ref to world
 
         x_key = key.camera_model.normalize(u_key)
-        prior_depth = invert_depth(prior_inv_depth)
 
         ratio = step_size_ratio(T_key, T_ref, x_key, prior_inv_depth)
         step_size_key = ratio * self.step_size_ref
@@ -193,3 +195,33 @@ class InverseDepthEstimator(object):
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
                                       image_grad, epipolar_gradient)
         return invert_depth(depth_key), variance, FLAG.SUCCESS
+
+
+
+class InverseDepthMapEstimator(object):
+    def __init__(self, keyframe):
+        self._estimator = InverseDepthEstimator(
+            keyframe,
+            sigma_l=0.005, sigma_i=0.04,
+            step_size_ref=0.005, min_gradient=10.0
+        )
+
+    def __call__(self, refframe,
+                 prior_inv_depth_map, prior_variance_map):
+        image_shape = prior_inv_depth_map.shape
+
+        inv_depth_map = np.zeros(image_shape)
+        variance_map = np.zeros(image_shape)
+        flag_map = np.zeros(image_shape)
+        for u_key in tqdm(image_coordinates(image_shape)):
+            x, y = u_key
+            inv_depth, variance, flag = self._estimator(
+                refframe, u_key,
+                prior_inv_depth_map[y, x],
+                prior_variance_map[y, x]
+            )
+            inv_depth_map[y, x] = invert_depth(inv_depth)
+            variance_map[y, x] = variance
+            flag_map[y, x] = flag
+
+        return inv_depth_map, variance_map, flag_map
