@@ -56,9 +56,8 @@ class PlotWarp(object):
 
 
 def plot_propagation(image0, image1,
-                     depth_map_true0, depth_map_true1,
-                     depth_map_pred1):
-    cmap='RdBu'
+                     depth_map_true0, depth_map_true1, depth_map_pred1,
+                     image_cmap="gray", depth_cmap="RdBu"):
 
     fig = plt.figure()
 
@@ -70,27 +69,27 @@ def plot_propagation(image0, image1,
                np.max(depth_map_pred1))
 
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-    mapper = ScalarMappable(norm=norm, cmap=cmap)
+    mapper = ScalarMappable(norm=norm, cmap=depth_cmap)
 
     ax = fig.add_subplot(231)
     ax.set_title("frame 0")
-    ax.imshow(image0)
+    ax.imshow(image0, cmap=image_cmap)
 
     ax = fig.add_subplot(232)
     ax.set_title("ground truth depth map 0")
-    im = ax.imshow(depth_map_true0, norm=norm, cmap=cmap)
+    im = ax.imshow(depth_map_true0, norm=norm, cmap=depth_cmap)
 
     ax = fig.add_subplot(234)
     ax.set_title("frame 1")
-    ax.imshow(image1)
+    ax.imshow(image1, cmap=image_cmap)
 
     ax = fig.add_subplot(235)
     ax.set_title("ground truth depth map 1")
-    im = ax.imshow(depth_map_true1, norm=norm, cmap=cmap)
+    im = ax.imshow(depth_map_true1, norm=norm, cmap=depth_cmap)
 
     ax = fig.add_subplot(236)
     ax.set_title("predicted depth map 1")
-    im = ax.imshow(depth_map_pred1, norm=norm, cmap=cmap)
+    im = ax.imshow(depth_map_pred1, norm=norm, cmap=depth_cmap)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -100,16 +99,20 @@ def plot_propagation(image0, image1,
 
 
 def plot_depth(image_key, image_ref, flag_map,
-               depth_map_true, depth_map_pred, variance_map, cmap='RdBu'):
+               depth_map_true, depth_map_pred, variance_map,
+               image_cmap="gray",
+               depth_cmap='RdBu'):
+
+
     fig = plt.figure()
 
     ax = fig.add_subplot(231)
     ax.set_title("keyframe")
-    ax.imshow(image_key)
+    ax.imshow(image_key, cmap=image_cmap)
 
     ax = fig.add_subplot(232)
     ax.set_title("reference frame")
-    ax.imshow(image_ref)
+    ax.imshow(image_ref, cmap=image_cmap)
 
     ax = fig.add_subplot(233)
     ax.set_title("flag map")
@@ -124,11 +127,11 @@ def plot_depth(image_key, image_ref, flag_map,
     vmin = min(np.min(depth_map_true), np.min(depths_pred))
     vmax = max(np.max(depth_map_true), np.max(depths_pred))
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-    mapper = ScalarMappable(norm=norm, cmap=cmap)
+    mapper = ScalarMappable(norm=norm, cmap=depth_cmap)
 
     ax = fig.add_subplot(234)
     ax.set_title("predicted depth map")
-    ax.imshow(image_key)
+    ax.imshow(image_key, cmap=image_cmap)
     height, width = image_key.shape[0:2]
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
@@ -137,7 +140,7 @@ def plot_depth(image_key, image_ref, flag_map,
 
     ax = fig.add_subplot(235)
     ax.set_title("ground truth depth")
-    im = ax.imshow(depth_map_true, norm=norm, cmap=cmap)
+    im = ax.imshow(depth_map_true, norm=norm, cmap=depth_cmap)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
