@@ -4,6 +4,7 @@ from tadataka.pose import WorldPose
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
+from tadataka.warp import Warp2D
 
 
 def propagate_variance(inv_depths0, inv_depths1, variances0, uncertaintity):
@@ -33,7 +34,7 @@ def coordinates(warp01, depth_map0):
     return us0, us1, depths0, depths1
 
 
-def propagate(warp01, depth_map0, variance_map0, uncertaintity_bias=0.01):
+def propagate_(warp01, depth_map0, variance_map0, uncertaintity_bias=0.01):
     assert(depth_map0.shape == variance_map0.shape)
     shape = depth_map0.shape
 
@@ -53,3 +54,13 @@ def propagate(warp01, depth_map0, variance_map0, uncertaintity_bias=0.01):
     depth_map1 = substitute(np.ones(shape), us1, depths1)
     variance_map1 = substitute(np.ones(shape), us1, variances1)
     return depth_map1, variance_map1
+
+
+def propagate(frame0, frame1, inv_depth_map0, variance_map0):
+    depth_map0 = invert_depth(inv_depth_map0)
+
+    warp01 = Warp2D(frame0.camera_model, frame1.camera_model,
+                    frame0.pose, frame1.pose)
+    depth_map1, variance_map1 = propagate_(warp01, depth_map0, variance_map0)
+
+    return invert_depth(depth_map1), variance_map1
