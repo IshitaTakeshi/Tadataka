@@ -54,16 +54,20 @@ class PlotWarp(object):
 
         plt.show()
 
+
 def plot_with_bar(ax, im):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
 
-def plot_depth_variance(image, depth_map_true,
-                        depth_map_pred, variance_map_pred,
-                        image_cmap="gray", depth_cmap="RdBu"):
+
+def plot_prior(image, depth_map_true,
+               depth_map_pred, variance_map_pred,
+               image_cmap="gray", depth_cmap="RdBu"):
 
     fig = plt.figure()
+
+    fig.suptitle("Prior")
 
     vmin = min(np.min(depth_map_true), np.min(depth_map_pred))
     vmax = max(np.max(depth_map_true), np.max(depth_map_pred))
@@ -71,33 +75,32 @@ def plot_depth_variance(image, depth_map_true,
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
     mapper = ScalarMappable(norm=norm, cmap=depth_cmap)
 
-    ax = fig.add_subplot(141)
+    ax = fig.add_subplot(221)
     ax.set_title("frame")
     ax.imshow(image, cmap=image_cmap)
 
-    ax = fig.add_subplot(142)
+    ax = fig.add_subplot(222)
     ax.set_title("ground truth depth map")
     im = ax.imshow(depth_map_true, norm=norm, cmap=depth_cmap)
 
-    ax = fig.add_subplot(143)
-    ax.set_title("predicted depth map")
+    ax = fig.add_subplot(223)
+    ax.set_title("prior depth map")
     im = ax.imshow(depth_map_pred, norm=norm, cmap=depth_cmap)
 
     plot_with_bar(ax, im)
 
-    ax = fig.add_subplot(144)
-    ax.set_title("predicted variance map")
+    ax = fig.add_subplot(224)
+    ax.set_title("prior variance map")
     im = ax.imshow(variance_map_pred, cmap=depth_cmap)
 
     plot_with_bar(ax, im)
 
-    # plt.show()
+    plt.show()
 
 
 def plot_depth(image_key, image_ref, flag_map,
                depth_map_true, depth_map_pred, variance_map,
-               image_cmap="gray",
-               depth_cmap='RdBu'):
+               image_cmap="gray", depth_cmap='RdBu'):
 
 
     fig = plt.figure()
