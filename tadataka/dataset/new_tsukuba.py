@@ -27,7 +27,15 @@ def load_depth(path):
 def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
-    return euler_angles, positions
+
+    positions[:, 2] = -positions[:, 2]
+    rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
+
+    quaternions = rotations.as_quat()
+    quaternions[:, 1] = -quaternions[:, 1]
+    rotations = Rotation.from_quat(quaternions)
+
+    return rotations, positions
 
 
 def discard_alpha(image):
@@ -81,12 +89,6 @@ class NewTsukubaDataset(BaseDataset):
 
         position_center = self.positions[index]
         rotation = self.rotations[index]
-
-        position_center[2] = -position_center[2]
-        rotation = Rotation.from_euler('xyz', rotation, degrees=True)
-        quat = rotation.as_quat()
-        quat[1] = -quat[1]
-        rotation = Rotation.from_quat(quat)
 
         offset = calc_baseline_offset(rotation, self.baseline_length)
         pose_l = WorldPose(rotation, position_center - offset / 2.0)
