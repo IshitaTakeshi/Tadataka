@@ -10,9 +10,10 @@ from tadataka.warp import Warp2D
 from tests.dataset.path import new_tsukuba
 
 
-def test_new_tsukuba_stereo():
-    dataset = NewTsukubaDataset(new_tsukuba)
+dataset = NewTsukubaDataset(new_tsukuba)
 
+
+def test_new_tsukuba_stereo():
     assert_equal(len(dataset), 5)
 
     L, R = dataset[0]
@@ -59,8 +60,6 @@ def test_new_tsukuba_warp():
 
         d = depths1 - interpolation(frame1.depth_map, us1)
         assert((np.abs(d) < threshold).all())
-
-    dataset = NewTsukubaDataset(new_tsukuba)
 
     frame0, _ = dataset[0]
     frame1, _ = dataset[4]
