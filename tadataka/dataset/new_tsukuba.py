@@ -28,9 +28,12 @@ def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
 
+    # left handded system to right handded system
     positions[:, 2] = -positions[:, 2]
     rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
 
+    # flip y
+    # I still don't understand why it works but it is working
     quaternions = rotations.as_quat()
     quaternions[:, 1] = -quaternions[:, 1]
     rotations = Rotation.from_quat(quaternions)
