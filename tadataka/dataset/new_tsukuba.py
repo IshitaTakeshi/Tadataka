@@ -27,17 +27,7 @@ def load_depth(path):
 def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
-
-    # left handded system to right handded system
-    positions[:, 2] = -positions[:, 2]
     rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
-
-    # flip y
-    # I still don't understand why it works but it is working
-    quaternions = rotations.as_quat()
-    quaternions[:, 1] = -quaternions[:, 1]
-    rotations = Rotation.from_quat(quaternions)
-
     return rotations, positions
 
 
@@ -92,6 +82,10 @@ class NewTsukubaDataset(BaseDataset):
 
         position_center = self.positions[index]
         rotation = self.rotations[index]
+        R = Rotation.from_rotvec([np.pi, 0, 0]).as_matrix()
+        position_center = np.dot(R, position_center)
+        A, B, C = rotation.as_euler('xyz', degrees=True)
+        rotation = Rotation.from_euler('xyz', [A, -B, -C], degrees=True)
 
         offset = calc_baseline_offset(rotation, self.baseline_length)
         pose_l = WorldPose(rotation, position_center - offset / 2.0)
