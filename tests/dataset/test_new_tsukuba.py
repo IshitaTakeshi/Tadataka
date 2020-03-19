@@ -8,7 +8,7 @@ from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 from tests.dataset.path import new_tsukuba
 
 
-def test_new_tsukuba():
+def test_new_tsukuba_stereo():
     dataset = NewTsukubaDataset(new_tsukuba)
 
     assert_equal(len(dataset), 5)
@@ -21,8 +21,8 @@ def test_new_tsukuba():
     assert_equal(R.depth_map.shape, image_shape[0:2])
 
     L, R = dataset[4]
-    translation_true = np.array([-51.802731, 4.731323, -105.171677])
-    degrees_true = np.array([16.091024, -10.583960, 0.007110])
+    translation_true = np.array([-51.802731, -4.731323, 105.171677])
+    degrees_true = np.array([16.091024, 10.583960, -0.007110])
     rotation_true = Rotation.from_euler('xyz', degrees_true, degrees=True)
 
     pose_l = L.pose
