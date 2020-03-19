@@ -29,7 +29,7 @@ points = np.array([
    [4, 1, 1],
    [-2, 3, 1],
    [-4, 4, -1]
-])
+], dtype=np.float64)
 
 omegas = np.array([
     [0.1, 0.0, 0.0],
@@ -164,16 +164,16 @@ def test_estimate_pose_change():
         [6, 5, 3],
         [0, -4, 1],
         [9, -1, 7]
-    ])
+    ], dtype=np.float64)
 
     R_true = np.array([
         [-1, 0, 0],
         [0, 0, 1],
         [0, 1, 0],
-    ])
+    ], dtype=np.float64)
 
     def case1():
-        t_true = np.array([0, 0, 5])
+        t_true = np.array([0, 0, 5], dtype=np.float64)
         P0 = X_true
         P1 = transform(R_true, t_true, X_true)
         keypoints0 = projection.compute(P0)
@@ -187,7 +187,7 @@ def test_estimate_pose_change():
 
     def case2():
         # 5 points are behind cameras
-        t_true = np.array([0, 0, 0])
+        t_true = np.array([0, 0, 0], dtype=np.float64)
         P0 = X_true
         P1 = transform(R_true, t_true, X_true)
         keypoints0 = projection.compute(P0)
