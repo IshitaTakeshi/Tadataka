@@ -24,9 +24,31 @@ def load_depth(path):
     return depth_map.reshape(height, width)
 
 
+def align_coordinate_system(positions, euler_angles):
+    # Camera coordinate system and world coordinate system are not aligned
+    #
+    # Usually camera coordinate system is represented in the format that
+    # x: right  y: down  z: forward
+    # however, in 'camera_track.txt', they are written in
+    # x: right  y: up    z: backward
+    #
+    # This means the camera coordinate system is
+    # rotated 180 degrees around the x-axis from the world coordinate system
+
+    # rotate 180 degrees around the x-axis
+    R = Rotation.from_rotvec([np.pi, 0, 0]).as_matrix()
+    positions = np.dot(R, positions.T).T
+
+    # Reverse rotations around y and z because axes are flipped
+    # (rot_x, rot_y, rot_z) <- (rot_x, -rot_y, -rot_z)
+    euler_angles[:, 1:3] = -euler_angles[:, 1:3]
+    return positions, euler_angles
+
+
 def load_poses(pose_path):
     poses = np.loadtxt(pose_path, delimiter=',')
     positions, euler_angles = poses[:, 0:3], poses[:, 3:6]
+    positions, euler_angles = align_coordinate_system(positions, euler_angles)
     rotations = Rotation.from_euler('xyz', euler_angles, degrees=True)
     return rotations, positions
 
@@ -82,10 +104,6 @@ class NewTsukubaDataset(BaseDataset):
 
         position_center = self.positions[index]
         rotation = self.rotations[index]
-        R = Rotation.from_rotvec([np.pi, 0, 0]).as_matrix()
-        position_center = np.dot(R, position_center)
-        A, B, C = rotation.as_euler('xyz', degrees=True)
-        rotation = Rotation.from_euler('xyz', [A, -B, -C], degrees=True)
 
         offset = calc_baseline_offset(rotation, self.baseline_length)
         pose_l = WorldPose(rotation, position_center - offset / 2.0)
