@@ -136,6 +136,32 @@ def test_mul():
     R1 = pose1.rotation.as_matrix()
     assert_array_almost_equal(pose3.t, np.dot(R1, pose2.t) + pose1.t)
 
+    # case3
+    # point in the world coordinate system
+    point = np.array([0, 0, 1], dtype=np.float64)
+
+    # rotate 90 degrees around the y-axis and move 1 along the z-axis
+    rotvec1 = [0, np.pi / 2, 0]
+    t1 = np.array([0, 0, 1])
+
+    # rotate 180 degrees around the z-axis and move 2 along the y axis
+    rotvec2 = [0, 0, np.pi]
+    t2 = np.array([0, 2, 0])
+
+    pose1 = WorldPose(Rotation.from_rotvec(rotvec1), t1)
+    pose2 = WorldPose(Rotation.from_rotvec(rotvec2), t2)
+    pose3 = pose2 * pose1
+
+    expected = [-1, 2, 1]
+    assert_array_almost_equal(
+        transform(pose2.R, pose2.t, transform(pose1.R, pose1.t, point)),
+        expected
+    )
+    assert_array_almost_equal(
+        transform(pose3.R, pose3.t, point),
+        expected
+    )
+
 
 def test_n_triangulated():
     assert(n_triangulated(1000, 0.2, 40) == 200)   # 1000 * 0.2
