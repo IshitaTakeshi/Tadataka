@@ -3,7 +3,9 @@ from numpy.testing import (assert_array_almost_equal,
                            assert_array_equal, assert_equal)
 from scipy.spatial.transform import Rotation
 
+from tadataka.interpolation import interpolation
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
+from tadataka.warp import Warp2D
 
 from tests.dataset.path import new_tsukuba
 
@@ -44,3 +46,38 @@ def test_new_tsukuba_stereo():
         pose_r.rotation.as_euler('xyz', degrees=True),
         degrees_true
     )
+
+
+def test_new_tsukuba_warp():
+    def run(frame0, frame1, us0, threshold):
+        warp = Warp2D(frame0.camera_model, frame1.camera_model,
+                      frame0.pose, frame1.pose)
+
+        depths0 = np.array([frame0.depth_map[y, x] for x, y in us0])
+
+        us1, depths1 = warp(us0, depths0)
+
+        d = depths1 - interpolation(frame1.depth_map, us1)
+        assert((np.abs(d) < threshold).all())
+
+    dataset = NewTsukubaDataset(new_tsukuba)
+
+    frame0, _ = dataset[0]
+    frame1, _ = dataset[4]
+
+    run(frame0, frame1,
+        np.array([
+            [500, 300],
+            [300, 140]
+        ]),
+        threshold=0.2)
+
+    frame0, _ = dataset[0]
+    _, frame1 = dataset[3]
+
+    run(frame0, frame1,
+        np.array([
+            [100, 200],
+            [300, 440]
+        ]),
+        threshold=0.1)
