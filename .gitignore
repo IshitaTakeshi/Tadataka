@@ -1,5 +1,8 @@
 # package specific contents
 datasets/
+*.c
+*.h
+*.lprof
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -8,8 +11,6 @@ __pycache__/
 
 # C extensions
 *.so
-*.c
-*.h
 
 # Distribution / packaging
 .Python
