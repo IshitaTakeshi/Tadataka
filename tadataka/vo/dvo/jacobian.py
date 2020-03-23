@@ -5,8 +5,8 @@ import numpy as np
 # Master's Thesis, Technical University (2012).
 
 
-def calc_projection_jacobian(camera_parameters, P):
-    fx, fy = camera_parameters.focal_length
+def calc_projection_jacobian(focal_lengths, P):
+    fx, fy = focal_lengths
 
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
 
@@ -32,22 +32,23 @@ def calc_projection_jacobian(camera_parameters, P):
     return JW
 
 
-def calc_jacobian(camera_parameters, dx, dy, P):
-    fx, fy = camera_parameters.focal_length
-    fgx, fgy = fx * dx, fy * dy
+def calc_jacobian(focal_length, didx, didy, P0, P1):
+    fx, fy = focal_length
+    fgx, fgy = fx * didx, fy * didy
 
-    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    x0, y0, z0 = P0[:, 0], P0[:, 1], P0[:, 2]
+    x1, y1, z1 = P1[:, 0], P1[:, 1], P1[:, 2]
 
-    z2 = z * z  # element-wise z * z
-    xy = x * y
+    z12 = z1 * z1
+    x1y1 = x1 * y1
 
-    J = np.empty((P.shape[0], 6))
-    J[:, 0] = fgx / z
-    J[:, 1] = fgy / z
-    J[:, 2] = -(fgx * x + fgy * y) / z2
-    J[:, 3] = -fgx * xy / z2 - fgy * (1 + np.power(y / z, 2))
-    J[:, 4] = fgx * (1 + np.power(x / z, 2)) + fgy * xy / z2
-    J[:, 5] = (-fgx * y + fgy * x) / z
+    J = np.empty((P0.shape[0], 6))
+    J[:, 0] = fgx / z0
+    J[:, 1] = fgy / z0
+    J[:, 2] = -(fgx * x0 + fgy * y0) / (z0 * z0)
+    J[:, 3] = -(fgx * x1y1 + fgy * (z12 + y1 * y1)) / z12
+    J[:, 4] = (fgx * (z12 + x1 * x1) + fgy * x1y1) / z12
+    J[:, 5] = (-fgx * y1 + fgy * x1) / z1
     return J
 
 
