@@ -8,14 +8,18 @@ from skimage.io import imread
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
-from tadataka.camera import CameraParameters
+
+from tadataka.coordinates import image_coordinates
+from tadataka.utils import is_in_image_range
+from tadataka.projection import inv_pi, pi
+from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
 from tadataka.interpolation import interpolation
 from tadataka.se3 import exp_se3, get_rotation, get_translation
 from tadataka.vo.dvo.mask import compute_mask
 from tadataka.vo.dvo.projection import inverse_projection, projection
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
-from tadataka.pose import LocalPose
+from tadataka.pose import WorldPose
 from tadataka.robust.weights import (compute_weights_huber,
                                      compute_weights_student_t,
                                      compute_weights_tukey)
@@ -33,54 +37,103 @@ def solve_linear_equation(J, r, weights=None):
         J = J * weights.reshape(-1, 1)
 
     xi, errors, _, _ = np.linalg.lstsq(J, r, rcond=None)
-    error = 0 if len(errors) == 0 else errors[0]
-    return xi, error
+    return xi
 
 
 def level_to_ratio(level):
     return 1 / pow(2, level)
 
 
-def calc_pose_update(camera_parameters,
-                     I0, D0, I1, DX, DY, S, pose, min_depth=1e-8):
-
-    # Transform onto the t0 coordinate
-    # means that
-    # 1. backproject each pixel in the t0 frame to 3D
-    # 2. transform the 3D points to t1 coordinates
-    # 3. reproject the transformed 3D points to the t1 coordinates
-    # 4. interpolate image gradient maps using the reprojected coordinates
-
-    P = transform(pose.R, pose.t, S)  # to t1 coordinates
-    Q = projection(camera_parameters, P)
-    mask = compute_mask(D0, Q).flatten()
+def calc_pose_update(camera_model1, residuals, GX1, GY1, P1,
+                     min_depth=1e-8):
+    assert(GX1.shape == GY1.shape)
+    us1 = camera_model1.unnormalize(pi(P1))
+    mask = is_in_image_range(us1, GX1.shape)
 
     if not np.any(mask):
-        # return xi = np.zeros(6), error = np.nan
-        # if there is no valid pixel
-        return np.zeros(6), np.nan
+        # warped coordinates are out of image range
+        return None
 
-    P = P[mask]
-    I0 = I0.flatten()[mask]  # you don't need to warp I0
-    I1 = interpolation(I1, Q, order=1)[mask]
-    DX = interpolation(DX, Q, order=1)[mask]
-    DY = interpolation(DY, Q, order=1)[mask]
+    r = residuals[mask]
+    p1 = P1[mask]
+    gx1 = interpolation(GX1, us1[mask])
+    gy1 = interpolation(GY1, us1[mask])
 
     # J.shape == (n_image_pixels, 6)
-    J = calc_jacobian(camera_parameters, DX, DY, P)
+    J = calc_jacobian(camera_model1.camera_parameters.focal_length,
+                      gx1, gy1, p1)
 
-    r = -(I1 - I0)
-    # weights = compute_weights_tukey(r)
-    weights = compute_weights_student_t(r)
+    weights = compute_weights_tukey(r)
+    # weights = compute_weights_student_t(r)
+    xi = solve_linear_equation(J, r, weights)
+    return xi
 
-    xi, error = solve_linear_equation(J, r, weights)
-    return xi, error
+
+def image_shape_at(level, shape):
+    ratio = level_to_ratio(level)
+    return (shape[0] * ratio, shape[1] * ratio)
+
+
+def camera_model_at(level, camera_model):
+    """Change camera parameters as the image is resized"""
+    ratio = level_to_ratio(level)
+    params = camera_model.camera_parameters
+    return CameraModel(
+        CameraParameters(params.focal_length * ratio, params.offset * ratio),
+        camera_model.distortion_model
+    )
+
+
+from tadataka.metric import photometric_error
+from tadataka.warp import Warp2D
+class Estimator(object):
+    def __init__(self, camera_model0, camera_model1, max_iter):
+        self.camera_model0 = camera_model0
+        self.camera_model1 = camera_model1
+        self.max_iter = max_iter
+
+    def __call__(self, I0, D0, I1, pose01):
+        def warn():
+            warnings.warn("There's no valid pixel at level {}. "\
+                          "Camera's pose change is too large ".format(level),
+                          RuntimeWarning)
+
+        us0 = image_coordinates(I0.shape)
+        xs0 = self.camera_model0.normalize(us0)
+        P0 = inv_pi(xs0, D0.flatten())
+        GX1, GY1 = calc_image_gradient(I1)
+        residuals = (I0 - I1).flatten()
+
+        prev_norm = np.inf
+        for k in range(self.max_iter):
+            P1 = transform(pose01.R, pose01.t, P0)
+            xi = calc_pose_update(self.camera_model1, residuals,
+                                  GX1, GY1, P1)
+
+            if xi is None:
+                warn()
+
+            curr_norm = norm(xi)
+            if curr_norm > prev_norm:
+                break
+            prev_norm = curr_norm
+
+            warp = Warp2D(self.camera_model0, self.camera_model1,
+                          pose01, WorldPose.identity())
+            print("\t{:>2d} : {}".format(
+                k, photometric_error(warp, I0, D0, I1)))
+            dpose = WorldPose.from_se3(xi)
+            pose01 = dpose * pose01
+        return pose01
 
 
 class PoseChangeEstimator(object):
-    def __init__(self, camera_model, I0, D0, I1,
+    def __init__(self, camera_model0, camera_model1, I0, D0, I1,
                  epsilon=1e-4, max_iter=20):
-        # TODO check if np.ndim(D0) == np.ndim(I1) == 2
+        assert(I0.shape == D0.shape == I1.shape)
+        assert(np.ndim(I0) == 2)
+        assert(np.ndim(D0) == 2)
+        assert(np.ndim(I1) == 2)
 
         self.I0 = I0
         self.D0 = D0
@@ -89,70 +142,42 @@ class PoseChangeEstimator(object):
         self.epsilon = epsilon
         self.max_iter = max_iter
 
-        # FIXME use 'camera_model'
-        self.camera_parameters = camera_model.camera_parameters
+        self.camera_model0 = camera_model0
+        self.camera_model1 = camera_model1
 
-    def estimate(self, n_coarse_to_fine=5):
+    def estimate(self, pose01=WorldPose.identity(), n_coarse_to_fine=5):
         levels = list(reversed(range(n_coarse_to_fine)))
 
-        pose = LocalPose.identity()
+        # transforms point in the 0th camera coordinate to
+        # the 1st camera coordicoordinate
+
         for level in levels:
+            print("level:", level)
             try:
-                pose = self.estimate_motion_at(level, pose)
+                pose01 = self.estimate_motion_at(level, pose01)
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
-                return LocalPose.identity()
-        # invert because 'pose' is representing the pose change from t1 to t0
-        return pose.inv()
+                return WorldPose.identity()
+        return pose01
 
-    def camera_parameters_at(self, level):
-        """Change camera parameters as the image is resized"""
-        focal_length = self.camera_parameters.focal_length
-        offset = self.camera_parameters.offset
-        ratio = level_to_ratio(level)
-        return CameraParameters(focal_length * ratio, offset * ratio)
+    def estimate_motion_at(self, level, pose01):
+        estimator = Estimator(
+            camera_model_at(level, self.camera_model0),
+            camera_model_at(level, self.camera_model1),
+            self.max_iter
+        )
 
-    def image_shape_at(self, level):
-        shape = np.array(self.I0.shape)
-        ratio = level_to_ratio(level)
-        return shape * ratio
-
-    def estimate_motion_at(self, level, pose):
-        camera_parameters = self.camera_parameters_at(level)
-        shape = self.image_shape_at(level)
-
+        shape = image_shape_at(level, self.I0.shape)
         I0 = resize(self.I0, shape)
         D0 = resize(self.D0, shape)
         I1 = resize(self.I1, shape)
 
-        S = inverse_projection(camera_parameters, D0)
-
-        DX, DY = calc_image_gradient(I1)
-
-        for k in range(self.max_iter):
-            dxi, error = calc_pose_update(
-                camera_parameters,
-                I0, D0, I1, DX, DY, S, pose
-            )
-
-            if np.isnan(error):
-                warnings.warn(
-                    "There's no valid pixel at level {}. "\
-                    "Camera's pose change is too large ".format(level),
-                    RuntimeWarning
-                )
-
-            if norm(dxi) < self.epsilon:
-                break
-
-            dpose = LocalPose.from_se3(dxi)
-            pose = pose * dpose
-        return pose
+        return estimator(I0, D0, I1, pose01)
 
 
 class DVO(object):
     def __init__(self):
-        self.pose = LocalPose.identity()
+        self.pose = WorldPose.identity()
         self.frames = []
 
     def estimate(self, frame1):
@@ -170,5 +195,5 @@ class DVO(object):
 
         self.frames.append(frame1)
 
-        self.pose = self.pose * dpose
+        self.pose = dpose * self.pose
         return self.pose
