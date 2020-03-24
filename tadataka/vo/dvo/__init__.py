@@ -40,8 +40,7 @@ def level_to_ratio(level):
     return 1 / pow(2, level)
 
 
-def calc_pose_update(camera_model1, residuals, GX1, GY1, P1,
-                     min_depth=1e-8):
+def calc_pose_update(camera_model1, residuals, GX1, GY1, P1):
     assert(GX1.shape == GY1.shape)
     us1 = camera_model1.unnormalize(pi(P1))
     mask = is_in_image_range(us1, GX1.shape)
@@ -80,9 +79,7 @@ def camera_model_at(level, camera_model):
     )
 
 
-from tadataka.metric import photometric_error
-from tadataka.warp import Warp2D
-class Estimator(object):
+class _PoseChangeEstimator(object):
     def __init__(self, camera_model0, camera_model1, max_iter):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
@@ -114,10 +111,6 @@ class Estimator(object):
                 break
             prev_norm = curr_norm
 
-            warp = Warp2D(self.camera_model0, self.camera_model1,
-                          pose01, WorldPose.identity())
-            print("\t{:>2d} : {}".format(
-                k, photometric_error(warp, I0, D0, I1)))
             dpose = WorldPose.from_se3(xi)
             pose01 = dpose * pose01
         return pose01
@@ -157,7 +150,7 @@ class PoseChangeEstimator(object):
         return pose01
 
     def estimate_motion_at(self, level, pose01):
-        estimator = Estimator(
+        estimator = _PoseChangeEstimator(
             camera_model_at(level, self.camera_model0),
             camera_model_at(level, self.camera_model1),
             self.max_iter
