@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from skimage.io import imread
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
@@ -40,7 +39,7 @@ def level_to_ratio(level):
     return 1 / pow(2, level)
 
 
-def calc_pose_update(camera_model1, residuals, GX1, GY1, P1):
+def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weight_map):
     assert(GX1.shape == GY1.shape)
     us1 = camera_model1.unnormalize(pi(P1))
     mask = is_in_image_range(us1, GX1.shape)
@@ -54,19 +53,21 @@ def calc_pose_update(camera_model1, residuals, GX1, GY1, P1):
     gx1 = interpolation(GX1, us1[mask])
     gy1 = interpolation(GY1, us1[mask])
 
-    # J.shape == (n_image_pixels, 6)
+    if weight_map is None:
+        # weights = compute_weights_tukey(r)
+        weights = compute_weights_student_t(r)
+    else:
+        weights = weight_map.flatten()[mask]
+
     J = calc_jacobian(camera_model1.camera_parameters.focal_length,
                       gx1, gy1, p1)
-
-    weights = compute_weights_tukey(r)
-    # weights = compute_weights_student_t(r)
     xi = solve_linear_equation(J, r, weights)
     return xi
 
 
 def image_shape_at(level, shape):
     ratio = level_to_ratio(level)
-    return (shape[0] * ratio, shape[1] * ratio)
+    return (int(shape[0] * ratio), int(shape[1] * ratio))
 
 
 def camera_model_at(level, camera_model):
@@ -85,7 +86,7 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
-    def __call__(self, I0, D0, I1, pose10):
+    def __call__(self, I0, D0, I1, pose10, weight_map=None):
         def warn():
             warnings.warn("There's no valid pixel at level {}. "\
                           "Camera's pose change is too large ".format(level),
@@ -101,10 +102,11 @@ class _PoseChangeEstimator(object):
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
-                                  GX1, GY1, P1)
+                                  GX1, GY1, P1, weight_map)
 
             if xi is None:
                 warn()
+                return pose10
 
             curr_norm = norm(xi)
             if curr_norm > prev_norm:
@@ -118,7 +120,7 @@ class _PoseChangeEstimator(object):
 
 class PoseChangeEstimator(object):
     def __init__(self, camera_model0, camera_model1, I0, D0, I1,
-                 epsilon=1e-4, max_iter=20):
+                 weight_map=None, epsilon=1e-4, max_iter=20):
         assert(I0.shape == D0.shape == I1.shape)
         assert(np.ndim(I0) == 2)
         assert(np.ndim(D0) == 2)
@@ -127,6 +129,7 @@ class PoseChangeEstimator(object):
         self.I0 = I0
         self.D0 = D0
         self.I1 = I1
+        self.W = weight_map
 
         self.epsilon = epsilon
         self.max_iter = max_iter
@@ -160,7 +163,9 @@ class PoseChangeEstimator(object):
         D0 = resize(self.D0, shape)
         I1 = resize(self.I1, shape)
 
-        return estimator(I0, D0, I1, pose10)
+        W = None if self.W in None else resize(self.W, shape)
+
+        return estimator(I0, D0, I1, pose10, W)
 
 
 class DVO(object):
