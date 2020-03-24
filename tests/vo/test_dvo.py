@@ -12,7 +12,7 @@ from tests.dataset.path import new_tsukuba
 
 
 def test_calc_pose_update():
-    level = 5
+    level = 6
     dataset = NewTsukubaDataset(new_tsukuba)
     frame0, frame1 = dataset[0][0], dataset[4][1]
 
@@ -35,4 +35,4 @@ def test_calc_pose_update():
 
     warp = Warp2D(camera_model0, camera_model1, dpose, WorldPose.identity())
     error_pred = photometric_error(warp, I0, D0, I1)
-    assert(error_pred < error_prior * 0.4)
+    assert(error_pred < error_prior * 0.1)
