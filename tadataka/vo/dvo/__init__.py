@@ -85,7 +85,7 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
-    def __call__(self, I0, D0, I1, pose01):
+    def __call__(self, I0, D0, I1, pose10):
         def warn():
             warnings.warn("There's no valid pixel at level {}. "\
                           "Camera's pose change is too large ".format(level),
@@ -99,7 +99,7 @@ class _PoseChangeEstimator(object):
 
         prev_norm = np.inf
         for k in range(self.max_iter):
-            P1 = transform(pose01.R, pose01.t, P0)
+            P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
                                   GX1, GY1, P1)
 
@@ -112,8 +112,8 @@ class _PoseChangeEstimator(object):
             prev_norm = curr_norm
 
             dpose = WorldPose.from_se3(xi)
-            pose01 = dpose * pose01
-        return pose01
+            pose10 = dpose * pose10
+        return pose10
 
 
 class PoseChangeEstimator(object):
@@ -134,22 +134,21 @@ class PoseChangeEstimator(object):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
 
-    def estimate(self, pose01=WorldPose.identity(), n_coarse_to_fine=5):
+    def estimate(self, pose10=WorldPose.identity(), n_coarse_to_fine=5):
         levels = list(reversed(range(n_coarse_to_fine)))
 
         # transforms point in the 0th camera coordinate to
         # the 1st camera coordicoordinate
 
         for level in levels:
-            print("level:", level)
             try:
-                pose01 = self.estimate_motion_at(level, pose01)
+                pose10 = self.estimate_motion_at(level, pose10)
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
                 return WorldPose.identity()
-        return pose01
+        return pose10
 
-    def estimate_motion_at(self, level, pose01):
+    def estimate_motion_at(self, level, pose10):
         estimator = _PoseChangeEstimator(
             camera_model_at(level, self.camera_model0),
             camera_model_at(level, self.camera_model1),
@@ -161,7 +160,7 @@ class PoseChangeEstimator(object):
         D0 = resize(self.D0, shape)
         I1 = resize(self.I1, shape)
 
-        return estimator(I0, D0, I1, pose01)
+        return estimator(I0, D0, I1, pose10)
 
 
 class DVO(object):

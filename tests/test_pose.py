@@ -240,16 +240,16 @@ def test_calc_relative_pose():
         # onto the 0th camera coordinate
         # pose1 represents transformation from the world coordinate
         # onto the 1st camera coordinate
-        # pose01 should be the transformation
+        # pose10 should be the transformation
         # from the 0th camera coordinate
         # onto the 1st camera coordinate
         pose0 = LocalPose(rotation0, t0)
         pose1 = LocalPose(rotation1, t1)
 
-        pose01 = calc_relative_pose(pose0, pose1)
+        pose10 = calc_relative_pose(pose0, pose1)
 
         p0 = transform(pose0.R, pose0.t, point)
-        p1_pred = transform(pose01.R, pose01.t, p0)
+        p1_pred = transform(pose10.R, pose10.t, p0)
 
         p1_true = transform(pose1.R, pose1.t, point)
 
@@ -260,15 +260,15 @@ def test_calc_relative_pose():
         # to another location (say this is the 0th location) in the world
         # pose1 transforms a point in the world coordinate
         # to another location (say this is the 1st location) in the world
-        # pose01 should be the transformation
+        # pose10 should be the transformation
         # from the 0th location to the 1st location
         pose0 = WorldPose(rotation0, t0)
         pose1 = WorldPose(rotation1, t1)
 
-        pose01 = calc_relative_pose(pose0, pose1)
+        pose10 = calc_relative_pose(pose0, pose1)
 
         p0 = transform(pose0.R, pose0.t, point)
-        p1_pred = transform(pose01.R, pose01.t, p0)
+        p1_pred = transform(pose10.R, pose10.t, p0)
 
         p1_true = transform(pose1.R, pose1.t, point)
 

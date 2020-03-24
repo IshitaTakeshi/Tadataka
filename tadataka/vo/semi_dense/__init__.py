@@ -60,8 +60,8 @@ class DepthMapUpdate(object):
 
 
 class DepthMapPropagation(object):
-    def __init__(self, pose01):
-        self.tz = pose01.t[2]
+    def __init__(self, pose10):
+        self.tz = pose10.t[2]
 
     def __call__(self, inv_depth_map0, variance_map0):
         inv_depth_map1 = new_inverse_depth_map(inv_depth_map0, self.tz)
@@ -100,12 +100,12 @@ class SemiDenseVO(object):
         inv_depth_map, variance_map = self.inv_depth_map, self.variance_map
 
         last = self.refframes[-1]
-        pose01 = calc_relative_pose(last.pose, keyframe.pose)
+        pose10 = calc_relative_pose(last.pose, keyframe.pose)
 
-        warp = Warp(last.camera_model, keyframe.camera_model, pose01)
+        warp = Warp(last.camera_model, keyframe.camera_model, pose10)
         self.age = increment_age(self.age, warp, invert_depth(inv_depth_map))
 
-        propagate = DepthMapPropagation(pose01)
+        propagate = DepthMapPropagation(pose10)
         inv_depth_map, variance_map = propagate(inv_depth_map, variance_map)
 
         update = DepthMapUpdate(keyframe, self.refframes, self.age)
