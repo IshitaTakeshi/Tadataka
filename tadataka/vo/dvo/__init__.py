@@ -8,16 +8,12 @@ from skimage.io import imread
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
-
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.projection import inv_pi, pi
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
 from tadataka.interpolation import interpolation
-from tadataka.se3 import exp_se3, get_rotation, get_translation
-from tadataka.vo.dvo.mask import compute_mask
-from tadataka.vo.dvo.projection import inverse_projection, projection
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
 from tadataka.pose import WorldPose
 from tadataka.robust.weights import (compute_weights_huber,
