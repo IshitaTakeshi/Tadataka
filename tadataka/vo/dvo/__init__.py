@@ -97,9 +97,7 @@ class _PoseChangeEstimator(object):
 
     def __call__(self, I0, D0, I1, pose10, weight_map=None):
         def warn():
-            warnings.warn("There's no valid pixel at level {}. "\
-                          "Camera's pose change is too large ".format(level),
-                          RuntimeWarning)
+            warnings.warn("Camera pose change is too large.", RuntimeWarning)
 
         us0 = image_coordinates(I0.shape)
         xs0 = self.camera_model0.normalize(us0)
