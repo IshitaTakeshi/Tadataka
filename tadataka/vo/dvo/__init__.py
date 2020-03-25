@@ -7,6 +7,8 @@ from numpy.linalg import norm
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
+from tadataka.warp import Warp2D
+from tadataka.metric import photometric_error
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 from tadataka.projection import inv_pi, pi
@@ -86,6 +88,13 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
+    def _error(self, I0, D0, I1, pose10):
+        return photometric_error(
+            Warp2D(self.camera_model0, self.camera_model1,
+                   pose10, WorldPose.identity()),
+            I0, D0, I1
+        )
+
     def __call__(self, I0, D0, I1, pose10, weight_map=None):
         def warn():
             warnings.warn("There's no valid pixel at level {}. "\
@@ -98,7 +107,7 @@ class _PoseChangeEstimator(object):
         GX1, GY1 = calc_image_gradient(I1)
         residuals = (I0 - I1).flatten()
 
-        prev_norm = np.inf
+        prev_error = np.inf
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
@@ -108,64 +117,72 @@ class _PoseChangeEstimator(object):
                 warn()
                 return pose10
 
-            curr_norm = norm(xi)
-            if curr_norm > prev_norm:
-                break
-            prev_norm = curr_norm
-
             dpose = WorldPose.from_se3(xi)
-            pose10 = dpose * pose10
+            canditate = dpose * pose10
+
+            E = self._error(I0, D0, I1, canditate)
+            if E > prev_error:
+                break
+            prev_error = E
+
+            pose10 = canditate
         return pose10
 
 
 class PoseChangeEstimator(object):
-    def __init__(self, camera_model0, camera_model1, I0, D0, I1,
-                 weight_map=None, epsilon=1e-4, max_iter=20):
-        assert(I0.shape == D0.shape == I1.shape)
-        assert(np.ndim(I0) == 2)
-        assert(np.ndim(D0) == 2)
-        assert(np.ndim(I1) == 2)
-
-        self.I0 = I0
-        self.D0 = D0
-        self.I1 = I1
-        self.W = weight_map
-
-        self.epsilon = epsilon
+    def __init__(self, camera_model0, camera_model1,
+                 n_coarse_to_fine=5, max_iter=10):
+        self.n_coarse_to_fine = n_coarse_to_fine
         self.max_iter = max_iter
 
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
 
-    def estimate(self, pose10=WorldPose.identity(), n_coarse_to_fine=5):
-        levels = list(reversed(range(n_coarse_to_fine)))
+    def __call__(self, I0, D0, I1, weight_map=None,
+                 pose10=WorldPose.identity()):
+        W0 = weight_map
+        assert(I0.shape == D0.shape == I1.shape)
+        assert(np.ndim(I0) == 2)
+        assert(np.ndim(D0) == 2)
+        assert(np.ndim(I1) == 2)
 
         # transforms point in the 0th camera coordinate to
         # the 1st camera coordicoordinate
 
-        for level in levels:
+        for level in list(reversed(range(self.n_coarse_to_fine))):
             try:
-                pose10 = self.estimate_motion_at(level, pose10)
+                print("before ", photometric_error(
+                    Warp2D(self.camera_model0, self.camera_model1,
+                           pose10, WorldPose.identity()),
+                    I0, D0, I1)
+                )
+
+                pose10 = self._estimate_at(pose10, level, I0, D0, I1, W0)
+
+                print("after  ", photometric_error(
+                    Warp2D(self.camera_model0, self.camera_model1,
+                           pose10, WorldPose.identity()),
+                    I0, D0, I1)
+                )
+
             except np.linalg.LinAlgError as e:
                 sys.stderr.write(str(e) + "\n")
                 return WorldPose.identity()
         return pose10
 
-    def estimate_motion_at(self, level, pose10):
-        estimator = _PoseChangeEstimator(
-            camera_model_at(level, self.camera_model0),
-            camera_model_at(level, self.camera_model1),
-            self.max_iter
-        )
+    def _estimate_at(self, prior, level, I0, D0, I1, W0):
+        camera_model0 = camera_model_at(level, self.camera_model0)
+        camera_model1 = camera_model_at(level, self.camera_model1)
+        estimator = _PoseChangeEstimator(camera_model0, camera_model1,
+                                         max_iter=10)
 
-        shape = image_shape_at(level, self.I0.shape)
-        I0 = resize(self.I0, shape)
-        D0 = resize(self.D0, shape)
-        I1 = resize(self.I1, shape)
+        shape = image_shape_at(level, D0.shape)
+        D0 = resize(D0, shape)
+        I0 = resize(I0, shape)
+        I1 = resize(I1, shape)
 
-        W = None if self.W in None else resize(self.W, shape)
-
-        return estimator(I0, D0, I1, pose10, W)
+        weight_map = np.ones(shape)
+        return estimator(I0, D0, I1, prior, weight_map)
 
 
 class DVO(object):
