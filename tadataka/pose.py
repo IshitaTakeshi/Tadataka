@@ -36,8 +36,9 @@ class _Pose(object):
 
     def __str__(self):
         rotvec = self.rotation.as_rotvec()
-        with np.printoptions(precision=3, suppress=True):
-            return "rotvec = " + str(rotvec)  + "   t = " + str(self.t)
+        sr = ' '.join(["{: .3f}".format(v) for v in rotvec])
+        st = ' '.join(["{: .3f}".format(v) for v in self.t])
+        return "rotvec = [ " + sr + " ]  t = [ " + st + " ]"
 
     @classmethod
     def identity(PoseClass):
