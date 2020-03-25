@@ -107,7 +107,7 @@ class _PoseChangeEstimator(object):
         GX1, GY1 = calc_image_gradient(I1)
         residuals = (I0 - I1).flatten()
 
-        prev_error = np.inf
+        prev_error = self._error(I0, D0, I1, pose10)
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
