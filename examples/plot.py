@@ -3,6 +3,7 @@ import matplotlib
 from matplotlib.cm import ScalarMappable
 from matplotlib.patches import Patch
 from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
@@ -105,15 +106,15 @@ def plot_depth(image_key, image_ref, flag_map,
 
     fig = plt.figure()
 
-    ax = fig.add_subplot(231)
+    ax = fig.add_subplot(241)
     ax.set_title("keyframe")
     ax.imshow(image_key, cmap=image_cmap)
 
-    ax = fig.add_subplot(232)
+    ax = fig.add_subplot(242)
     ax.set_title("reference frame")
     ax.imshow(image_ref, cmap=image_cmap)
 
-    ax = fig.add_subplot(233)
+    ax = fig.add_subplot(243)
     ax.set_title("flag map")
     ax.imshow(flag_to_color_map(flag_map))
     patches = [Patch(facecolor=flag_to_color(f), label=f.name) for f in FLAG]
@@ -121,34 +122,48 @@ def plot_depth(image_key, image_ref, flag_map,
 
     mask = flag_map==FLAG.SUCCESS
     depths_pred = depth_map_pred[mask]
+    depths_true = depth_map_true[mask]
+    depths_diff = np.abs(depths_pred - depths_true)
+
     us = image_coordinates(depth_map_pred.shape)[mask.flatten()]
 
     vmin = min(np.min(depth_map_true), np.min(depths_pred))
     vmax = max(np.max(depth_map_true), np.max(depths_pred))
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    norm = Normalize(vmin=vmin, vmax=vmax)
     mapper = ScalarMappable(norm=norm, cmap=depth_cmap)
 
-    ax = fig.add_subplot(234)
-    ax.set_title("predicted depth map")
-    ax.imshow(image_key, cmap=image_cmap)
-    height, width = image_key.shape[0:2]
-    ax.set_xlim(0, width)
-    ax.set_ylim(height, 0)
-    ax.scatter(us[:, 0], us[:, 1],
-               s=0.5, c=mapper.to_rgba(depths_pred))
-
-    ax = fig.add_subplot(235)
+    ax = fig.add_subplot(245)
     ax.set_title("ground truth depth")
     im = ax.imshow(depth_map_true, norm=norm, cmap=depth_cmap)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(im, cax=cax)
+    plot_with_bar(ax, im)
 
-    ax = fig.add_subplot(236)
+    height, width = image_key.shape[0:2]
+
+    ax = fig.add_subplot(246)
+    ax.set_title("predicted depth map")
+    im = ax.imshow(image_key, cmap=image_cmap)
+    ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_pred))
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    # plot_with_bar(ax, im)
+
+    ax = fig.add_subplot(247)
+    ax.set_title("error = abs(pred - true)")
+    im = ax.imshow(image_key, cmap=image_cmap)
+    ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_diff))
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    # plot_with_bar(ax, im)
+
+    ax = fig.add_subplot(248)
     ax.set_title("variance map")
     im = ax.imshow(variance_map)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(im, cax=cax)
+    plot_with_bar(ax, im)
 
     plt.show()
+
+
+
+    plt.show()
+
+
