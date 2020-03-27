@@ -136,6 +136,11 @@ def plot_depth(image_key, pixel_age, flag_map,
     ax.legend(handles=patches, loc='center left', bbox_to_anchor=(1.05, 0.5))
 
     mask = flag_map==FLAG.SUCCESS
+
+    if mask.sum() == 0:  # no success pixel
+        plt.show()
+        return
+
     depths_pred = depth_map_pred[mask]
     depths_true = depth_map_true[mask]
     depths_diff = np.abs(depths_pred - depths_true)
