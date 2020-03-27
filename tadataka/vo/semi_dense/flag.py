@@ -10,3 +10,4 @@ class ResultFlag(IntEnum):
     NEGATIVE_PRIOR_DEPTH = -5
     NEGATIVE_REF_DEPTH = -6
     NEGATIVE_ESTIMATED_DEPTH = -7
+    NOT_PROCESSED = -8
