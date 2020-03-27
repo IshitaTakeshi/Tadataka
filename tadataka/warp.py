@@ -17,10 +17,10 @@ def warp3d(T0, T1, P):
 
 
 @njit
-def warp2d(T0, T1, x, depth):
-    p = inv_pi(x, depth)
-    q = warp3d(T0, T1, p)
-    return pi(q)
+def warp2d(T0, T1, xs, depths):
+    P = inv_pi(xs, depths)
+    Q = warp3d(T0, T1, P)
+    return pi(Q)
 
 
 class Warp3D(object):
