@@ -131,7 +131,7 @@ class InverseDepthEstimator(object):
         assert(np.ndim(keyframe.image) == 2)
         self.keyframe = keyframe
 
-        self.T_key = (keyframe.pose.R, keyframe.pose.t)
+        self.T_key = (keyframe.R, keyframe.t)
         self.min_gradient = min_gradient
 
         image_key = keyframe.image
@@ -148,8 +148,7 @@ class InverseDepthEstimator(object):
         ref = refframe
 
         T_key = self.T_key  # key to world
-        t_ref = ref.pose.t
-        T_ref = (ref.pose.R, ref.pose.t)  # ref to world
+        T_ref = (refframe.R, refframe.t)
 
         x_key = key.camera_model.normalize(u_key)
 
@@ -170,7 +169,7 @@ class InverseDepthEstimator(object):
         # inv_transform(*T_key, ref.t) brings the ref camera center onto
         # the key camera coordinate
         # pi project it onto the key image plane
-        t_image_ref = pi(inv_transform(*T_key, t_ref))
+        t_image_ref = pi(inv_transform(*T_key, ref.t))
         xs_key = key_coordinates(x_key, t_image_ref, step_size_key)
         us_key = key.camera_model.unnormalize(xs_key)
 
