@@ -114,10 +114,9 @@ def plot_prior(image, depth_map_true,
     plt.show()
 
 
-def plot_depth(image_key, image_ref, flag_map,
+def plot_depth(image_key, pixel_age, flag_map,
                depth_map_true, depth_map_pred, variance_map,
                image_cmap="gray", depth_cmap='RdBu'):
-
 
     fig = plt.figure()
 
@@ -126,8 +125,9 @@ def plot_depth(image_key, image_ref, flag_map,
     ax.imshow(image_key, cmap=image_cmap)
 
     ax = fig.add_subplot(242)
-    ax.set_title("reference frame")
-    ax.imshow(image_ref, cmap=image_cmap)
+    ax.set_title("Pixel age")
+    im = ax.imshow(pixel_age, cmap=image_cmap)
+    plot_with_bar(ax, im)
 
     ax = fig.add_subplot(243)
     ax.set_title("flag map")
