@@ -14,7 +14,7 @@ from tadataka.utils import is_in_image_range
 from tadataka.projection import inv_pi, pi
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
-from tadataka.interpolation import interpolation
+from tadataka.interpolation import interpolation2d_
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
 from tadataka.pose import WorldPose
 from tadataka.robust.weights import (compute_weights_huber,
@@ -52,8 +52,8 @@ def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weight_map):
 
     r = residuals[mask]
     p1 = P1[mask]
-    gx1 = interpolation(GX1, us1[mask])
-    gy1 = interpolation(GY1, us1[mask])
+    gx1 = interpolation2d_(GX1, us1[mask])
+    gy1 = interpolation2d_(GY1, us1[mask])
 
     if weight_map is None:
         # weights = compute_weights_tukey(r)
