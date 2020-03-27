@@ -8,24 +8,39 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.coordinates import image_coordinates
+from matplotlib.colors import CSS4_COLORS, to_rgb
 
 
-def flag_to_color(flag):
+def color_to_rgb(color_name):
+    return to_rgb(CSS4_COLORS[color_name])
+
+
+def flag_to_rgb(flag):
     if flag == FLAG.SUCCESS:
-        return np.array([0, 1, 0])  # green
+        return color_to_rgb("limegreen")
     if flag == FLAG.KEY_OUT_OF_RANGE:
-        return np.array([0, 0, 0])  # black
+        return color_to_rgb("gray")
+    if flag == FLAG.REF_OUT_OF_RANGE:
+        return color_to_rgb("navy")
     if flag == FLAG.EPIPOLAR_TOO_SHORT:
-        return np.array([1, 0, 0])  # red
+        return color_to_rgb("brown")
     if flag == FLAG.INSUFFICIENT_GRADIENT:
-        return np.array([0, 0, 1])  # blue
+        return color_to_rgb("white")
+    if flag == FLAG.NEGATIVE_PRIOR_DEPTH:
+        return color_to_rgb("cyan")
+    if flag == FLAG.NEGATIVE_REF_DEPTH:
+        return color_to_rgb("pink")
+    if flag == FLAG.NEGATIVE_ESTIMATED_DEPTH:
+        return color_to_rgb("yellow")
+    if flag == FLAG.NOT_PROCESSED:
+        return color_to_rgb("black")
     raise ValueError
 
 
 def flag_to_color_map(flag_map):
     color_map = np.empty((*flag_map.shape, 3))
     for x, y in image_coordinates(flag_map.shape):
-        color_map[y, x] = flag_to_color(flag_map[y, x])
+        color_map[y, x] = flag_to_rgb(flag_map[y, x])
     return color_map
 
 
