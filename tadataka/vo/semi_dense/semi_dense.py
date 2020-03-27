@@ -48,17 +48,17 @@ class InverseDepthSearchRange(object):
         return L, U
 
 
+@njit
 def calc_depth_ref(T_key, T_ref, x_key, depth_key):
     p_key = inv_pi(x_key, depth_key)
     p_ref = warp3d(T_key, T_ref, p_key)
     return p_ref[2]
 
 
-def step_size_ratio(T_key, T_ref, x_key, inv_depth_key):
+def calc_inv_depth_ref(T_key, T_ref, x_key, inv_depth_key):
     depth_key = invert_depth(inv_depth_key)
     depth_ref = calc_depth_ref(T_key, T_ref, x_key, depth_key)
-    inv_depth_ref = invert_depth(depth_ref)
-    return inv_depth_key / inv_depth_ref
+    return invert_depth(depth_ref)
 
 
 class GradientImage(object):
@@ -153,11 +153,21 @@ class InverseDepthEstimator(object):
 
         x_key = key.camera_model.normalize(u_key)
 
-        ratio = step_size_ratio(T_key, T_ref, x_key, prior_inv_depth)
-        step_size_key = ratio * self.step_size_ref
+        if prior_inv_depth <= 0:
+            return prior_inv_depth, prior_variance, FLAG.NEGATIVE_PRIOR_DEPTH
 
-        # t_ref is the position of ref camera center in the world coordinate
-        # inv_transform(*T_key, t_ref) brings the ref camera center onto
+        inv_depth_ref = calc_inv_depth_ref(T_key, T_ref,
+                                           x_key, prior_inv_depth)
+
+        if inv_depth_ref <= 0:
+            return prior_inv_depth, prior_variance, FLAG.NEGATIVE_REF_DEPTH
+
+        step_size_key = (prior_inv_depth / inv_depth_ref) * self.step_size_ref
+
+        assert(step_size_key > 0)
+        assert(self.step_size_ref > 0)
+        # ref.t is the position of ref camera center in the world coordinate
+        # inv_transform(*T_key, ref.t) brings the ref camera center onto
         # the key camera coordinate
         # pi project it onto the key image plane
         t_image_ref = pi(inv_transform(*T_key, t_ref))
