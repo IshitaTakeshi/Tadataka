@@ -1,3 +1,4 @@
+from numba import njit
 import numpy as np
 
 from tadataka.decorator import allow_1d
@@ -32,17 +33,25 @@ def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
 
-@allow_1d(which_argument=0)
-def is_in_image_range(keypoints, image_shape):
-    """
-    Accept coordinates in range x <- [0, width-1], y <- [0, height-1]
-    """
-    height, width = image_shape[0:2]
+@njit
+def _is_in_image_range(keypoints, image_shape):
+    height, width = image_shape
     xs, ys = keypoints[:, 0], keypoints[:, 1]
     # using this form to accept float coordinates
     mask_x = np.logical_and(0 <= xs, xs <= width-1)
     mask_y = np.logical_and(0 <= ys, ys <= height-1)
     return np.logical_and(mask_x, mask_y)
+
+
+@allow_1d(which_argument=0)
+def is_in_image_range(keypoints, image_shape):
+    """
+    Accept coordinates in range x <- [0, width-1], y <- [0, height-1]
+    """
+
+    # assert(isinstance(image_shape, tuple) or isinstance(image_shape, list))
+
+    return _is_in_image_range(keypoints, image_shape[0:2])
 
 
 def radian_to_degree(radian):
