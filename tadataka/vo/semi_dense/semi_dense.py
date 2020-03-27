@@ -121,6 +121,10 @@ def _unnormalize_if_in_image(camera_model, xs, shape):
     return xs[mask], us[mask]
 
 
+def all_points_in_image(us, image_shape):
+    return is_in_image_range(us, image_shape).all()
+
+
 class InverseDepthEstimator(object):
     def __init__(self, keyframe, sigma_i, sigma_l, step_size_ref,
                  min_gradient):
@@ -160,7 +164,7 @@ class InverseDepthEstimator(object):
         xs_key = key_coordinates(x_key, t_image_ref, step_size_key)
         us_key = key.camera_model.unnormalize(xs_key)
 
-        if not is_in_image_range(us_key, key.image.shape).all():
+        if not all_points_in_image(us_key, key.image.shape):
             return prior_inv_depth, prior_variance, FLAG.KEY_OUT_OF_RANGE
 
         intensities_key = interpolation2d_(key.image, us_key)
@@ -169,14 +173,16 @@ class InverseDepthEstimator(object):
             return prior_inv_depth, prior_variance, FLAG.INSUFFICIENT_GRADIENT
 
         inv_depth_range = self.search_range(prior_inv_depth, prior_variance)
-        x_range_ref = epipolar_search_range(T_key, T_ref, x_key, inv_depth_range)
+        x_range_ref = epipolar_search_range(T_key, T_ref,
+                                            x_key, inv_depth_range)
 
         xs_ref = reference_coordinates(x_range_ref, self.step_size_ref)
-        xs_ref, us_ref = _unnormalize_if_in_image(ref.camera_model, xs_ref,
-                                                  ref.image.shape)
-
         if len(xs_ref) < len(xs_key):
             return prior_inv_depth, prior_variance, FLAG.EPIPOLAR_TOO_SHORT
+
+        us_ref = ref.camera_model.unnormalize(xs_ref)
+        if not all_points_in_image(us_ref, ref.image.shape):
+            return prior_inv_depth, prior_variance, FLAG.REF_OUT_OF_RANGE
 
         intensities_ref = interpolation2d_(ref.image, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
