@@ -132,8 +132,8 @@ def plot_depth(image_key, pixel_age, flag_map,
     ax = fig.add_subplot(243)
     ax.set_title("flag map")
     ax.imshow(flag_to_color_map(flag_map))
-    patches = [Patch(facecolor=flag_to_color(f), label=f.name) for f in FLAG]
-    ax.legend(handles=patches, loc='lower left', bbox_to_anchor=(0.6, 1.05))
+    patches = [Patch("black", flag_to_rgb(f), label=f.name) for f in FLAG]
+    ax.legend(handles=patches, loc='center left', bbox_to_anchor=(1.05, 0.5))
 
     mask = flag_map==FLAG.SUCCESS
     depths_pred = depth_map_pred[mask]
@@ -160,7 +160,6 @@ def plot_depth(image_key, pixel_age, flag_map,
     ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_pred))
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
-    # plot_with_bar(ax, im)
 
     ax = fig.add_subplot(247)
     ax.set_title("error = abs(pred - true)")
@@ -168,7 +167,6 @@ def plot_depth(image_key, pixel_age, flag_map,
     ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_diff))
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
-    # plot_with_bar(ax, im)
 
     ax = fig.add_subplot(248)
     ax.set_title("variance map")
@@ -215,5 +213,3 @@ def plot_warp(warp2d, gray_image0, depth_map0, gray_image1):
     ax.set_aspect('equal')
 
     plt.show()
-
-
