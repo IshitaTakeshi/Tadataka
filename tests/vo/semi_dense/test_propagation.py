@@ -34,7 +34,7 @@ def test_coordinates():
     rotation = Rotation.identity()
     pose0 = WorldPose(rotation, np.array([0, 0, 0]))
     pose1 = WorldPose(rotation, np.array([-2, 0, -2]))
-    warp01 = Warp2D(cm, cm, pose0, pose1)
+    warp10 = Warp2D(cm, cm, pose0, pose1)
     # xs             #  x  y   z
     # [-0.5, -0.5],  # [0, 0]  2.0
     # [0.5, -0.5],   # [1, 0]  3.0
@@ -65,7 +65,7 @@ def test_coordinates():
     # [0.3, 0.9]
     # [1.25, 0.75]
 
-    us0, us1, depths0, depths1 = coordinates(warp01, depth_map0)
+    us0, us1, depths0, depths1 = coordinates(warp10, depth_map0)
     # image coordinates
     assert_array_almost_equal(us1,
         [[0.75, 0.25],
