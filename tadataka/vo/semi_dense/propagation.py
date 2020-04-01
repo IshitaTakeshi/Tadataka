@@ -83,3 +83,10 @@ def detect_intensity_change(warp10, image0, image1, inv_depth_map0,
     assert(image1.dtype == np.float64)
     return detect_intensity_change_(warp10, image0, image1,
                                     invert_depth(inv_depth_map0), threshold)
+
+
+def warp_image(warp10, depth_map0, image0, default_value=0.0):
+    us0, us1, depths0, depths1 = coordinates(warp10, depth_map0)
+    us1 = np.round(us1).astype(np.int64)
+    default = np.full(depth_map0.shape, default_value)
+    return substitute(default, us0, get(image0, us0))

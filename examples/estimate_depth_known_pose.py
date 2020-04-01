@@ -1,12 +1,17 @@
 import numpy as np
 from skimage.color import rgb2gray
-from tadataka.warp import warp2d
+from tadataka.pose import WorldPose
+from tadataka.warp import warp2d, Warp2D
 from tadataka.dataset import NewTsukubaDataset, TumRgbdDataset
+from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.vo.semi_dense.frame import Frame
+from tadataka.vo.semi_dense import validity
 from tadataka.vo.semi_dense.common import invert_depth
-from tadataka.vo.semi_dense.propagation import propagate as propagate_
+from tadataka.vo.semi_dense.propagation import (
+    propagate, detect_intensity_change, warp_image)
 from tadataka.vo.semi_dense.semi_dense import InverseDepthMapEstimator
 from tadataka.vo.semi_dense.age import increment_age
+from tadataka.vo.semi_dense.regularization import regularize
 from tadataka.camera import CameraModel
 from examples.plot import plot_depth
 
@@ -67,17 +72,6 @@ class ReferenceFrameSelector(object):
             return None
         return self.frames[-age]
 
-
-def propagate(frame0, frame1, inv_depth_map, variance_map):
-    pose10 = frame1.pose.inv() * frame0.pose
-    inv_depth_map, variance_map = propagate_(
-        frame0.camera_model, frame1.camera_model,
-        pose10, inv_depth_map, variance_map
-    )
-
-    return inv_depth_map, variance_map
-
-
 def plot_age_map(age_map):
     from matplotlib import pyplot as plt
     from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -100,6 +94,8 @@ frame = gray_frame(color_frames[0])
 inv_depth_map = np.random.uniform(0.8, 1.2, frame.image.shape)
 variance_map = 0.5 * np.ones(frame.image.shape)
 reference_selector = ReferenceFrameSelector(frame, inv_depth_map)
+default_validity = 0.5
+validity_map = default_validity * np.ones(frame.image.shape)
 
 for i in range(1, len(color_frames)-1):
     frame0_ = color_frames[i+0]
@@ -117,12 +113,33 @@ for i in range(1, len(color_frames)-1):
     inv_depth_map, variance_map, flag_map = estimator(
         reference_selector, inv_depth_map, variance_map
     )
+    success = flag_map==FLAG.SUCCESS
+    validity_map = validity.decrease(validity_map, success)
+    validity_map = validity.increase(validity_map, ~success)
+
+    inv_depth_map = regularize(inv_depth_map, variance_map)
 
     plot_depth(frame0.image, reference_selector.age_map,
-               flag_map, frame0_.depth_map,
+               flag_map, validity_map, frame0_.depth_map,
                invert_depth(inv_depth_map), variance_map)
 
+    pose10 = frame1_.pose.inv() * frame0_.pose
+
+    warp10 = Warp2D(frame0.camera_model, frame0.camera_model,
+                    pose10, WorldPose.identity())
+
+    mask = detect_intensity_change(warp10, frame0.image, frame1.image,
+                                   inv_depth_map)
+    validity_map = validity.increase(validity_map, mask)
+    validity_map = warp_image(warp10, invert_depth(inv_depth_map),
+                              validity_map, default_value=default_validity)
+
+    # TODO collision handling
     inv_depth_map, variance_map = propagate(
-        frame0_, frame1_,
-        inv_depth_map, variance_map
+        frame0.camera_model, frame1.camera_model,
+        warp10, inv_depth_map, variance_map
     )
+
+    plot_depth(frame0.image, reference_selector.age_map,
+               flag_map, validity_map, frame0_.depth_map,
+               invert_depth(inv_depth_map), variance_map)
