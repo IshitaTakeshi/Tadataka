@@ -50,35 +50,32 @@ def test_regularization():
         return s / d
 
 
-    inv_depth_map = np.array([
-        [4, 2, 4, 1],
-        [2, 1, 5, 4],
-        [3, 4, 1, 3],
-        [5, 9, 1, 2]
-    ])
-    variance_map = np.array([
-        [3, 2, 2, 3],
-        [4, 9, 3, 4],
-        [3, 2, 8, 1],
-        [2, 4, 1, 3]
-    ])
+    inv_depth_map = np.random.random((4, 4))
+    variance_map = np.random.random((4, 4))
 
     R = regularize(inv_depth_map, variance_map, conv_size=3)
-    assert(R.shape == (2, 2))
+    assert(R.shape == (4, 4))
+    mask = np.array([
+        [1, 1, 1, 1],
+        [1, 0, 0, 1],
+        [1, 0, 0, 1],
+        [1, 1, 1, 1]
+    ], dtype=np.bool)
+    assert_array_equal(R[mask], inv_depth_map[mask])
 
     assert_almost_equal(
-        R[0, 0],
+        R[1, 1],
         regularize_(inv_depth_map[0:3, 0:3], variance_map[0:3, 0:3])
     )
     assert_almost_equal(
-        R[0, 1],
+        R[1, 2],
         regularize_(inv_depth_map[0:3, 1:4], variance_map[0:3, 1:4])
     )
     assert_almost_equal(
-        R[1, 0],
+        R[2, 1],
         regularize_(inv_depth_map[1:4, 0:3], variance_map[1:4, 0:3])
     )
     assert_almost_equal(
-        R[1, 1],
+        R[2, 2],
         regularize_(inv_depth_map[1:4, 1:4], variance_map[1:4, 1:4])
     )

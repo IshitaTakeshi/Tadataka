@@ -26,18 +26,26 @@ def create_mask_(inv_depth_map, variance):
     return mask
 
 
+def regularize_(D, W, v):
+    mask = create_mask_(D, v)
+    M = W * mask.astype(np.float64)
+    return (M * D).sum() / M.sum()
+
+
 def regularize(inv_depth_map, variance_map, conv_size=3):
     assert(inv_depth_map.shape == variance_map.shape)
     height, width = inv_depth_map.shape
     weight_map = invert_depth(variance_map)
     offset = conv_size // 2
 
-    regularized = np.empty((height-conv_size+1, width-conv_size+1))
-    for y in range(regularized.shape[0]):
-        for x in range(regularized.shape[1]):
-            D = inv_depth_map[y:y+conv_size, x:x+conv_size]
-            W = weight_map[y:y+conv_size, x:x+conv_size]
-            mask = create_mask_(D, variance_map[y+offset, x+offset])
-            M = W * mask.astype(np.float64)
-            regularized[y, x] = (M * D).sum() / M.sum()
+    regularized = np.copy(inv_depth_map)
+    for y in range(offset, regularized.shape[0]-offset):
+        for x in range(offset, regularized.shape[1]-offset):
+            ystart, yend = y-offset, y+offset+1
+            xstart, xend = x-offset, x+offset+1
+            regularized[y, x] = regularize_(
+                inv_depth_map[ystart:yend, xstart:xend],
+                weight_map[ystart:yend, xstart:xend],
+                variance_map[y, x]
+            )
     return regularized
