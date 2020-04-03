@@ -1,6 +1,8 @@
 import numpy as np
 
 from tadataka.pose import WorldPose
+from tadataka.vo.semi_dense.stat import are_statically_same
+from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
@@ -27,66 +29,77 @@ def get(array2d, us):
     return array2d[ys, xs]
 
 
-def coordinates(warp10, depth_map0):
+def coordinates_(warp10, depth_map0):
     us0 = image_coordinates(depth_map0.shape)
     depths0 = depth_map0.flatten()
     us1, depths1 = warp10(us0, depths0)
-
-    mask = is_in_image_range(us1, depth_map0.shape)
-    us0, depths0 = us0[mask], depths0[mask]
-    us1, depths1 = us1[mask], depths1[mask]
-
     return us0, us1, depths0, depths1
 
 
-def propagate_(warp10, depth_map0, variance_map0, uncertaintity_bias=0.01):
-    assert(depth_map0.shape == variance_map0.shape)
-    shape = depth_map0.shape
-
-    us0, us1, depths0, depths1 = coordinates(warp10, depth_map0)
-
-    us1 = np.round(us1).astype(np.int64)
-
-    variances0 = get(variance_map0, us0)
-    variances1 = propagate_variance(invert_depth(depths0),
-                                    invert_depth(depths1),
-                                    variances0, uncertaintity_bias)
-
-    depth_map1 = substitute(np.ones(shape), us1, depths1)
-    variance_map1 = substitute(np.ones(shape), us1, variances1)
-    return depth_map1, variance_map1
-
-
-def propagate(camera_model0, camera_model1, warp10,
-              inv_depth_map0, variance_map0):
+def coordinates(warp10, inv_depth_map0):
     depth_map0 = invert_depth(inv_depth_map0)
+    us0, us1, depths0, depths1 = coordinates_(warp10, depth_map0)
 
-    depth_map1, variance_map1 = propagate_(warp10, depth_map0, variance_map0)
+    mask = is_in_image_range(us1, depth_map0.shape)
+    return (us0[mask], us1[mask],
+            invert_depth(depths0[mask]), invert_depth(depths1[mask]))
 
-    return invert_depth(depth_map1), variance_map1
+
+def handle_collision_(inv_depth_a, inv_depth_b, variance_a, variance_b):
+    if are_statically_same(inv_depth_a, inv_depth_b,
+                           variance_a, variance_b, factor=2.0):
+        return fusion(inv_depth_a, inv_depth_b, variance_a, variance_b)
+
+    if invert_depth(inv_depth_a) < invert_depth(inv_depth_b):
+        return (inv_depth_a, variance_a)
+    else:
+        return (inv_depth_b, variance_b)
 
 
-def detect_intensity_change_(warp10, image0, image1, depth_map0,
-                             threshold):
-    from tadataka.interpolation import interpolation
-    us0, us1, depths0, depths1 = coordinates(warp10, depth_map0)
+def substitute_(us, inv_depths, variances, shape):
+    inv_depth_map = np.full(shape, np.nan)
+    variance_map = np.full(shape, np.nan)
+    for i in range(us.shape[0]):
+        x, y = us[i]
+
+        if np.isnan(inv_depth_map[y, x]):
+            inv_depth_map[y, x] = inv_depths[i]
+            variance_map[y, x] = variances[i]
+            continue
+
+        inv_depth_map[y, x], variance_map[y, x] = handle_collision_(
+            inv_depth_map[y, x], inv_depths[i],
+            variance_map[y, x], variances[i]
+        )
+    return inv_depth_map, variance_map
+
+
+def propagate(warp10, inv_depth_map0, variance_map0,
+              default_inv_depth=1.0, default_variance=1.0,
+              uncertaintity_bias=0.01):
+    assert(inv_depth_map0.shape == variance_map0.shape)
+    shape = inv_depth_map0.shape
+
+    us0, us1, inv_depths0, inv_depths1 = coordinates(warp10, inv_depth_map0)
+    variances1 = propagate_variance(inv_depths0, inv_depths1,
+                                    get(variance_map0, us0),
+                                    uncertaintity_bias)
+
+    inv_depth_map1, variance_map1 = substitute_(us1.astype(np.int64),
+                                                inv_depths1, variances1, shape)
+    inv_depth_map1[np.isnan(inv_depth_map1)] = default_inv_depth
+    variance_map1[np.isnan(variance_map1)] = default_variance
+    return inv_depth_map1, variance_map1
+
+
+from tadataka.interpolation import interpolation
+def detect_intensity_change(warp10, image0, image1, inv_depth_map0,
+                            threshold=0.2):
+    assert(image0.dtype == np.float64)
+    assert(image1.dtype == np.float64)
+    us0, us1, _, _ = coordinates(warp10, inv_depth_map0)
 
     intensities0 = get(image0, us0)
     intensities1 = interpolation(image1, us1)
     mask = (intensities0 - intensities1) > threshold
     return substitute(np.zeros(image0.shape, dtype=np.bool), us0, mask)
-
-
-def detect_intensity_change(warp10, image0, image1, inv_depth_map0,
-                            threshold=0.2):
-    assert(image0.dtype == np.float64)
-    assert(image1.dtype == np.float64)
-    return detect_intensity_change_(warp10, image0, image1,
-                                    invert_depth(inv_depth_map0), threshold)
-
-
-def warp_image(warp10, depth_map0, image0, default_value=0.0):
-    us0, us1, depths0, depths1 = coordinates(warp10, depth_map0)
-    us1 = np.round(us1).astype(np.int64)
-    default = np.full(depth_map0.shape, default_value)
-    return substitute(default, us0, get(image0, us0))
