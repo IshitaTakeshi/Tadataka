@@ -6,14 +6,6 @@ from numba import njit
 
 
 @njit
-def is_statically_same(inv_depth1, inv_depth2, variance, factor):
-    # equivalent_condition:
-    #   np.abs(inv_depth1-inv_depth2) <= factor * np.sqrt(variance1)
-    ds = (inv_depth1 - inv_depth2) * (inv_depth1 - inv_depth2)
-    fs = factor * factor
-    return ds <= fs * variance
-
-
 def create_mask_(inv_depth_map, variance):
     height, width = inv_depth_map.shape
 
