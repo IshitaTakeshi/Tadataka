@@ -10,25 +10,20 @@ def test_is_statically_same():
     def equivalent_condition(v1, v2, var, fac):
         return np.abs(v1-v2) <= fac * np.sqrt(var)
 
-    value1, value2, variance, factor = 1.0, 3.0, 4.0, 2.0
-    c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == is_statically_same(value1, value2, variance, factor))
+    factor = 2.0
+    for i in range(100):
+        value1 = np.random.uniform(-100, 100)
+        value2 = np.random.uniform(-100, 100)
+        variance = np.random.uniform(0, 200)
+        c = equivalent_condition(value1, value2, variance, factor)
+        assert(c == is_statically_same(value1, value2, variance, factor))
 
-    value1, value2, variance, factor = -1.0, 2.9, 4.0, 2.0
-    c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == is_statically_same(value1, value2, variance, factor))
-
-    value1, value2, variance, factor = 1.0, 3.0, 4.0, 1.0
-    c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == is_statically_same(value1, value2, variance, factor))
-
-    variance = 2.0
     inv_depth_map = np.array([
         [2, -1, 0],
         [-3, 1, 3],
         [4, -2, -4]
     ])
-    mask = create_mask_(inv_depth_map, variance)
+    mask = create_mask_(inv_depth_map, variance=2.0)
     assert_array_equal(
         mask,
         [[1, 1, 1],
