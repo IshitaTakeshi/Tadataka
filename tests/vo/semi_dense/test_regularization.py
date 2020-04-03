@@ -2,25 +2,25 @@ from numpy.testing import assert_almost_equal, assert_array_equal
 import numpy as np
 
 from tadataka.vo.semi_dense.regularization import (
-    regularize, are_statically_same, create_mask_
+    regularize, is_statically_same, create_mask_
 )
 
 
-def test_are_statically_same():
+def test_is_statically_same():
     def equivalent_condition(v1, v2, var, fac):
         return np.abs(v1-v2) <= fac * np.sqrt(var)
 
     value1, value2, variance, factor = 1.0, 3.0, 4.0, 2.0
     c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == are_statically_same(value1, value2, variance, factor))
+    assert(c == is_statically_same(value1, value2, variance, factor))
 
     value1, value2, variance, factor = -1.0, 2.9, 4.0, 2.0
     c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == are_statically_same(value1, value2, variance, factor))
+    assert(c == is_statically_same(value1, value2, variance, factor))
 
     value1, value2, variance, factor = 1.0, 3.0, 4.0, 1.0
     c = equivalent_condition(value1, value2, variance, factor)
-    assert(c == are_statically_same(value1, value2, variance, factor))
+    assert(c == is_statically_same(value1, value2, variance, factor))
 
     variance = 2.0
     inv_depth_map = np.array([
@@ -48,7 +48,7 @@ def test_regularization():
         d = 0.0
         for y in range(3):
             for x in range(3):
-                if not are_statically_same(D[1, 1], D[y, x], V[1, 1], 2.0):
+                if not is_statically_same(D[1, 1], D[y, x], V[1, 1], 2.0):
                     continue
                 s += D[y, x] / V[y, x]
                 d += 1.0 / V[y, x]

@@ -1,13 +1,15 @@
 import numpy as np
 from scipy.signal import convolve2d
 from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.vo.semi_dense.stat import is_statically_same
 from numba import njit
 
 
-def are_statically_same(value1, value2, variance, factor):
+@njit
+def is_statically_same(inv_depth1, inv_depth2, variance, factor):
     # equivalent_condition:
-    #   np.abs(value1-value2) <= factor * np.sqrt(variance1)
-    ds = (value1 - value2) * (value1 - value2)
+    #   np.abs(inv_depth1-inv_depth2) <= factor * np.sqrt(variance1)
+    ds = (inv_depth1 - inv_depth2) * (inv_depth1 - inv_depth2)
     fs = factor * factor
     return ds <= fs * variance
 
