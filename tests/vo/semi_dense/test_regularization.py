@@ -36,6 +36,11 @@ def test_are_statically_same():
          [0, 0, 0]]
     )
 
+    for _ in range(20):
+        inv_depth_map = np.random.uniform(-100, 100, (3, 3))
+        # center is always 1
+        assert(create_mask_(inv_depth_map, 0.01)[1, 1] == 1)
+
 
 def test_regularization():
     def regularize_(D, V):
