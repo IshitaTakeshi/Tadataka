@@ -7,17 +7,6 @@ from tadataka.vo.semi_dense.regularization import (
 
 
 def test_is_statically_same():
-    def equivalent_condition(v1, v2, var, fac):
-        return np.abs(v1-v2) <= fac * np.sqrt(var)
-
-    factor = 2.0
-    for i in range(100):
-        value1 = np.random.uniform(-100, 100)
-        value2 = np.random.uniform(-100, 100)
-        variance = np.random.uniform(0, 200)
-        c = equivalent_condition(value1, value2, variance, factor)
-        assert(c == is_statically_same(value1, value2, variance, factor))
-
     inv_depth_map = np.array([
         [2, -1, 0],
         [-3, 1, 3],
