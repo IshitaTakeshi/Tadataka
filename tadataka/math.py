@@ -1,4 +1,5 @@
 from numba import njit
+import numpy as np
 
 
 @njit
@@ -12,3 +13,16 @@ def weighted_mean(x, w):
         raise ValueError("Sum of weights is zero")
 
     return (x * w).sum() / s
+
+
+@njit(fastmath=True)
+def solve_linear_equation(A, b, weights=None):
+    assert(A.shape[0] == b.shape[0])
+
+    if weights is None:
+        return np.linalg.inv(A.T.dot(A)).dot(A.T).dot(b)
+
+    assert(A.shape[0] == weights.shape[0])
+
+    ATW = A.T * weights
+    return np.linalg.inv(ATW.dot(A)).dot(ATW).dot(b)

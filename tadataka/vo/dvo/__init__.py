@@ -6,7 +6,7 @@ from numpy.linalg import norm
 
 from skimage.transform import resize
 from skimage.color import rgb2gray
-
+from tadataka.math import solve_linear_equation
 from tadataka.warp import Warp2D
 from tadataka.metric import photometric_error
 from tadataka.coordinates import image_coordinates
@@ -25,16 +25,7 @@ from tadataka.robust.weights import (compute_weights_huber,
 def calc_error(r, weights=None):
     if weights is None:
         return np.dot(r, r)
-    return np.dot(r * weights, r)  # r * W * r
-
-
-def solve_linear_equation(J, r, weights=None):
-    if weights is not None:
-        # mulitply weights to each row
-        J = J * weights.reshape(-1, 1)
-
-    xi, errors, _, _ = np.linalg.lstsq(J, r, rcond=None)
-    return xi
+    return np.dot(r * weights, r)  # r * W * r where W = diag(weights)
 
 
 def level_to_ratio(level):
