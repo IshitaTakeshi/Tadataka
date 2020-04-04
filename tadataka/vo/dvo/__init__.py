@@ -135,28 +135,8 @@ class PoseChangeEstimator(object):
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
 
-        # transforms point in the 0th camera coordinate to
-        # the 1st camera coordicoordinate
-
         for level in list(reversed(range(self.n_coarse_to_fine))):
-            try:
-                print("before ", photometric_error(
-                    Warp2D(self.camera_model0, self.camera_model1,
-                           pose10, WorldPose.identity()),
-                    I0, D0, I1)
-                )
-
-                pose10 = self._estimate_at(pose10, level, I0, D0, I1, W0)
-
-                print("after  ", photometric_error(
-                    Warp2D(self.camera_model0, self.camera_model1,
-                           pose10, WorldPose.identity()),
-                    I0, D0, I1)
-                )
-
-            except np.linalg.LinAlgError as e:
-                sys.stderr.write(str(e) + "\n")
-                return WorldPose.identity()
+            pose10 = self._estimate_at(pose10, level, I0, D0, I1, W0)
         return pose10
 
     def _estimate_at(self, prior, level, I0, D0, I1, W0):
