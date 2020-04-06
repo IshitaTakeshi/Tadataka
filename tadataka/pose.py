@@ -143,8 +143,7 @@ def select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1):
     argmax_R, argmax_t, argmax_depth_mask = None, None, None
 
     # not necessary to triangulate all points to validate depths
-    N = max(int(0.2 * len(keypoints0)), 10)
-    indices = triangulation_indices(N)
+    indices = triangulation_indices(min(100, len(keypoints0)))
     keypoints = np.stack((keypoints0[indices], keypoints1[indices]))
     for i, (R_, t_) in enumerate(itertools.product((R1A, R1B), (t1a, t1b))):
         _, depths = linear_triangulation(
@@ -183,8 +182,10 @@ def pose_change_from_stereo(keypoints0, keypoints1):
 
 
 def estimate_pose_change(keypoints0, keypoints1):
-    # estimate pose change between viewpoint 0 and 1
-    # regarding viewpoint 0 as identity
+    """
+    Estimate pose s.t. X1 = pose.R * X0 + pose.t
+    where keypoints0 = pi(X0), keypoints1 = pi(X1)
+    """
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
     return LocalPose(Rotation.from_matrix(R), t)
 
