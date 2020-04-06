@@ -1,7 +1,10 @@
 import numpy as np
+from skimage.color import rgb2gray
 from tadataka.pose import WorldPose
+from tadataka.camera import CameraModel
 from tadataka.warp import warp2d, Warp2D
 from tadataka.dataset import NewTsukubaDataset, TumRgbdDataset
+from tadataka.vo.semi_dense.age import increment_age
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.vo.semi_dense.frame import Frame
@@ -10,7 +13,7 @@ from tadataka.vo.semi_dense.propagation import (
     propagate, detect_intensity_change)
 from tadataka.vo.semi_dense.semi_dense import InverseDepthMapEstimator
 from tadataka.vo.semi_dense.regularization import regularize
-from tadataka.vo.semi_dense.frame_selection import ReferenceFrameSelector
+from tadataka.vo.semi_dense.frame_selection import ReferenceSelector
 from examples.plot import plot_depth
 
 
@@ -61,50 +64,60 @@ def update(keyframe, ref_selector, prior_inv_depth_map, prior_variance_map):
     inv_depth_map, variance_map = fusion(prior_inv_depth_map, inv_depth_map,
                                          prior_variance_map, variance_map)
 
+    inv_depth_map = regularize(inv_depth_map, variance_map)
+
     return inv_depth_map, variance_map, flag_map
 
 
-dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_xyz",
-                         which_freiburg=1)
-color_frames = dataset[0:50:10]
-
-# dataset = NewTsukubaDataset("datasets/NewTsukubaStereoDataset")
-
-frame = Frame(color_frames[0])
-inv_depth_map = np.random.uniform(0.8, 1.2, frame.image.shape)
-variance_map = 0.5 * np.ones(frame.image.shape)
-ref_selector = ReferenceFrameSelector(frame, inv_depth_map)
-
-for i in range(1, len(color_frames)-1):
-    frame0_ = color_frames[i+0]
-    frame1_ = color_frames[i+1]
-    frame0 = Frame(frame0_)
-    frame1 = Frame(frame1_)
-
-    ref_selector.update(frame0, inv_depth_map)
-
-    inv_depth_map, variance_map, flag_map = update(
-        frame0, ref_selector, inv_depth_map, variance_map
+def to_perspective(camera_model):
+    return CameraModel(
+        camera_model.camera_parameters,
+        distortion_model=None
     )
 
-    plot_depth(frame0.image, ref_selector.age_map,
-               flag_map, frame0_.depth_map,
-               invert_depth(inv_depth_map), variance_map)
 
-    inv_depth_map = regularize(inv_depth_map, variance_map)
+def main():
+    dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_desk",
+                             which_freiburg=1)
+    color_frames = dataset[300:310:3]
 
-    plot_depth(frame0.image, ref_selector.age_map,
-               flag_map, frame0_.depth_map,
-               invert_depth(inv_depth_map), variance_map)
+    frame0_ = color_frames[0]
 
-    pose10 = frame1_.pose.inv() * frame0_.pose
+    frame0 = Frame(to_perspective(frame0_.camera_model),
+                   rgb2gray(frame0_.image), frame0_.pose)
+    age_map0 = np.zeros(frame0.image.shape, dtype=np.int64)
 
-    warp10 = Warp2D(frame0.camera_model, frame0.camera_model,
-                    pose10, WorldPose.identity())
+    inv_depth_map0 = invert_depth(frame0_.depth_map)
+    variance_map0 = 0.5 * np.ones(frame0.image.shape)
 
-    inv_depth_map, variance_map = propagate(warp10,
-                                            inv_depth_map, variance_map)
+    refframes = []
 
-    plot_depth(frame0.image, ref_selector.age_map,
-               flag_map, frame0_.depth_map,
-               invert_depth(inv_depth_map), variance_map)
+    for i in range(1, len(color_frames)):
+        frame1_ = color_frames[i]
+        frame1 = Frame(to_perspective(frame1_.camera_model),
+                       rgb2gray(frame1_.image), frame1_.pose)
+
+        warp10 = Warp2D(frame0.camera_model, frame0.camera_model,
+                        frame0_.pose, frame1_.pose)
+
+        prior_inv_depth_map1, prior_variance_map1 = propagate(
+            warp10, inv_depth_map0, variance_map0
+        )
+        age_map1 = increment_age(age_map0, warp10, inv_depth_map0)
+
+        refframes.append(frame0)
+        inv_depth_map1, variance_map1, flag_map1 = update(
+            frame1, ReferenceSelector(refframes, age_map1),
+            prior_inv_depth_map1, prior_variance_map1
+        )
+
+        # plot_depth(frame1.image, age_map1,
+        #            flag_map1, frame1_.depth_map,
+        #            invert_depth(inv_depth_map1), variance_map1)
+
+        frame0 = frame1
+        age_map0 = age_map1
+        inv_depth_map0 = inv_depth_map1
+        variance_map0 = variance_map1
+
+main()
