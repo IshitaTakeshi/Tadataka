@@ -3,10 +3,8 @@ from tadataka.camera import CameraModel
 
 
 class Frame(object):
-    def __init__(self, frame):
-        self.camera_model = CameraModel(
-            frame.camera_model.camera_parameters,
-            distortion_model=None
-        )
-        self.image = rgb2gray(frame.image)
-        self.R, self.t = frame.pose.R, frame.pose.t
+    def __init__(self, camera_model, image, pose):
+        assert(image.ndim == 2)
+        self.camera_model = camera_model
+        self.image = image
+        self.R, self.t = pose.R, pose.t
