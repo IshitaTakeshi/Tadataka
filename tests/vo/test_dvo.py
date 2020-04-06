@@ -61,5 +61,4 @@ def test_pose_change_estimator():
 
     error_pred = photometric_error(camera_model0, camera_model1,
                                    pose10.to_local(), I0, D0, I1)
-    print("error_pred, error_prior =", error_pred, error_prior)
     assert(error_pred < error_prior * 0.12)

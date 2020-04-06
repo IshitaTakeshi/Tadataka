@@ -106,9 +106,7 @@ class _PoseChangeEstimator(object):
 
             canditate = LocalPose.from_se3(xi) * pose10
 
-            print("prev_error", prev_error)
             E = self._error(I0, D0, I1, canditate)
-            print("next_error", E)
             if E > prev_error:
                 break
             prev_error = E
