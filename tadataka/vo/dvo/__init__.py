@@ -16,7 +16,7 @@ from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
 from tadataka.interpolation import interpolation2d_
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
-from tadataka.pose import WorldPose
+from tadataka.pose import WorldPose, LocalPose
 from tadataka.robust.weights import (compute_weights_huber,
                                      compute_weights_student_t,
                                      compute_weights_tukey)
@@ -79,14 +79,12 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
-    def _error(self, I0, D0, I1, pose10):
-        return photometric_error(
-            Warp2D(self.camera_model0, self.camera_model1,
-                   pose10, WorldPose.identity()),
-            I0, D0, I1
-        )
+    def _error(self, I0, D0, I1, pose10: LocalPose):
+        return photometric_error(self.camera_model0, self.camera_model1,
+                                 pose10, I0, D0, I1)
 
-    def __call__(self, I0, D0, I1, pose10, weight_map=None):
+    def __call__(self, I0, D0, I1, pose10 : LocalPose, weight_map=None):
+        assert(isinstance(pose10, LocalPose))
         def warn():
             warnings.warn("Camera pose change is too large.", RuntimeWarning)
 
@@ -106,10 +104,11 @@ class _PoseChangeEstimator(object):
                 warn()
                 return pose10
 
-            dpose = WorldPose.from_se3(xi)
-            canditate = dpose * pose10
+            canditate = LocalPose.from_se3(xi) * pose10
 
+            print("prev_error", prev_error)
             E = self._error(I0, D0, I1, canditate)
+            print("next_error", E)
             if E > prev_error:
                 break
             prev_error = E
@@ -128,18 +127,23 @@ class PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
 
     def __call__(self, I0, D0, I1, weight_map=None,
-                 pose10=WorldPose.identity()):
+                 pose10: WorldPose =WorldPose.identity()):
+        """
+        Estimate 'pose10' s.t. pose1w = pose10 * pose0w
+        """
+
         W0 = weight_map
+        assert(isinstance(pose10, WorldPose))
         assert(I0.shape == D0.shape == I1.shape)
         assert(np.ndim(I0) == 2)
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
-
+        local_pose10 = pose10.to_local()
         for level in list(reversed(range(self.n_coarse_to_fine))):
-            pose10 = self._estimate_at(pose10, level, I0, D0, I1, W0)
-        return pose10
+            local_pose10 = self._estimate_at(local_pose10, level, I0, D0, I1, W0)
+        return local_pose10.to_world()
 
-    def _estimate_at(self, prior, level, I0, D0, I1, W0):
+    def _estimate_at(self, prior : LocalPose, level, I0, D0, I1, W0):
         camera_model0 = camera_model_at(level, self.camera_model0)
         camera_model1 = camera_model_at(level, self.camera_model1)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
