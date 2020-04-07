@@ -3,7 +3,7 @@ from tadataka.rigid_transform import transform
 from tadataka.decorator import allow_1d
 from tadataka.projection import inv_pi, pi
 from tadataka.rigid_transform import transform, inv_transform
-from tadataka.pose import WorldPose
+from tadataka.pose import LocalPose, WorldPose
 
 
 @njit
@@ -35,16 +35,17 @@ class Warp3D(object):
         return warp3d(self.T0, self.T1, P)
 
 
-def warp_(warp3d_, xs0, depths0):
+def warp3d_(warp: Warp3D, xs0, depths0):
     P0 = inv_pi(xs0, depths0)
-    P1 = warp3d_(P0)
+    P1 = warp(P0)
     xs1, depths1 = pi(P1), P1[:, 2]
     return xs1, depths1
 
 
 class Warp2D(object):
     """Warp coordinate between image planes"""
-    def __init__(self, camera_model0, camera_model1, pose0, pose1):
+    def __init__(self, camera_model0, camera_model1,
+                 pose0: WorldPose, pose1: WorldPose):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
         self.warp3d = Warp3D(pose0, pose1)
@@ -68,7 +69,29 @@ class Warp2D(object):
 
         xs0 = self.camera_model0.normalize(us0)
 
-        xs1, depths1 = warp_(self.warp3d, xs0, depths0)
+        xs1, depths1 = warp3d_(self.warp3d, xs0, depths0)
 
+        us1 = self.camera_model1.unnormalize(xs1)
+        return us1, depths1
+
+
+def local_warp3d_(T10, xs0, depths0):
+    R10, t10 = T10
+
+    P0 = inv_pi(xs0, depths0)
+    P1 = transform(R10, t10, P0)
+    xs1, depths1 = pi(P1), P1[:, 2]
+    return xs1, depths1
+
+
+class LocalWarp2D(object):
+    def __init__(self, camera_model0, camera_model1, pose10: LocalPose):
+        self.camera_model0 = camera_model0
+        self.camera_model1 = camera_model1
+        self.T10 = pose10.R, pose10.t
+
+    def __call__(self, us0, depths0):
+        xs0 = self.camera_model0.normalize(us0)
+        xs1, depths1 = local_warp3d_(self.T10, xs0, depths0)
         us1 = self.camera_model1.unnormalize(xs1)
         return us1, depths1
