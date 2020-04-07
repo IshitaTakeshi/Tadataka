@@ -4,7 +4,7 @@ from skimage.transform import resize
 
 from tadataka.pose import WorldPose, LocalPose
 from tadataka.dataset.new_tsukuba import NewTsukubaDataset
-from tadataka.warp import Warp2D
+from tadataka.warp import LocalWarp2D, Warp2D
 from tadataka.metric import photometric_error
 from tadataka.vo.dvo import _PoseChangeEstimator, PoseChangeEstimator
 from tadataka.vo.dvo import camera_model_at, image_shape_at
@@ -27,14 +27,14 @@ def test_subestimator():
     estimator = _PoseChangeEstimator(camera_model0, camera_model1, max_iter=10)
 
     pose10_prior = LocalPose.identity()
-    error_prior = photometric_error(camera_model0, camera_model1,
-                                    pose10_prior, I0, D0, I1)
+    warp10 = LocalWarp2D(camera_model0, camera_model1, pose10_prior)
+    error_prior = photometric_error(warp10, I0, D0, I1)
 
     weight_map = np.ones(shape)
     pose10 = estimator(I0, D0, I1, pose10_prior, weight_map)
 
-    error_pred = photometric_error(camera_model0, camera_model1,
-                                   pose10, I0, D0, I1)
+    warp10 = LocalWarp2D(camera_model0, camera_model1, pose10)
+    error_pred = photometric_error(warp10, I0, D0, I1)
     assert(error_pred < error_prior * 0.1)
 
 
@@ -53,12 +53,12 @@ def test_pose_change_estimator():
                                     n_coarse_to_fine=6, max_iter=10)
 
     pose10_prior = WorldPose.identity()
-    error_prior = photometric_error(camera_model0, camera_model1, pose10_prior,
-                                    I0, D0, I1)
+    warp10 = LocalWarp2D(camera_model0, camera_model1, pose10_prior)
+    error_prior = photometric_error(warp10, I0, D0, I1)
 
     weight_map = np.ones(D0.shape)
     pose10 = estimator(I0, D0, I1, weight_map, pose10_prior)
 
-    error_pred = photometric_error(camera_model0, camera_model1,
-                                   pose10.to_local(), I0, D0, I1)
+    warp10 = LocalWarp2D(camera_model0, camera_model1, pose10.to_local())
+    error_pred = photometric_error(warp10, I0, D0, I1)
     assert(error_pred < error_prior * 0.12)

@@ -7,7 +7,7 @@ from numpy.linalg import norm
 from skimage.transform import resize
 from skimage.color import rgb2gray
 from tadataka.math import solve_linear_equation
-from tadataka.warp import Warp2D
+from tadataka.warp import LocalWarp2D
 from tadataka.metric import photometric_error
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
@@ -80,8 +80,8 @@ class _PoseChangeEstimator(object):
         self.max_iter = max_iter
 
     def _error(self, I0, D0, I1, pose10: LocalPose):
-        return photometric_error(self.camera_model0, self.camera_model1,
-                                 pose10, I0, D0, I1)
+        warp10 = LocalWarp2D(self.camera_model0, self.camera_model1, pose10)
+        return photometric_error(warp10, I0, D0, I1)
 
     def __call__(self, I0, D0, I1, pose10 : LocalPose, weight_map=None):
         assert(isinstance(pose10, LocalPose))
