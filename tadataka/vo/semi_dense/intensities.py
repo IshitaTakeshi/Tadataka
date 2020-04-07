@@ -9,7 +9,7 @@ def search_(sequence, kernel):
     argmin = None
     for i in range(len(sequence)-N+1):
         d = sequence[i:i+N] - kernel
-        error = np.dot(d, d)
+        error = (d * d).sum()
         if error < min_error:
             min_error = error
             argmin = i
