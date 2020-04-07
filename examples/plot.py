@@ -23,15 +23,13 @@ def flag_to_rgb(flag):
     if flag == FLAG.REF_OUT_OF_RANGE:
         return color_to_rgb("navy")
     if flag == FLAG.EPIPOLAR_TOO_SHORT:
-        return color_to_rgb("brown")
+        return color_to_rgb("yellow")
     if flag == FLAG.INSUFFICIENT_GRADIENT:
         return color_to_rgb("white")
     if flag == FLAG.NEGATIVE_PRIOR_DEPTH:
         return color_to_rgb("cyan")
     if flag == FLAG.NEGATIVE_REF_DEPTH:
         return color_to_rgb("pink")
-    if flag == FLAG.NEGATIVE_ESTIMATED_DEPTH:
-        return color_to_rgb("yellow")
     if flag == FLAG.NOT_PROCESSED:
         return color_to_rgb("black")
     raise ValueError

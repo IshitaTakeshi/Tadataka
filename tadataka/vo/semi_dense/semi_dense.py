@@ -209,9 +209,6 @@ class InverseDepthEstimator(object):
         image_grad = self.image_grad(u_key)
         variance = self.uncertaintity(x_key, x_ref, x_range_ref, R, t,
                                       image_grad, epipolar_gradient)
-        if depth_key < 0:
-            return (prior_inv_depth, prior_variance,
-                    FLAG.NEGATIVE_ESTIMATED_DEPTH)
         return invert_depth(depth_key), variance, FLAG.SUCCESS
 
 
