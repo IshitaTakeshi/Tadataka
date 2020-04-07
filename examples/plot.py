@@ -112,28 +112,22 @@ def plot_prior(image, depth_map_true,
     plt.show()
 
 
-def plot_depth(image_key, pixel_age, flag_map, validity_map,
+def plot_depth(image_key, pixel_age, flag_map, # validity_map,
                depth_map_true, depth_map_pred, variance_map,
                image_cmap="gray", depth_cmap='RdBu'):
 
     fig = plt.figure()
 
-    ax = fig.add_subplot(2, 5, 1)
+    ax = fig.add_subplot(2, 4, 1)
     ax.set_title("keyframe")
     ax.imshow(image_key, cmap=image_cmap)
 
-    ax = fig.add_subplot(2, 5, 2)
+    ax = fig.add_subplot(2, 4, 2)
     ax.set_title("pixel age")
     im = ax.imshow(pixel_age, cmap=image_cmap)
     plot_with_bar(ax, im)
 
-    ax = fig.add_subplot(2, 5, 3)
-    ax.set_title("validty map")
-    im = ax.imshow(validity_map, norm=Normalize(vmin=0.0, vmax=1.0),
-                   cmap=depth_cmap)
-    plot_with_bar(ax, im)
-
-    ax = fig.add_subplot(2, 5, 4)
+    ax = fig.add_subplot(2, 4, 3)
     ax.set_title("flag map")
     ax.imshow(flag_to_color_map(flag_map))
     patches = [Patch("black", flag_to_rgb(f), label=f.name) for f in FLAG]
@@ -151,35 +145,39 @@ def plot_depth(image_key, pixel_age, flag_map, validity_map,
 
     us = image_coordinates(depth_map_pred.shape)[mask.flatten()]
 
-    vmin = min(np.min(depth_map_true), np.min(depths_pred))
-    vmax = max(np.max(depth_map_true), np.max(depths_pred))
-    norm = Normalize(vmin=vmin, vmax=vmax)
+    vmax = np.percentile(
+        np.concatenate((depth_map_true.flatten(), depths_pred)), 98
+    )
+    norm = Normalize(vmin=0.0, vmax=vmax)
     mapper = ScalarMappable(norm=norm, cmap=depth_cmap)
 
-    ax = fig.add_subplot(2, 5, 6)
+    ax = fig.add_subplot(2, 4, 5)
     ax.set_title("ground truth depth")
+    ax.axis("off")
     im = ax.imshow(depth_map_true, norm=norm, cmap=depth_cmap)
     plot_with_bar(ax, im)
 
     height, width = image_key.shape[0:2]
 
-    ax = fig.add_subplot(2, 5, 7)
+    ax = fig.add_subplot(2, 4, 6)
     ax.set_title("predicted depth map")
+    ax.axis("off")
     im = ax.imshow(image_key, cmap=image_cmap)
     ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_pred))
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
 
-    ax = fig.add_subplot(2, 5, 8)
+    ax = fig.add_subplot(2, 4, 7)
     ax.set_title("error = abs(pred - true)")
     im = ax.imshow(image_key, cmap=image_cmap)
     ax.scatter(us[:, 0], us[:, 1], s=0.5, c=mapper.to_rgba(depths_diff))
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
 
-    ax = fig.add_subplot(2, 5, 9)
+    ax = fig.add_subplot(2, 4, 8)
     ax.set_title("variance map")
-    im = ax.imshow(variance_map)
+    norm = Normalize(vmin=0.0, vmax=np.percentile(variance_map.flatten(), 98))
+    im = ax.imshow(variance_map, norm=norm, cmap=depth_cmap)
     plot_with_bar(ax, im)
 
     plt.show()
