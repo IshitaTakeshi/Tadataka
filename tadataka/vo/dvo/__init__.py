@@ -32,7 +32,17 @@ def level_to_ratio(level):
     return 1 / pow(2, level)
 
 
-def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weight_map):
+def compute_weights(name, residuals):
+    if name == "tukey":
+        return compute_weights_tukey(residuals)
+    if name == "student-t":
+        return compute_weights_student_t(residuals)
+    if name == "huber":
+        return compute_weights_huber(residuals)
+    raise ValueError(f"No such weights '{name}'")
+
+
+def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
     assert(GX1.shape == GY1.shape)
     us1 = camera_model1.unnormalize(pi(P1))
     mask = is_in_image_range(us1, GX1.shape)
@@ -46,16 +56,17 @@ def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weight_map):
     gx1 = interpolation2d_(GX1, us1[mask])
     gy1 = interpolation2d_(GY1, us1[mask])
 
-    if weight_map is None:
-        # weights = compute_weights_tukey(r)
-        weights = compute_weights_student_t(r)
-    else:
-        weights = weight_map.flatten()[mask]
-
     J = calc_jacobian(camera_model1.camera_parameters.focal_length,
                       gx1, gy1, p1)
-    xi = solve_linear_equation(J, r, weights)
-    return xi
+
+    if weights is None:
+        return solve_linear_equation(J, r)
+    if isinstance(weights, str):
+        weights = compute_weights(weights, r)
+        return solve_linear_equation(J, r, weights)
+
+    weights = weights.flatten()[mask]
+    return solve_linear_equation(J, r, weights)
 
 
 def image_shape_at(level, shape):
@@ -83,7 +94,7 @@ class _PoseChangeEstimator(object):
         warp10 = LocalWarp2D(self.camera_model0, self.camera_model1, pose10)
         return photometric_error(warp10, I0, D0, I1)
 
-    def __call__(self, I0, D0, I1, pose10 : LocalPose, weight_map=None):
+    def __call__(self, I0, D0, I1, pose10 : LocalPose, weights):
         assert(isinstance(pose10, LocalPose))
         def warn():
             warnings.warn("Camera pose change is too large.", RuntimeWarning)
@@ -98,7 +109,7 @@ class _PoseChangeEstimator(object):
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
-                                  GX1, GY1, P1, weight_map)
+                                  GX1, GY1, P1, weights)
 
             if xi is None:
                 warn()
@@ -124,13 +135,12 @@ class PoseChangeEstimator(object):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
 
-    def __call__(self, I0, D0, I1, weight_map=None,
+    def __call__(self, I0, D0, I1, weights=None,
                  pose10: WorldPose =WorldPose.identity()):
         """
         Estimate 'pose10' s.t. pose1w = pose10 * pose0w
         """
 
-        W0 = weight_map
         assert(isinstance(pose10, WorldPose))
         assert(I0.shape == D0.shape == I1.shape)
         assert(np.ndim(I0) == 2)
@@ -138,7 +148,8 @@ class PoseChangeEstimator(object):
         assert(np.ndim(I1) == 2)
         local_pose10 = pose10.to_local()
         for level in list(reversed(range(self.n_coarse_to_fine))):
-            local_pose10 = self._estimate_at(local_pose10, level, I0, D0, I1, W0)
+            local_pose10 = self._estimate_at(local_pose10, level,
+                                             I0, D0, I1, weights)
         return local_pose10.to_world()
 
     def _estimate_at(self, prior : LocalPose, level, I0, D0, I1, W0):
@@ -151,9 +162,10 @@ class PoseChangeEstimator(object):
         D0 = resize(D0, shape)
         I0 = resize(I0, shape)
         I1 = resize(I1, shape)
+        if isinstance(W0, np.ndarray):
+            W0 = resize(W0, shape)
 
-        weight_map = np.ones(shape)
-        return estimator(I0, D0, I1, prior, weight_map)
+        return estimator(I0, D0, I1, prior, W0)
 
 
 class DVO(object):
