@@ -9,7 +9,6 @@ from tadataka.dataset.new_tsukuba import NewTsukubaDataset
 from tadataka.warp import Warp2D
 from tadataka.metric import photometric_error
 from tadataka.vo.dvo import _PoseChangeEstimator, PoseChangeEstimator
-from tadataka.vo.dvo import camera_model_at, image_shape_at
 from tests.dataset.path import new_tsukuba
 
 
