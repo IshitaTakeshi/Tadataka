@@ -64,3 +64,11 @@ class CameraModel(object):
     def __eq__(self, another):
         return (self.camera_parameters == another.camera_parameters and
                 self.distortion_model == another.distortion_model)
+
+
+def resize(cm, scale):
+    return CameraModel(
+        CameraParameters(cm.camera_parameters.focal_length * scale,
+                         cm.camera_parameters.offset * scale),
+        cm.distortion_model
+    )
