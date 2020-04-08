@@ -15,14 +15,18 @@ def weighted_mean(x, w):
     return (x * w).sum() / s
 
 
-@njit(fastmath=True)
+# @njit(fastmath=True)
 def solve_linear_equation(A, b, weights=None):
     assert(A.shape[0] == b.shape[0])
 
     if weights is None:
-        return np.linalg.inv(A.T.dot(A)).dot(A.T).dot(b)
+        x, _, _, _ = np.linalg.lstsq(A, b)
+        return x
 
     assert(A.shape[0] == weights.shape[0])
 
-    ATW = A.T * weights
-    return np.linalg.inv(ATW.dot(A)).dot(ATW).dot(b)
+    w = np.sqrt(weights)
+    b = b * w
+    A = A * w.reshape(-1, 1)
+    x, _, _, _ = np.linalg.lstsq(A, b)
+    return x
