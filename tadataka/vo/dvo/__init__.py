@@ -6,17 +6,18 @@ from numpy.linalg import norm
 
 from skimage.transform import resize
 from skimage.color import rgb2gray
-from tadataka.math import solve_linear_equation
-from tadataka.warp import LocalWarp2D
+
+from tadataka.warp import Warp2D
 from tadataka.metric import photometric_error
 from tadataka.coordinates import image_coordinates
+from tadataka.math import solve_linear_equation
 from tadataka.utils import is_in_image_range
 from tadataka.projection import inv_pi, pi
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
 from tadataka.interpolation import interpolation2d_
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
-from tadataka.pose import WorldPose, LocalPose
+from tadataka.pose import WorldPose
 from tadataka.robust.weights import (compute_weights_huber,
                                      compute_weights_student_t,
                                      compute_weights_tukey)
@@ -25,11 +26,7 @@ from tadataka.robust.weights import (compute_weights_huber,
 def calc_error(r, weights=None):
     if weights is None:
         return np.dot(r, r)
-    return np.dot(r * weights, r)  # r * W * r where W = diag(weights)
-
-
-def level_to_ratio(level):
-    return 1 / pow(2, level)
+    return np.dot(r * weights, r)  # r * W * r
 
 
 def compute_weights(name, residuals):
@@ -42,10 +39,14 @@ def compute_weights(name, residuals):
     raise ValueError(f"No such weights '{name}'")
 
 
+def level_to_ratio(level):
+    return 1 / pow(2, level)
+
+
 def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
     assert(GX1.shape == GY1.shape)
     us1 = camera_model1.unnormalize(pi(P1))
-    mask = is_in_image_range(us1, GX1.shape)
+    mask = is_in_image_range(us1, GX1.shape) & (P1[:, 2] > 0)
 
     if not np.any(mask):
         # warped coordinates are out of image range
@@ -90,12 +91,16 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
-    def _error(self, I0, D0, I1, pose10: LocalPose):
-        warp10 = LocalWarp2D(self.camera_model0, self.camera_model1, pose10)
-        return photometric_error(warp10, I0, D0, I1)
+    def _error(self, I0, D0, I1, pose10):
+        # warp points in t0 coordinate onto the t1 coordinate
+        # we regard pose1 as world origin
+        return photometric_error(
+            Warp2D(self.camera_model0, self.camera_model1,
+                   pose10, WorldPose.identity()),
+            I0, D0, I1
+        )
 
-    def __call__(self, I0, D0, I1, pose10 : LocalPose, weights):
-        assert(isinstance(pose10, LocalPose))
+    def __call__(self, I0, D0, I1, pose10, weights=None):
         def warn():
             warnings.warn("Camera pose change is too large.", RuntimeWarning)
 
@@ -115,7 +120,8 @@ class _PoseChangeEstimator(object):
                 warn()
                 return pose10
 
-            canditate = LocalPose.from_se3(xi) * pose10
+            dpose = WorldPose.from_se3(xi)
+            canditate = dpose * pose10
 
             E = self._error(I0, D0, I1, canditate)
             if E > prev_error:
@@ -135,24 +141,20 @@ class PoseChangeEstimator(object):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
 
-    def __call__(self, I0, D0, I1, weights=None,
-                 pose10: WorldPose =WorldPose.identity()):
-        """
-        Estimate 'pose10' s.t. pose1w = pose10 * pose0w
-        """
-
-        assert(isinstance(pose10, WorldPose))
+    def __call__(self, I0, D0, I1, weights=None, pose10=WorldPose.identity()):
         assert(I0.shape == D0.shape == I1.shape)
         assert(np.ndim(I0) == 2)
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
-        local_pose10 = pose10.to_local()
-        for level in list(reversed(range(self.n_coarse_to_fine))):
-            local_pose10 = self._estimate_at(local_pose10, level,
-                                             I0, D0, I1, weights)
-        return local_pose10.to_world()
 
-    def _estimate_at(self, prior : LocalPose, level, I0, D0, I1, W0):
+        # transforms point in the 0th camera coordinate to
+        # the 1st camera coordicoordinate
+
+        for level in list(reversed(range(self.n_coarse_to_fine))):
+            pose10 = self._estimate_at(pose10, level, I0, D0, I1, weights)
+        return pose10
+
+    def _estimate_at(self, prior, level, I0, D0, I1, W0):
         camera_model0 = camera_model_at(level, self.camera_model0)
         camera_model1 = camera_model_at(level, self.camera_model1)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
