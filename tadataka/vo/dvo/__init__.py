@@ -7,6 +7,7 @@ from numpy.linalg import norm
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
+from tadataka import camera
 from tadataka.warp import Warp2D
 from tadataka.metric import photometric_error
 from tadataka.coordinates import image_coordinates
@@ -70,19 +71,14 @@ def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
     return solve_linear_equation(J, r, weights)
 
 
-def image_shape_at(level, shape):
+def image_shape_at(shape, level):
     ratio = level_to_ratio(level)
     return (int(shape[0] * ratio), int(shape[1] * ratio))
 
 
-def camera_model_at(level, camera_model):
+def camera_model_at(camera_model, level):
     """Change camera parameters as the image is resized"""
-    ratio = level_to_ratio(level)
-    params = camera_model.camera_parameters
-    return CameraModel(
-        CameraParameters(params.focal_length * ratio, params.offset * ratio),
-        camera_model.distortion_model
-    )
+    return camera.resize(camera_model, level_to_ratio(level))
 
 
 class _PoseChangeEstimator(object):
@@ -155,12 +151,12 @@ class PoseChangeEstimator(object):
         return pose10
 
     def _estimate_at(self, prior, level, I0, D0, I1, W0):
-        camera_model0 = camera_model_at(level, self.camera_model0)
-        camera_model1 = camera_model_at(level, self.camera_model1)
+        camera_model0 = camera_model_at(self.camera_model0, level)
+        camera_model1 = camera_model_at(self.camera_model1, level)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
                                          max_iter=10)
 
-        shape = image_shape_at(level, D0.shape)
+        shape = image_shape_at(D0.shape, level)
         D0 = resize(D0, shape)
         I0 = resize(I0, shape)
         I1 = resize(I1, shape)
