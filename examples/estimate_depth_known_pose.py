@@ -1,9 +1,11 @@
 import numpy as np
+from skimage.transform import resize
 from skimage.color import rgb2gray
 from tadataka.pose import WorldPose
-from tadataka.camera import CameraModel
+from tadataka.camera import CameraModel, CameraParameters
 from tadataka.warp import warp2d, Warp2D
 from tadataka.dataset import NewTsukubaDataset, TumRgbdDataset
+from tadataka.vo.dvo import PoseChangeEstimator
 from tadataka.vo.semi_dense.age import increment_age
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.vo.semi_dense.fusion import fusion
@@ -76,10 +78,6 @@ def to_perspective(camera_model):
     )
 
 
-def create_frame(camera_model, image, pose):
-    return Frame(to_perspective(camera_model), rgb2gray(image), pose)
-
-
 def plot_refframes(refframes, keyframe, age_map):
     from matplotlib import pyplot as plt
     N = len(refframes) + 2
@@ -101,27 +99,59 @@ def plot_refframes(refframes, keyframe, age_map):
     plt.show()
 
 
+def get(frame):
+    return to_perspective(frame.camera_model), rgb2gray(frame.image)
+
+
+def resize_camera_model(cm, scale):
+    return CameraModel(
+        CameraParameters(cm.camera_parameters.focal_length * scale,
+                         cm.camera_parameters.offset * scale),
+        cm.distortion_model
+    )
+
+
+def dvo_(cm0, cm1, I0, D0, I1, W, scale=1.0):
+    estimator = PoseChangeEstimator(resize_camera_model(cm0, scale),
+                                    resize_camera_model(cm1, scale),
+                                    n_coarse_to_fine=3)
+
+    shape = (int(I0.shape[0] * scale), int(I0.shape[1] * scale))
+    return estimator(resize(I0, shape), resize(D0, shape),
+                     resize(I1, shape), resize(W, shape))
+
+
+def dvo(camera_model0, camera_model1, image0, image1,
+        inv_depth_map, variance_map):
+    return dvo_(camera_model0, camera_model1,
+                image0, invert_depth(inv_depth_map),
+                image1, invert_depth(variance_map))
+
 def main():
     dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_desk",
                              which_freiburg=1)
     color_frames = dataset[100:130]
 
-    frame0_ = color_frames[0]
-    frame0 = create_frame(frame0_.camera_model, frame0_.image, frame0_.pose)
+    camera_model0, image0 = get(color_frames[0])
+    pose0 = WorldPose.identity()
+    frame0 = Frame(camera_model0, image0, pose0)
 
-    age_map0 = np.zeros(frame0.image.shape, dtype=np.int64)
+    age_map0 = np.zeros(image0.shape, dtype=np.int64)
     # inv_depth_map0 = invert_depth(frame0_.depth_map)
-    inv_depth_map0 = np.random.uniform(0.1, 10.0, frame0.image.shape)
-    variance_map0 = 10.0 * np.ones(frame0.image.shape)
+    inv_depth_map0 = np.random.uniform(0.1, 10.0, image0.shape)
+    variance_map0 = 10.0 * np.ones(image0.shape)
 
     refframes = []
 
     for i in range(1, len(color_frames)):
         frame1_ = color_frames[i]
-        frame1 = create_frame(frame1_.camera_model, frame1_.image, frame1_.pose)
+        camera_model1, image1 = get(frame1_)
+        pose10 = dvo(camera_model0, camera_model1, image0, image1,
+                     inv_depth_map0, variance_map0)
+        pose1 = pose10 * pose0
+        frame1 = Frame(camera_model1, image1, pose1)
 
-        warp10 = Warp2D(frame0.camera_model, frame0.camera_model,
-                        frame0_.pose, frame1_.pose)
+        warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
 
         prior_inv_depth_map1, prior_variance_map1 = propagate(
             warp10, inv_depth_map0, variance_map0
