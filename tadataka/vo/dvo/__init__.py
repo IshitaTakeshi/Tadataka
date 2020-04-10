@@ -116,15 +116,16 @@ class _PoseChangeEstimator(object):
                 break
             prev_error = curr_error
 
+            print("norm(xi) = {:.6f}  error = {:.6f}".format(norm(xi), curr_error))
+
             pose10 = canditate
         return pose10
 
 
 class PoseChangeEstimator(object):
     def __init__(self, camera_model0, camera_model1,
-                 n_coarse_to_fine=5, max_iter=10):
+                 n_coarse_to_fine=5):
         self.n_coarse_to_fine = n_coarse_to_fine
-        self.max_iter = max_iter
 
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
@@ -135,20 +136,20 @@ class PoseChangeEstimator(object):
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
 
-        # transforms point in the 0th camera coordinate to
-        # the 1st camera coordicoordinate
-
+        print("\n")
         for level in list(reversed(range(self.n_coarse_to_fine))):
             pose10 = self._estimate_at(pose10, level, I0, D0, I1, weights)
+
         return pose10
 
     def _estimate_at(self, prior, level, I0, D0, I1, W0):
         camera_model0 = camera_model_at(self.camera_model0, level)
         camera_model1 = camera_model_at(self.camera_model1, level)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
-                                         max_iter=10)
+                                         max_iter=20)
 
         shape = image_shape_at(D0.shape, level)
+        print("level = {}  shape = {}".format(level, shape))
         D0 = resize(D0, shape)
         I0 = resize(I0, shape)
         I1 = resize(I1, shape)
