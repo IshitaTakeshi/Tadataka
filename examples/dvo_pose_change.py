@@ -1,5 +1,5 @@
 from skimage.color import rgb2gray
-from skimage.transform import resize
+from skimage.transform import rescale
 from tqdm import tqdm
 
 from tadataka.metric import PhotometricError
@@ -23,12 +23,17 @@ def get(frame):
     camera_model = to_perspective(frame.camera_model)
     I = rgb2gray(frame.image)
     D = frame.depth_map
+
+    scale = 0.5
+    camera_model = camera.resize(camera_model, scale)
+    I = rescale(I, scale)
+    D = rescale(D, scale)
     return camera_model, I, D
 
 
 def dvo(camera_model0, camera_model1, I0, D0, I1, weights):
     estimator = PoseChangeEstimator(camera_model0, camera_model1,
-                                    n_coarse_to_fine=6)
+                                    n_coarse_to_fine=5)
     return estimator(I0, D0, I1, weights)
 
 
