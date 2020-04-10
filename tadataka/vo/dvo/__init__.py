@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from skimage.transform import resize
+from skimage.transform import rescale
 from skimage.color import rgb2gray
 
 from tadataka import camera
@@ -70,16 +70,6 @@ def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
     return solve_linear_equation(J, r, weights)
 
 
-def image_shape_at(shape, level):
-    ratio = level_to_ratio(level)
-    return (int(shape[0] * ratio), int(shape[1] * ratio))
-
-
-def camera_model_at(camera_model, level):
-    """Change camera parameters as the image is resized"""
-    return camera.resize(camera_model, level_to_ratio(level))
-
-
 class _PoseChangeEstimator(object):
     def __init__(self, camera_model0, camera_model1, max_iter):
         self.camera_model0 = camera_model0
@@ -143,18 +133,19 @@ class PoseChangeEstimator(object):
         return pose10
 
     def _estimate_at(self, prior, level, I0, D0, I1, W0):
-        camera_model0 = camera_model_at(self.camera_model0, level)
-        camera_model1 = camera_model_at(self.camera_model1, level)
+        print("level =", level)
+        scale = level_to_scale(level)
+
+        camera_model0 = camera.resize(self.camera_model0, scale)
+        camera_model1 = camera.resize(self.camera_model1, scale)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
                                          max_iter=20)
 
-        shape = image_shape_at(D0.shape, level)
-        print("level = {}  shape = {}".format(level, shape))
-        D0 = resize(D0, shape)
-        I0 = resize(I0, shape)
-        I1 = resize(I1, shape)
+        D0 = rescale(D0, scale)
+        I0 = rescale(I0, scale)
+        I1 = rescale(I1, scale)
         if isinstance(W0, np.ndarray):
-            W0 = resize(W0, shape)
+            W0 = rescale(W0, scale)
 
         return estimator(I0, D0, I1, prior, W0)
 
