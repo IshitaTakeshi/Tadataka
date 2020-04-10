@@ -20,7 +20,7 @@ def solve_linear_equation(A, b, weights=None):
     assert(A.shape[0] == b.shape[0])
 
     if weights is None:
-        x, _, _, _ = np.linalg.lstsq(A, b)
+        x, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
         return x
 
     assert(A.shape[0] == weights.shape[0])
@@ -28,5 +28,5 @@ def solve_linear_equation(A, b, weights=None):
     w = np.sqrt(weights)
     b = b * w
     A = A * w.reshape(-1, 1)
-    x, _, _, _ = np.linalg.lstsq(A, b)
+    x, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
     return x
