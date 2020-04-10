@@ -8,8 +8,7 @@ from skimage.transform import resize
 from skimage.color import rgb2gray
 
 from tadataka import camera
-from tadataka.warp import Warp2D
-from tadataka.metric import photometric_error
+from tadataka.metric import PhotometricError
 from tadataka.coordinates import image_coordinates
 from tadataka.math import solve_linear_equation
 from tadataka.utils import is_in_image_range
@@ -87,18 +86,12 @@ class _PoseChangeEstimator(object):
         self.camera_model1 = camera_model1
         self.max_iter = max_iter
 
-    def _error(self, I0, D0, I1, pose10):
-        # warp points in t0 coordinate onto the t1 coordinate
-        # we regard pose1 as world origin
-        return photometric_error(
-            Warp2D(self.camera_model0, self.camera_model1,
-                   pose10, WorldPose.identity()),
-            I0, D0, I1
-        )
-
     def __call__(self, I0, D0, I1, pose10, weights=None):
         def warn():
             warnings.warn("Camera pose change is too large.", RuntimeWarning)
+
+        error = PhotometricError(self.camera_model0, self.camera_model1,
+                                 I0, D0, I1)
 
         us0 = image_coordinates(I0.shape)
         xs0 = self.camera_model0.normalize(us0)
@@ -106,12 +99,11 @@ class _PoseChangeEstimator(object):
         GX1, GY1 = calc_image_gradient(I1)
         residuals = (I0 - I1).flatten()
 
-        prev_error = self._error(I0, D0, I1, pose10)
+        prev_error = error(pose10)
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
             xi = calc_pose_update(self.camera_model1, residuals,
                                   GX1, GY1, P1, weights)
-
             if xi is None:
                 warn()
                 return pose10
@@ -119,10 +111,10 @@ class _PoseChangeEstimator(object):
             dpose = WorldPose.from_se3(xi)
             canditate = dpose * pose10
 
-            E = self._error(I0, D0, I1, canditate)
-            if E > prev_error:
+            curr_error = error(canditate)
+            if curr_error > prev_error:
                 break
-            prev_error = E
+            prev_error = curr_error
 
             pose10 = canditate
         return pose10
