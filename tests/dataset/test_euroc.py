@@ -16,8 +16,7 @@ def test_euroc():
 
     camera_parameters = CameraParameters(
         focal_length=[42, 43],
-        offset=[20, 15],
-        image_shape=[40, 30]
+        offset=[20, 15]
     )
     distortion_model = RadTan([-0.20, 0.01, -0.001, -0.002])
     assert(frame_l.camera_model.camera_parameters == camera_parameters)
@@ -25,8 +24,7 @@ def test_euroc():
 
     camera_parameters = CameraParameters(
         focal_length=[42, 44],
-        offset=[20, 14],
-        image_shape=[40, 30]
+        offset=[20, 14]
     )
     distortion_model = RadTan([-0.201, 0.001, -0.002, -0.001])
     assert(frame_r.camera_model.camera_parameters == camera_parameters)

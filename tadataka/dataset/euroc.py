@@ -71,14 +71,12 @@ class EurocDataset(BaseDataset):
 
         self.camera_model0 = CameraModel(
             CameraParameters(focal_length=intrinsics0[0:2],
-                             offset=intrinsics0[2:4],
-                             image_shape=[image0_h, image0_w]),
+                             offset=intrinsics0[2:4]),
             RadTan(dist_coeffs0)
         )
         self.camera_model1 = CameraModel(
             CameraParameters(focal_length=intrinsics1[0:2],
-                             offset=intrinsics1[2:4],
-                             image_shape=[image1_h, image1_w]),
+                             offset=intrinsics1[2:4]),
             RadTan(dist_coeffs1)
         )
 
