@@ -28,7 +28,7 @@ points_true = np.array([
    [-2, 3, 1],
    [4, 1, 2],
    [-4, 4, -1]
-])
+], dtype=np.float64)
 
 projection = PerspectiveProjection(
     CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
@@ -125,9 +125,9 @@ def test_depths_from_triangulation():
 
     rotation0 = Rotation.from_quat([0, 0, 0, 1])
     rotation1 = Rotation.from_quat([0, 0, 1, 0])
-    t0 = np.array([-1, 3, 4])
-    t1 = np.array([4, 1, 6])
-    point = np.array([0, 0, 5])
+    t0 = np.array([-1, 3, 4], dtype=np.float64)
+    t1 = np.array([4, 1, 6], dtype=np.float64)
+    point = np.array([0, 0, 5], dtype=np.float64)
 
     p0 = transform(rotation0.as_matrix(), t0, point)
     p1 = transform(rotation1.as_matrix(), t1, point)
@@ -144,7 +144,7 @@ def test_depths_from_triangulation():
     projection = PerspectiveProjection(
         CameraParameters(focal_length=[1, 1], offset=[0, 0]),
     )
-    point = np.array([0, 0, 5])
+    point = np.array([0, 0, 5], dtype=np.float64)
 
     rotvec0 = np.random.uniform(-np.pi, np.pi, 3)
     rotation1 = Rotation.from_rotvec(rotvec0)
