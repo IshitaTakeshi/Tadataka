@@ -39,8 +39,8 @@ def compute_weights(name, residuals):
     raise ValueError(f"No such weights '{name}'")
 
 
-def level_to_ratio(level):
-    return 1 / pow(1.5, level)
+def level_to_scale(level):
+    return 1 / pow(1.2, level)
 
 
 def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
