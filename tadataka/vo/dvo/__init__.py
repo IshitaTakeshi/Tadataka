@@ -109,16 +109,16 @@ class _PoseChangeEstimator(object):
                 return pose10
 
             dpose = WorldPose.from_se3(xi)
-            canditate = dpose * pose10
+            candidate = dpose * pose10
 
-            curr_error = error(canditate)
+            curr_error = error(candidate)
             if curr_error > prev_error:
                 break
             prev_error = curr_error
 
             print("norm(xi) = {:.6f}  error = {:.6f}".format(norm(xi), curr_error))
 
-            pose10 = canditate
+            pose10 = candidate
         return pose10
 
 
