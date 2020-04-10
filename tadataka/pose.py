@@ -57,7 +57,7 @@ class _Pose(object):
         check_type_(self, other)
         PoseClass = type(self)
         return PoseClass(self.rotation * other.rotation,
-                         np.dot(self.rotation.as_matrix(), other.t) + self.t)
+                         np.dot(self.R, other.t) + self.t)
 
     def __eq__(self, other):
         check_type_(self, other)

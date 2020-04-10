@@ -26,7 +26,7 @@ class Triangulation(object):
         """
         poses: List of poses in the local coordinate system
         """
-        self.rotations = np.array([pose.rotation.as_matrix() for pose in poses])
+        self.rotations = np.array([pose.R for pose in poses])
         self.translations = np.array([pose.t for pose in poses])
 
     def triangulate(self, keypoints):
