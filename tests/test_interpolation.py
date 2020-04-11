@@ -1,5 +1,7 @@
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
+from scipy.ndimage import map_coordinates
+from skimage import data
 
 import pytest
 
@@ -76,3 +78,15 @@ def test_interpolation():
 
     with pytest.raises(ValueError):
         interpolation(image, [0.0, -0.01])
+
+
+def test_map_coordinates():
+    image = data.clock().astype(np.float64)
+    height, width = image.shape
+    N = 2000
+    X = np.random.uniform(0, width-1, N)
+    Y = np.random.uniform(0, height-1, N)
+    assert_array_almost_equal(
+        map_coordinates(image, np.vstack((Y, X)), order=1),
+        interpolation(image, np.column_stack((X, Y)))
+    )
