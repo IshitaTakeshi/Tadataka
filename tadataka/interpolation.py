@@ -9,29 +9,29 @@ from tadataka.utils import is_in_image_range
 def interpolation1d_(image, c):
     cx, cy = c
 
-    l = np.floor(c)
-    lx, ly = l
-    lxi, lyi = l.astype(np.int64)
+    a = np.floor(c)
+    ax, ay = a
+    axi, ayi = a.astype(np.int64)
 
-    if lx == cx and ly == cy:
-        return image[lyi, lxi]
+    if ax == cx and ay == cy:
+        return image[ayi, axi]
 
-    u = l + 1.0
-    ux, uy = u
-    uxi, uyi = u.astype(np.int64)
+    b = a + 1.0
+    bx, by = b
+    bxi, byi = b.astype(np.int64)
 
-    if lx == cx:
-        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
-                image[uyi, lxi] * (ux - cx) * (cy - ly))
+    if ax == cx:
+        return (image[ayi, axi] * (bx - cx) * (by - cy) +
+                image[byi, axi] * (bx - cx) * (cy - ay))
 
-    if ly == cy:
-        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
-                image[lyi, uxi] * (cx - lx) * (uy - cy))
+    if ay == cy:
+        return (image[ayi, axi] * (bx - cx) * (by - cy) +
+                image[ayi, bxi] * (cx - ax) * (by - cy))
 
-    return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
-            image[lyi, uxi] * (cx - lx) * (uy - cy) +
-            image[uyi, lxi] * (ux - cx) * (cy - ly) +
-            image[uyi, uxi] * (cx - lx) * (cy - ly))
+    return (image[ayi, axi] * (bx - cx) * (by - cy) +
+            image[ayi, bxi] * (cx - ax) * (by - cy) +
+            image[byi, axi] * (bx - cx) * (cy - ay) +
+            image[byi, bxi] * (cx - ax) * (cy - ay))
 
 
 @njit
