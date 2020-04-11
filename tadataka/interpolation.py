@@ -6,19 +6,17 @@ from tadataka.utils import is_in_image_range
 
 
 @njit
-def interpolation1d_(image, c):
+def interpolation__(image, c, af, bf, ai, bi):
     cx, cy = c
 
-    a = np.floor(c)
-    ax, ay = a
-    axi, ayi = a.astype(np.int64)
+    ax, ay = af
+    axi, ayi = ai
 
     if ax == cx and ay == cy:
         return image[ayi, axi]
 
-    b = a + 1.0
-    bx, by = b
-    bxi, byi = b.astype(np.int64)
+    bx, by = bf
+    bxi, byi = bi
 
     if ax == cx:
         return (image[ayi, axi] * (bx - cx) * (by - cy) +
@@ -35,11 +33,27 @@ def interpolation1d_(image, c):
 
 
 @njit
+def interpolation1d_(image, c):
+    af = np.floor(c)
+    bf = af + 1.0
+    ai = af.astype(np.int64)
+    bi = bf.astype(np.int64)
+
+    return interpolation__(image, c, af, bf, ai, bi)
+
+
+@njit
 def interpolation2d_(image, C):
+    AF = np.floor(C)
+    BF = AF + 1.0
+    AI = AF.astype(np.int64)
+    BI = BF.astype(np.int64)
+
     N = C.shape[0]
     intensities = np.empty(N)
     for i in range(N):
-        intensities[i] = interpolation1d_(image, C[i])
+        intensities[i] = interpolation__(image, C[i],
+                                         AF[i], BF[i], AI[i], BI[i])
     return intensities
 
 
