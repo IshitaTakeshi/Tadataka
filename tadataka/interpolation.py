@@ -6,54 +6,54 @@ from tadataka.utils import is_in_image_range
 
 
 @njit
-def interpolation__(image, c, af, bf, ai, bi):
+def interpolation__(image, c, lf, uf, li, ui):
     cx, cy = c
 
-    ax, ay = af
-    axi, ayi = ai
+    lx, ly = lf
+    lxi, lyi = li
 
-    if ax == cx and ay == cy:
-        return image[ayi, axi]
+    if lx == cx and ly == cy:
+        return image[lyi, lxi]
 
-    bx, by = bf
-    bxi, byi = bi
+    ux, uy = uf
+    uxi, uyi = ui
 
-    if ax == cx:
-        return (image[ayi, axi] * (bx - cx) * (by - cy) +
-                image[byi, axi] * (bx - cx) * (cy - ay))
+    if lx == cx:
+        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+                image[uyi, lxi] * (ux - cx) * (cy - ly))
 
-    if ay == cy:
-        return (image[ayi, axi] * (bx - cx) * (by - cy) +
-                image[ayi, bxi] * (cx - ax) * (by - cy))
+    if ly == cy:
+        return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+                image[lyi, uxi] * (cx - lx) * (uy - cy))
 
-    return (image[ayi, axi] * (bx - cx) * (by - cy) +
-            image[ayi, bxi] * (cx - ax) * (by - cy) +
-            image[byi, axi] * (bx - cx) * (cy - ay) +
-            image[byi, bxi] * (cx - ax) * (cy - ay))
+    return (image[lyi, lxi] * (ux - cx) * (uy - cy) +
+            image[lyi, uxi] * (cx - lx) * (uy - cy) +
+            image[uyi, lxi] * (ux - cx) * (cy - ly) +
+            image[uyi, uxi] * (cx - lx) * (cy - ly))
 
 
 @njit
 def interpolation1d_(image, c):
-    af = np.floor(c)
-    bf = af + 1.0
-    ai = af.astype(np.int64)
-    bi = bf.astype(np.int64)
+    lf = np.floor(c)
+    uf = lf + 1.0
+    li = lf.astype(np.int64)
+    ui = uf.astype(np.int64)
 
-    return interpolation__(image, c, af, bf, ai, bi)
+    return interpolation__(image, c, lf, uf, li, ui)
 
 
 @njit
 def interpolation2d_(image, C):
-    AF = np.floor(C)
-    BF = AF + 1.0
-    AI = AF.astype(np.int64)
-    BI = BF.astype(np.int64)
+    LF = np.floor(C)
+    UF = LF + 1.0
+    LI = LF.astype(np.int64)
+    UI = UF.astype(np.int64)
 
     N = C.shape[0]
     intensities = np.empty(N)
     for i in range(N):
         intensities[i] = interpolation__(image, C[i],
-                                         AF[i], BF[i], AI[i], BI[i])
+                                         LF[i], UF[i], LI[i], UI[i])
     return intensities
 
 
