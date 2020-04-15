@@ -26,3 +26,15 @@ def yx_to_xy(coordinates):
 def xy_to_yx(coordinates):
     # this is identical to 'yx_to_xy' but I prefer to name expilictly
     return yx_to_xy(coordinates)
+
+
+def substitute(array2d, us, values):
+    assert(us.shape[0] == values.shape[0])
+    xs, ys = us[:, 0], us[:, 1]
+    array2d[ys, xs] = values
+    return array2d
+
+
+def get(array2d, us):
+    xs, ys = us[:, 0], us[:, 1]
+    return array2d[ys, xs]
