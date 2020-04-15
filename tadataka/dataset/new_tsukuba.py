@@ -1,7 +1,9 @@
 import csv
+import os
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from tqdm import tqdm
 from scipy.spatial.transform import Rotation
 from skimage.io import imread
 import numpy as np
@@ -22,6 +24,23 @@ def load_depth(path):
     depth_text = depth_text.replace('\n', '').strip()
     depth_map = np.fromstring(depth_text, sep=' ')
     return depth_map.reshape(height, width)
+
+
+def generate_depth_cache(depth_dir, cache_dir):
+    def generate_(subdir):
+        os.makedirs(str(Path(cache_dir, subdir)))
+
+        print(f"Generating cache from {subdir} images")
+
+        depth_paths = Path(depth_dir, subdir).glob("*.xml")
+        for depth_path in tqdm(depth_paths):
+            filename = depth_path.name.replace(".xml", ".npy")
+            cache_path = Path(cache_dir, subdir, filename)
+            depth_map = load_depth(depth_path)
+            np.save(str(cache_path), depth_map)
+
+    generate_("left")
+    generate_("right")
 
 
 def align_coordinate_system(positions, euler_angles):
@@ -66,7 +85,6 @@ def calc_baseline_offset(rotation, baseline_length):
 # TODO download and set dataset_root automatically
 class NewTsukubaDataset(BaseDataset):
     def __init__(self, dataset_root, condition="daylight"):
-
         self.camera_model = CameraModel(
             CameraParameters(focal_length=[615, 615], offset=[320, 240]),
             distortion_model=None
@@ -80,10 +98,14 @@ class NewTsukubaDataset(BaseDataset):
         self.rotations, self.positions = load_poses(pose_path)
 
         depth_dir = Path(groundtruth_dir, "depth_maps")
+        cache_dir = Path(groundtruth_dir, "depth_cache")
         image_dir = Path(illumination_dir, condition)
 
-        self.depth_L_paths = sorted(Path(depth_dir, "left").glob("*.xml"))
-        self.depth_R_paths = sorted(Path(depth_dir, "right").glob("*.xml"))
+        if not cache_dir.exists():
+            generate_depth_cache(depth_dir, cache_dir)
+
+        self.depth_L_paths = sorted(Path(cache_dir, "left").glob("*.npy"))
+        self.depth_R_paths = sorted(Path(cache_dir, "right").glob("*.npy"))
         self.image_L_paths = sorted(Path(image_dir, "left").glob("*.png"))
         self.image_R_paths = sorted(Path(image_dir, "right").glob("*.png"))
 
@@ -99,8 +121,8 @@ class NewTsukubaDataset(BaseDataset):
         image_l = discard_alpha(image_l)
         image_r = discard_alpha(image_r)
 
-        depth_l = load_depth(self.depth_L_paths[index])
-        depth_r = load_depth(self.depth_R_paths[index])
+        depth_l = np.load(self.depth_L_paths[index])
+        depth_r = np.load(self.depth_R_paths[index])
 
         position_center = self.positions[index]
         rotation = self.rotations[index]

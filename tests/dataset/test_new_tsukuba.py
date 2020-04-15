@@ -1,19 +1,52 @@
+from pathlib import Path
+import shutil
+
 import numpy as np
 from numpy.testing import (assert_array_almost_equal,
                            assert_array_equal, assert_equal)
 from scipy.spatial.transform import Rotation
 
 from tadataka.interpolation import interpolation
-from tadataka.dataset.new_tsukuba import NewTsukubaDataset
+from tadataka.dataset.new_tsukuba import (NewTsukubaDataset, load_depth,
+                                          generate_depth_cache)
 from tadataka.warp import Warp2D
 
 from tests.dataset.path import new_tsukuba
 
 
-dataset = NewTsukubaDataset(new_tsukuba)
+def test_generate_depth_cache():
+    cache_dir = Path(new_tsukuba, "groundtruth", "depth_cache")
+    depth_dir = Path(new_tsukuba, "groundtruth", "depth_maps")
+
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
+
+    def check(subdir):
+        depth_paths = list(Path(depth_dir, subdir).glob("*.xml"))
+        assert(len(depth_paths) > 0)
+
+        for depth_path in depth_paths:
+            filename = depth_path.name.replace(".xml", ".npy")
+            cache_path = Path(cache_dir, subdir, filename)
+            print(cache_path)
+            assert(cache_path.exists())
+
+            depth_map = load_depth(depth_path)
+            cache_map = np.load(cache_path)
+            assert_array_equal(depth_map, cache_map)
+
+    generate_depth_cache(depth_dir, cache_dir)
+
+    check("left")
+    check("right")
+
+    # cleanup
+    shutil.rmtree(cache_dir)
 
 
 def test_new_tsukuba_stereo():
+    dataset = NewTsukubaDataset(new_tsukuba)
+
     assert_equal(len(dataset), 5)
 
     L, R = dataset[0]
@@ -60,6 +93,8 @@ def test_new_tsukuba_warp():
 
         d = depths1 - interpolation(frame1.depth_map, us1)
         assert((np.abs(d) < threshold).all())
+
+    dataset = NewTsukubaDataset(new_tsukuba)
 
     frame0, _ = dataset[0]
     frame1, _ = dataset[4]
