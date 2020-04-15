@@ -10,7 +10,7 @@ from tadataka.matrix import to_homogeneous
 from tadataka.camera.table import NoramlizationMapTable
 from tadataka.projection import inv_pi, pi
 from tadataka.rigid_transform import inv_transform
-from tadataka.interpolation import interpolation1d_, interpolation2d_
+from tadataka.interpolation import interpolation_, interpolation_
 from tadataka.triangulation import depth_from_triangulation
 from tadataka.warp import warp2d, warp3d
 from tadataka.vo.semi_dense.common import invert_depth
@@ -67,8 +67,8 @@ class GradientImage(object):
         self.grad_y = image_grad_y
 
     def __call__(self, u_key):
-        gx = interpolation1d_(self.grad_x, u_key)
-        gy = interpolation1d_(self.grad_y, u_key)
+        gx = interpolation_(self.grad_x, u_key)
+        gy = interpolation_(self.grad_y, u_key)
         return np.array([gx, gy])
 
 
@@ -176,7 +176,7 @@ class InverseDepthEstimator(object):
         if not all_points_in_image(us_key, key.image.shape):
             return prior_inv_depth, prior_variance, FLAG.KEY_OUT_OF_RANGE
 
-        intensities_key = interpolation2d_(key.image, us_key)
+        intensities_key = interpolation_(key.image, us_key)
         epipolar_gradient = intensity_gradient(intensities_key, step_size_key)
         if epipolar_gradient < self.min_gradient:
             return prior_inv_depth, prior_variance, FLAG.INSUFFICIENT_GRADIENT
@@ -193,7 +193,7 @@ class InverseDepthEstimator(object):
         if not all_points_in_image(us_ref, ref.image.shape):
             return prior_inv_depth, prior_variance, FLAG.REF_OUT_OF_RANGE
 
-        intensities_ref = interpolation2d_(ref.image, us_ref)
+        intensities_ref = interpolation_(ref.image, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
 
         R_ref, t_ref = T_ref

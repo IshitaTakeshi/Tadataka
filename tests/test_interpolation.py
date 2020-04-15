@@ -5,8 +5,7 @@ from skimage import data
 
 import pytest
 
-from tadataka.interpolation import (interpolation,
-                                    interpolation1d_, interpolation2d_)
+from tadataka.interpolation import interpolation, interpolation_
 
 
 def test_interpolation():
@@ -67,7 +66,6 @@ def test_interpolation():
     coordinate = np.array([2.0, 3.0])
     assert_almost_equal(interpolation(image, coordinate), image[3, 2])
 
-
     with pytest.raises(ValueError):
         interpolation(image, [3.0, 2.01])
 
@@ -81,7 +79,7 @@ def test_interpolation():
         interpolation(image, [0.0, -0.01])
 
 
-def test_map_coordinates():
+def test_interpolation_():
     image = data.clock().astype(np.float64)
     height, width = image.shape
     N = 2000
@@ -90,7 +88,13 @@ def test_map_coordinates():
     C = np.column_stack((X, Y))
     expected = map_coordinates(image, np.vstack((Y, X)), order=1)
 
-    assert_array_almost_equal(interpolation2d_(image, C), expected)
+    assert_array_almost_equal(interpolation_(image, C), expected)
 
     for i, c in enumerate(C):
-        assert_almost_equal(interpolation1d_(image, c), expected[i])
+        assert_almost_equal(interpolation_(image, c), expected[i])
+
+    C = np.array([[width-1, 0],
+                  [0, height-1],
+                  [width-1, height-1]])
+    expected = image[C[:, 1], C[:, 0]]
+    assert_almost_equal(interpolation_(image, C.astype(np.float64)), expected)

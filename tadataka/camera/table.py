@@ -1,7 +1,7 @@
 from numba import njit
 import numpy as np
 from tadataka.decorator import allow_1d
-from tadataka.interpolation import interpolation2d_
+from tadataka.interpolation import interpolation_
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
 
@@ -9,8 +9,8 @@ from tadataka.utils import is_in_image_range
 @njit
 def _normalize(_xs_map_0, _xs_map_1, us):
     xs = np.empty(us.shape)
-    xs[:, 0] = interpolation2d_(_xs_map_0, us)
-    xs[:, 1] = interpolation2d_(_xs_map_1, us)
+    xs[:, 0] = interpolation_(_xs_map_0, us)
+    xs[:, 1] = interpolation_(_xs_map_1, us)
     return xs
 
 
