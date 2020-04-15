@@ -1,5 +1,6 @@
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
+from Cython.Build import cythonize
 
 
 def sympy_codegen():
@@ -19,11 +20,11 @@ class CustomBuildExt(build_ext):
 
 setup(
     name='tadataka',
-    description='VITAMIN-E',
-    url='http://github.com/IshitaTakeshi/VITAMIN-E',
+    description='Tadataka',
+    url='http://github.com/IshitaTakeshi/Tadataka',
     author='Takeshi Ishita',
     author_email='ishitah.takeshi@gmail.com',
-    license='MIT',
+    license='Apache 2.0',
     packages=['tadataka'],
     install_requires=[
         'autograd',
@@ -44,12 +45,21 @@ setup(
         'sparseba',
         'pyyaml>=5.3'
     ],
-    ext_modules=[
-        Extension('tadataka.camera._radtan',
-                  sources=["tadataka/camera/_radtan.pyx",
-                           "tadataka/camera/_radtan_distort.c",
-                           "tadataka/camera/_radtan_distort_jacobian.c"]),
-    ],
+    ext_modules=cythonize([
+        Extension(
+            'tadataka.camera._radtan',
+            sources=["tadataka/camera/_radtan.pyx",
+                     "tadataka/camera/_radtan_distort.c",
+                     "tadataka/camera/_radtan_distort_jacobian.c"],
+            extra_compile_args=["-Wall", "-Ofast"]
+        ),
+        Extension(
+            'tadataka.interpolation._interpolation',
+            sources=["tadataka/interpolation/_interpolation.pyx",
+                     "tadataka/interpolation/_bilinear.c"],
+            extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
+        ),
+    ]),
     cmdclass = {'build_ext': CustomBuildExt},
 
 )
