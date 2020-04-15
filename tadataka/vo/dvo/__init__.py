@@ -39,8 +39,8 @@ def compute_weights(name, residuals):
     raise ValueError(f"No such weights '{name}'")
 
 
-def level_to_scale(level):
-    return 1 / pow(1.2, level)
+def level_to_scale(level, layer_size_ratio):
+    return 1 / pow(layer_size_ratio, level)
 
 
 def calc_pose_update(camera_model1, residuals, GX1, GY1, P1, weights):
@@ -114,8 +114,11 @@ class _PoseChangeEstimator(object):
 
 class PoseChangeEstimator(object):
     def __init__(self, camera_model0, camera_model1,
-                 n_coarse_to_fine=5):
+                 n_coarse_to_fine=5, max_iter=20,
+                 layer_size_ratio=1.5):
         self.n_coarse_to_fine = n_coarse_to_fine
+        self.max_iter = max_iter
+        self.layer_size_ratio = layer_size_ratio
 
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
@@ -133,13 +136,12 @@ class PoseChangeEstimator(object):
         return pose10
 
     def _estimate_at(self, prior, level, I0, D0, I1, W0):
-        print("level =", level)
-        scale = level_to_scale(level)
+        scale = level_to_scale(level, self.layer_size_ratio)
 
         camera_model0 = camera.resize(self.camera_model0, scale)
         camera_model1 = camera.resize(self.camera_model1, scale)
         estimator = _PoseChangeEstimator(camera_model0, camera_model1,
-                                         max_iter=20)
+                                         max_iter=self.max_iter)
 
         D0 = rescale(D0, scale)
         I0 = rescale(I0, scale)
