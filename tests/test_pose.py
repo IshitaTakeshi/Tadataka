@@ -100,6 +100,19 @@ def test_R():
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
 
 
+def test_T():
+    rotvec = np.array([0, np.pi/2, 0])
+    t = np.array([-3, -2, 3])
+    pose = _Pose(Rotation.from_rotvec(rotvec), t)
+    assert_array_almost_equal(
+        pose.T,
+        [[0, 0, 1, -3],
+         [0, 1, 0, -2],
+         [-1, 0, 0, 3],
+         [0, 0, 0, 1]]
+    )
+
+
 def test_inv():
     for i in range(10):
         rotvec = np.random.uniform(-np.pi, np.pi, 3)

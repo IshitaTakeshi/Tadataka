@@ -9,7 +9,8 @@ import cv2
 from tadataka.depth import (depth_condition, warn_points_behind_cameras,
                             compute_depth_mask)
 from tadataka.exceptions import NotEnoughInliersException
-from tadataka.matrix import estimate_fundamental, decompose_essential
+from tadataka.matrix import (estimate_fundamental, decompose_essential,
+                             motion_matrix)
 from tadataka.so3 import exp_so3, log_so3
 from tadataka.se3 import exp_se3_t_
 from tadataka._triangulation import linear_triangulation
@@ -33,6 +34,10 @@ class _Pose(object):
     @property
     def R(self):
         return self.rotation.as_matrix()
+
+    @property
+    def T(self):
+        return motion_matrix(self.R, self.t)
 
     def __str__(self):
         rotvec = self.rotation.as_rotvec()
