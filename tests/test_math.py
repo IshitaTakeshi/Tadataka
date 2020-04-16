@@ -15,19 +15,22 @@ def test_weighted_mean():
 
 
 def test_solve_linear_equation():
-    A = np.array([
-        [0, 1],
-        [1, 1],
-        [2, 1],
-    ], dtype=np.float64)
-    b = np.array([6, 0, 0], dtype=np.float64)
+    def run(method):
+        A = np.array([
+            [0, 1],
+            [1, 1],
+            [2, 1],
+        ], dtype=np.float64)
+        b = np.array([6, 0, 0], dtype=np.float64)
+        x = solve_linear_equation(A, b, weights=None, method=method)
+        assert_array_almost_equal(x, [-3, 5])
 
-    x = solve_linear_equation(A, b, weights=None)
-    assert_array_almost_equal(x, [-3, 5])
+        A = np.random.uniform(-1, 1, (10, 4))
+        weights = np.random.random(10)
+        b = np.random.uniform(-1, 1, 10)
+        x = solve_linear_equation(A, b, weights, method=method)
+        W = np.diag(weights)
+        assert_array_almost_equal((A.T @ W @ A) @ x, A.T @ W @ b)
 
-    A = np.random.uniform(-1, 1, (10, 4))
-    weights = np.random.random(10)
-    b = np.random.uniform(-1, 1, 10)
-    x = solve_linear_equation(A, b, weights)
-    W = np.diag(weights)
-    assert_array_almost_equal((A.T @ W @ A) @ x, A.T @ W @ b)
+    run("lstsq")
+    run("cg")

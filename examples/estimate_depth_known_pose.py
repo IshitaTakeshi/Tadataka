@@ -2,6 +2,7 @@ import numpy as np
 from skimage.transform import resize
 from skimage.color import rgb2gray
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 from tadataka import camera
 from tadataka.pose import WorldPose
@@ -48,7 +49,7 @@ def update(keyframe, ref_selector, prior_inv_depth_map, prior_variance_map):
     estimator = InverseDepthMapEstimator(
         keyframe,
         sigma_i=0.1, sigma_l=0.2,
-        step_size_ref=0.001, min_gradient=20.0
+        step_size_ref=0.01, min_gradient=20.0
     )
 
     inv_depth_map, variance_map, flag_map = estimator(
@@ -64,10 +65,8 @@ def update(keyframe, ref_selector, prior_inv_depth_map, prior_variance_map):
 
 
 def to_perspective(camera_model):
-    return CameraModel(
-        camera_model.camera_parameters,
-        distortion_model=None
-    )
+    return CameraModel(camera_model.camera_parameters,
+                       distortion_model=None)
 
 
 def plot_refframes(refframes, keyframe, age_map):
@@ -90,78 +89,109 @@ def plot_refframes(refframes, keyframe, age_map):
     plt.show()
 
 
-def get(frame):
-    return to_perspective(frame.camera_model), rgb2gray(frame.image)
+def get(frame, scale=1.0):
+    camera_model = to_perspective(frame.camera_model)
+    camera_model = camera.resize(camera_model, scale)
+
+    image = rgb2gray(frame.image)
+    shape = (int(image.shape[0] * scale), int(image.shape[1] * scale))
+    image = resize(image, shape)
+    return camera_model, image
 
 
-def dvo_(cm0, cm1, I0, D0, I1, W, scale=1/6):
-    estimator = PoseChangeEstimator(camera.resize(cm0, scale),
-                                    camera.resize(cm1, scale),
-                                    n_coarse_to_fine=3)
-
-    shape = (int(I0.shape[0] * scale), int(I0.shape[1] * scale))
-    return estimator(resize(I0, shape), resize(D0, shape),
-                     resize(I1, shape), resize(W, shape))
-
-
-def dvo(camera_model0, camera_model1, image0, image1,
-        inv_depth_map, variance_map):
-    return dvo_(camera_model0, camera_model1,
-                image0, invert_depth(inv_depth_map),
-                image1, invert_depth(variance_map))
+def dvo(camera_model0, camera_model1, image0, image1, depth_map, weights):
+    estimator = PoseChangeEstimator(camera_model0, camera_model1,
+                                    n_coarse_to_fine=7)
+    return estimator(image0, depth_map, image1, weights)
 
 
 def main():
-    dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_desk",
-                             which_freiburg=1)
-    color_frames = dataset[100:200]
+    scale = 1.0
+    dataset = NewTsukubaDataset("datasets/NewTsukubaStereoDataset",
+                                condition="fluorescent")
+    color_frames = [fl for fl, fr in dataset[0:1000]]
+    # dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_desk",
+    #                          which_freiburg=1)
+    # color_frames = dataset[:30]
 
-    pose0 = WorldPose.identity()
-    age_map0 = np.zeros(color_frames[0].image.shape[0:2], dtype=np.int64)
-    # inv_depth_map0 = np.random.uniform(0.1, 10.0, image0.shape)
-    variance_map0 = np.ones(color_frames[0].image.shape[0:2])
+    # shape_ = get(color_frames[0])[1].shape[0:2]
+    # pose0 = WorldPose.identity()
+    # age_map0 = np.zeros(shape_, dtype=np.int64)
+    # inv_depth_map0 = np.random.uniform(0.1, 10.0, shape_)
+    # variance_map0 = np.ones(shape_)
 
     trajectory_true = []
     trajectory_pred = []
-    refframes = []
-    for i in range(len(color_frames)-1):
+    # refframes = []
+
+    pose_pred = WorldPose.identity()
+    pose_true = WorldPose.identity()
+    for i in tqdm(range(len(color_frames)-1)):
         frame0_, frame1_ = color_frames[i+0], color_frames[i+1]
 
-        camera_model0, image0 = get(frame0_)
-        camera_model1, image1 = get(frame1_)
+        camera_model0, image0 = get(frame0_, scale)
+        camera_model1, image1 = get(frame1_, scale)
 
-        inv_depth_map0 = invert_depth(frame0_.depth_map)
+        depth_map0 = resize(frame0_.depth_map, image1.shape)
+        # # if i == 0:
+        # #     pose10 = frame1_.pose.inv() * frame0_.pose
+        # # else:
+        pose10_true = frame1_.pose.inv() * frame0_.pose
+        pose10_pred = dvo(camera_model0, camera_model1, image0, image1,
+                          depth_map0, None)
+        error_true = photometric_error(
+            LocalWarp2D(camera_model0, camera_model1, pose10_true),
+                        image0, depth_map0, image1)
+        error_pred = photometric_error(
+            LocalWarp2D(camera_model0, camera_model1, pose10_pred),
+                        image0, depth_map0, image1)
+        print("i =", i)
+        print("pose10_true :", pose10_true)
+        print("pose10_pred :", pose10_pred)
+        # print("diff       ", pose10_true * pose10_pred.inv())
 
-        pose10 = dvo(camera_model0, camera_model1, image0, image1,
-                     inv_depth_map0, np.ones(image0.shape))
-        pose1 = pose10 * pose0
-        print("pose10 pred", pose10)
-        print("pose10 true", frame1_.pose * frame0_.pose.inv())
+        print("error true = {:.6f}".format(error_true))
+        print("error pred = {:.6f}".format(error_pred))
 
-        warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
-        age_map1 = increment_age(age_map0, warp10, inv_depth_map0)
+        if False:  # error_pred > error_true:
+            from examples.plot import plot_warp
+            plot_warp(LocalWarp2D(camera_model0, camera_model1, pose10_true),
+                      image0, depth_map0, image1)
+            plot_warp(LocalWarp2D(camera_model0, camera_model1, pose10_pred),
+                      image0, depth_map0, image1)
+        pose_pred = pose_pred * pose10_pred.inv()
+        pose_true = pose_true * pose10_true.inv()
+        trajectory_pred.append(pose_pred.t)
+        trajectory_true.append(pose_true.t)
+        continue
 
-        refframes.append(Frame(camera_model0, image0, pose0))
-        # plot_refframes(refframes, frame1, age_map1)
+        # pose1 = pose10 * pose0
 
-        inv_depth_map1, variance_map1, flag_map1 = update(
-            Frame(camera_model1, image1, pose1),
-            ReferenceSelector(refframes, age_map1),
-            *propagate(warp10, inv_depth_map0, variance_map0)
-        )
+        # warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
+        # age_map1 = increment_age(age_map0, warp10, inv_depth_map0)
 
-        # plot_depth(image1, age_map1, flag_map1, frame1_.depth_map,
-        #            invert_depth(inv_depth_map1), variance_map1)
+        # refframes.append(Frame(camera_model0, image0, pose0))
+        # # plot_refframes(refframes, frame1, age_map1)
 
-        age_map0 = age_map1
-        inv_depth_map0 = inv_depth_map1
-        variance_map0 = variance_map1
-        pose0 = pose1
+        # inv_depth_map1, variance_map1, flag_map1 = update(
+        #     Frame(camera_model1, image1, pose1),
+        #     ReferenceSelector(refframes, age_map1),
+        #     *propagate(warp10, inv_depth_map0, variance_map0)
+        # )
 
-        trajectory_pred.append(pose1.t)
-        trajectory_true.append(frame1_.pose.t)
+        # # plot_depth(image1, age_map1, flag_map1,
+        # #            resize(frame1_.depth_map, image1.shape),
+        # #            invert_depth(inv_depth_map1), variance_map1)
+
+        # age_map0 = age_map1
+        # inv_depth_map0 = inv_depth_map1
+        # variance_map0 = variance_map1
+        # pose0 = pose1
+
+        # trajectory_pred.append(pose1.t)
+        # trajectory_true.append(frame1_.pose.t)
+
 
     plot_trajectory(np.array(trajectory_true), np.array(trajectory_pred))
-
 
 main()
