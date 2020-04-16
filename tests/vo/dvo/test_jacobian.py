@@ -7,6 +7,8 @@ from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
 
 
 def test_calc_jacobian():
+    fx, fy = 300, 400
+
     def run(j, gx, gy, p1):
         x, y, z = p1
         assert_almost_equal(j[0], gx * (fx / z))
@@ -23,16 +25,18 @@ def test_calc_jacobian():
         assert_almost_equal(j[5],
                             gx * (-fx * y / z) + gy * (fy * x / z))
 
-    P = np.array([[3, -1, 2],
-                  [2, -1, 5]])
-    didx = np.array([10, -20])
-    didy = np.array([-20, 10])
-
-    fx, fy = 300, 400
+    N = 100
+    P = np.random.uniform(-10, 10, (N, 3))
+    # P = np.array([[3, -1, 2],
+    #               [2, -1, 5]])
+    didx = np.random.uniform(-1, 1, N)
+    didy = np.random.uniform(-1, 1, N)
+    # didx = np.array([10, -20])
+    # didy = np.array([-20, 10])
 
     J = calc_jacobian([fx, fy], didx, didy, P)
 
-    assert J.shape == (P.shape[0], 6)
+    assert J.shape == (N, 6)
 
-    for i in range(P.shape[0]):
+    for i in range(N):
         run(J[i], didx[i], didy[i], P[i])
