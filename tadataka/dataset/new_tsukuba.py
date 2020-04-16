@@ -26,21 +26,29 @@ def load_depth(path):
     return depth_map.reshape(height, width)
 
 
-def generate_depth_cache(depth_dir, cache_dir):
+def generate_cache(src_dir, cache_dir, src_extension, loader):
     def generate_(subdir):
         os.makedirs(str(Path(cache_dir, subdir)))
 
-        print(f"Generating cache from {subdir} images")
+        print(f"Generating cache from {subdir}")
 
-        depth_paths = Path(depth_dir, subdir).glob("*.xml")
-        for depth_path in tqdm(depth_paths):
-            filename = depth_path.name.replace(".xml", ".npy")
+        paths = Path(src_dir, subdir).glob("*" + src_extension)
+        for path in tqdm(list(paths)):
+            filename = path.name.replace(src_extension, ".npy")
             cache_path = Path(cache_dir, subdir, filename)
-            depth_map = load_depth(depth_path)
-            np.save(str(cache_path), depth_map)
+            array = loader(path)
+            np.save(str(cache_path), array)
 
     generate_("left")
     generate_("right")
+
+
+def generate_image_cache(image_dir, cache_dir):
+    generate_cache(image_dir, cache_dir, ".png", imread)
+
+
+def generate_depth_cache(depth_dir, cache_dir):
+    generate_cache(depth_dir, cache_dir, ".xml", load_depth)
 
 
 def align_coordinate_system(positions, euler_angles):
@@ -98,25 +106,37 @@ class NewTsukubaDataset(BaseDataset):
         self.rotations, self.positions = load_poses(pose_path)
 
         depth_dir = Path(groundtruth_dir, "depth_maps")
-        cache_dir = Path(groundtruth_dir, "depth_cache")
+        depth_cache_dir = Path(groundtruth_dir, "depth_cache")
+
+        if not depth_cache_dir.exists():
+            generate_depth_cache(depth_dir, depth_cache_dir)
+
+        self.depth_L_paths = sorted(Path(depth_cache_dir, "left").glob("*.npy"))
+        self.depth_R_paths = sorted(Path(depth_cache_dir, "right").glob("*.npy"))
+
         image_dir = Path(illumination_dir, condition)
+        image_cache_dir = Path(illumination_dir, condition + "_cache")
 
-        if not cache_dir.exists():
-            generate_depth_cache(depth_dir, cache_dir)
+        if not image_cache_dir.exists():
+            generate_image_cache(image_dir, image_cache_dir)
 
-        self.depth_L_paths = sorted(Path(cache_dir, "left").glob("*.npy"))
-        self.depth_R_paths = sorted(Path(cache_dir, "right").glob("*.npy"))
-        self.image_L_paths = sorted(Path(image_dir, "left").glob("*.png"))
-        self.image_R_paths = sorted(Path(image_dir, "right").glob("*.png"))
+        self.image_L_paths = sorted(Path(image_cache_dir, "left").glob("*.npy"))
+        self.image_R_paths = sorted(Path(image_cache_dir, "right").glob("*.npy"))
 
         assert((len(self.depth_L_paths) == len(self.depth_R_paths) ==
-                len(self.image_L_paths) == len(self.image_R_paths)))
+                len(self.image_L_paths) == len(self.image_R_paths) ==
+                len(self.rotations) == len(self.positions)))
 
-        self.length = len(self.depth_L_paths)
+        for i in range(len(self.positions)):
+            assert(self.depth_L_paths[:-8] == self.depth_R_paths[:-8] ==
+                   self.image_L_paths[:-8] == self.image_R_paths[:-8])
+
+    def __len__(self):
+        return len(self.positions)
 
     def load(self, index):
-        image_l = imread(self.image_L_paths[index])
-        image_r = imread(self.image_R_paths[index])
+        image_l = np.load(self.image_L_paths[index])
+        image_r = np.load(self.image_R_paths[index])
 
         image_l = discard_alpha(image_l)
         image_r = discard_alpha(image_r)
