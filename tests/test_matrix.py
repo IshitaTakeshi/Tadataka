@@ -19,7 +19,6 @@ from tadataka.rigid_transform import transform
 from tadataka.so3 import tangent_so3
 
 from tests.utils import random_rotation_matrix
-from tests.data import dummy_points as points_true
 
 
 def test_solve_linear():
@@ -44,6 +43,7 @@ def test_to_homogeneous():
         to_homogeneous(np.array([2, 3])),
         [2, 3, 1]
     )
+
 
 def test_motion_matrix():
     R = np.arange(9).reshape(3, 3)
@@ -91,7 +91,9 @@ def test_estimate_fundamental():
     projection = PerspectiveProjection(camera_parameters)
 
     R = random_rotation_matrix(3)
-    t = np.random.uniform(-1, 1, 3)
+    t = np.random.uniform(-10, 10, 3)
+
+    points_true = np.random.uniform(-10, 10, (10, 3))
 
     keypoints0 = projection.compute(points_true)
     keypoints1 = projection.compute(transform(R, t, points_true))
