@@ -43,6 +43,7 @@ setup(
         'scipy>=1.4.1',
         'sympy',
         'sparseba',
+        'tqdm',
         'pyyaml>=5.3'
     ],
     ext_modules=cythonize([
