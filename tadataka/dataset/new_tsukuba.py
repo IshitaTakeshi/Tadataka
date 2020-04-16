@@ -44,10 +44,12 @@ def generate_cache(src_dir, cache_dir, src_extension, loader):
 
 
 def generate_image_cache(image_dir, cache_dir):
+    print("Generating image cache")
     generate_cache(image_dir, cache_dir, ".png", imread)
 
 
 def generate_depth_cache(depth_dir, cache_dir):
+    print("Generating depth cache")
     generate_cache(depth_dir, cache_dir, ".xml", load_depth)
 
 
@@ -128,8 +130,12 @@ class NewTsukubaDataset(BaseDataset):
                 len(self.rotations) == len(self.positions)))
 
         for i in range(len(self.positions)):
-            assert(self.depth_L_paths[:-8] == self.depth_R_paths[:-8] ==
-                   self.image_L_paths[:-8] == self.image_R_paths[:-8])
+            DL = self.depth_L_paths[i].name
+            DR = self.depth_R_paths[i].name
+            IL = self.image_L_paths[i].name
+            IR = self.image_R_paths[i].name
+
+            assert(DL[-8:] == DR[-8:] == IL[-8:] == IR[-8:])
 
     def __len__(self):
         return len(self.positions)
