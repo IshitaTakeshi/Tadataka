@@ -15,13 +15,6 @@ def get_rotation_translation(T):
     return R, t
 
 
-def motion_matrix(R, t):
-    T = np.empty((3, 4))
-    T[0:3, 0:3] = R
-    T[0:3, 3] = t
-    return T
-
-
 def homogeneous_matrix(A, b):
     """
     Example:
