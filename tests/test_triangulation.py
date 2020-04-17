@@ -7,13 +7,14 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraParameters
 from tadataka.dataset.observations import generate_translations
-from tadataka.pose import LocalPose
-from tadataka.projection import PerspectiveProjection
+from tadataka.pose import LocalPose, _Pose
+from tadataka.projection import PerspectiveProjection, pi
 from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation
 from tadataka.triangulation import (
-    Triangulation, TwoViewTriangulation,
-    depth_from_triangulation, DepthsFromTriangulation)
+    Triangulation, TwoViewTriangulation, DepthsFromTriangulation,
+    calc_depth0, calc_depth0_)
+
 
 # TODO add the case such that x[3] = 0
 
@@ -42,9 +43,9 @@ R2 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
     np.array([R0, R1, R2]), points_true
 )
 
-keypoints0 = projection.compute(transform(R0, t0, points_true))
-keypoints1 = projection.compute(transform(R1, t1, points_true))
-keypoints2 = projection.compute(transform(R2, t2, points_true))
+keypoints0 = pi(transform(R0, t0, points_true))
+keypoints1 = pi(transform(R1, t1, points_true))
+keypoints2 = pi(transform(R2, t2, points_true))
 
 
 def test_linear_triangulation():
@@ -119,10 +120,6 @@ def test_triangulation():
 
 
 def test_depths_from_triangulation():
-    projection = PerspectiveProjection(
-        CameraParameters(focal_length=[1, 1], offset=[0, 0]),
-    )
-
     rotation0 = Rotation.from_quat([0, 0, 0, 1])
     rotation1 = Rotation.from_quat([0, 0, 1, 0])
     t0 = np.array([-1, 3, 4], dtype=np.float64)
@@ -131,31 +128,50 @@ def test_depths_from_triangulation():
 
     p0 = transform(rotation0.as_matrix(), t0, point)
     p1 = transform(rotation1.as_matrix(), t1, point)
-    keypoint0 = projection.compute(p0)
-    keypoint1 = projection.compute(p1)
+    x0 = pi(p0)
+    x1 = pi(p1)
 
     pose0 = LocalPose(rotation0, t0)
     pose1 = LocalPose(rotation1, t1)
-    depths = DepthsFromTriangulation(pose0, pose1)(keypoint0, keypoint1)
+    depths = DepthsFromTriangulation(pose0, pose1)(x0, x1)
     assert_array_almost_equal(depths, [p0[2], p1[2]])
 
 
-def test_depths_from_triangulation():
-    projection = PerspectiveProjection(
-        CameraParameters(focal_length=[1, 1], offset=[0, 0]),
-    )
+def test_calc_depth0_():
     point = np.array([0, 0, 5], dtype=np.float64)
 
     rotvec0 = np.random.uniform(-np.pi, np.pi, 3)
     rotation1 = Rotation.from_rotvec(rotvec0)
     t1 = np.array([4, 1, 6])
-    pose0 = LocalPose.identity()
-    pose1 = LocalPose(rotation1, t1)
 
-    p0 = transform(pose0.R, pose0.t, point)
-    p1 = transform(pose1.R, pose1.t, point)
-    keypoint0 = projection.compute(p0)
-    keypoint1 = projection.compute(p1)
+    pose0w = _Pose.identity()
+    pose1w = _Pose(rotation1, t1)
 
-    depth = depth_from_triangulation(pose1.R, pose1.t, keypoint0, keypoint1)
+    p0 = transform(pose0w.R, pose0w.t, point)
+    p1 = transform(pose1w.R, pose1w.t, point)
+    x0 = pi(p0)
+    x1 = pi(p1)
+
+    pose10 = pose1w * pose0w.inv()
+    depth = calc_depth0_(pose10.R, pose10.t, x0, x1)
     assert_array_almost_equal(depth, p0[2])
+
+
+def test_calc_depth0():
+    rotation0 = Rotation.from_rotvec([0, np.pi/2, 0])
+    t0 = np.array([-3, 0, 1])
+
+    rotation1 = Rotation.from_rotvec([0, -np.pi/2, 0])
+    t1 = np.array([0, 0, 2])
+
+    pose_w0 = _Pose(rotation0, t0)
+    pose_w1 = _Pose(rotation1, t1)
+
+    point = np.array([-1, 0, 1], dtype=np.float64)
+
+    pose_0w = pose_w0.inv()
+    pose_1w = pose_w1.inv()
+
+    x0 = pi(transform(pose_0w.R, pose_0w.t, point))
+    x1 = pi(transform(pose_1w.R, pose_1w.t, point))
+    assert(calc_depth0(pose_w0, pose_w1, x0, x1), 2)
