@@ -3,9 +3,8 @@ import itertools
 import numpy as np
 from numpy.linalg import inv
 
-from numpy.testing import (
-    assert_array_almost_equal, assert_almost_equal, assert_array_equal,
-    assert_equal)
+from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
+                           assert_array_equal, assert_equal)
 
 from scipy.spatial.transform import Rotation
 
@@ -13,7 +12,7 @@ from tadataka.camera import CameraParameters
 from tadataka.matrix import (
     solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
     decompose_essential, estimate_fundamental, fundamental_to_essential,
-    to_homogeneous)
+    to_homogeneous, calc_relative_transform)
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.so3 import tangent_so3
@@ -46,8 +45,12 @@ def test_to_homogeneous():
 
 
 def test_motion_matrix():
-    R = np.arange(9).reshape(3, 3)
-    t = np.arange(9, 12)
+    R = np.array([
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8]
+    ])
+    t = np.array([9, 10, 11])
     T = motion_matrix(R, t)
     assert_array_equal(T,
         np.array([
@@ -72,6 +75,18 @@ def test_motion_matrix():
     T = motion_matrix(R, t)
     assert_array_equal(T[0:3, 0:3], R)
     assert_array_equal(T[0:3, 3], t)
+def test_calc_relative_transform():
+    R_wa = random_rotation_matrix(3)
+    t_wa = np.random.uniform(-1, 1, 3)
+    T_wa = motion_matrix(R_wa, t_wa)
+
+    R_wb = random_rotation_matrix(3)
+    t_wb = np.random.uniform(-1, 1, 3)
+    T_wb = motion_matrix(R_wb, t_wb)
+
+    T_ab = calc_relative_transform(T_wa, T_wb)
+
+    assert_array_almost_equal(np.dot(T_wa, T_ab), T_wb)
 
 
 def test_get_rotation_translation():
