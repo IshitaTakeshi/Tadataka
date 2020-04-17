@@ -4,15 +4,23 @@ import numpy as np
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
 
 
+def get_rotation(T):
+    return T[0:3, 0:3]
+
+
+def get_translation(T):
+    return T[0:3, 3]
+
+
+def get_rotation_translation(T):
+    return get_rotation(T), get_translation(T)
+
+
 def inv_motion_matrix(T):
     R, t = get_rotation_translation(T)
     return motion_matrix(R.T, -np.dot(R.T, t))
 
 
-def get_rotation_translation(T):
-    R = T[0:3, 0:3]
-    t = T[0:3, 3]
-    return R, t
 
 
 def homogeneous_matrix(A, b):
