@@ -1,6 +1,6 @@
-from numba import njit
 import numpy as np
 from tadataka.decorator import allow_1d
+from tadataka.matrix import to_homogeneous, from_homogeneous
 
 
 def transform_each(rotations, translations, points):
@@ -107,7 +107,14 @@ class Transform(object):
         return s * np.dot(R, P.T).T + t
 
 
-@njit
+# want to use multiple dispatch and rename to 'transform'...
+def transform_se3(T_10, P0):
+    Q0 = to_homogeneous(P0)
+    Q1 = np.dot(T_10, Q0.T).T
+    P1 = from_homogeneous(Q1)
+    return P1
+
+
 def transform(R, t, P):
     """
     R: rotation matrix
@@ -119,7 +126,6 @@ def transform(R, t, P):
     return np.dot(R, P.T).T + t
 
 
-@njit
 def inv_transform(R, t, P):
     P = P - t
     return np.dot(R.T, P.T).T

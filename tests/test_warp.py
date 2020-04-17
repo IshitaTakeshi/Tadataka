@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.warp import (warp_depth, Warp2D, Warp3D,
-                           local_warp3d_, LocalWarp2D)
+                           warp2d_, LocalWarp2D)
 from tadataka.pose import LocalPose, WorldPose
 
 
@@ -87,7 +87,7 @@ def test_local_warp2d():
     # [2, 0, 0] + [0, 0, 4] = [2, 0, 4]
     # [4, -4, -8] + [0, 0, 4] = [4, -4, -4]
 
-    xs1, depths1 = local_warp3d_(pose10.T, xs0, depths0)
+    xs1, depths1 = warp2d_(pose10.T, xs0, depths0)
     assert_array_almost_equal(xs1, [[0.5, 0.0], [-1.0, 1.0]])
     assert_array_almost_equal(depths1, [4.0, -4.0])
 
