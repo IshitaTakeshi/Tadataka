@@ -21,10 +21,10 @@ def inv_motion_matrix(T):
     return motion_matrix(R.T, -np.dot(R.T, t))
 
 
-def calc_relative_transform(T_w1, T_w0):
-    T_1w = inv_motion_matrix(T_w1)
-    T_10 = np.dot(T_1w, T_w0)
-    return T_10
+def calc_relative_transform(T_wa, T_wb):
+    T_aw = inv_motion_matrix(T_wa)
+    T_ab = np.dot(T_aw, T_wb)
+    return T_ab
 
 
 def homogeneous_matrix(A, b):
