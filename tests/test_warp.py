@@ -4,7 +4,8 @@ from numpy.testing import assert_array_almost_equal
 from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraModel, CameraParameters
-from tadataka.warp import warp3d_, Warp2D, Warp3D, local_warp3d_, LocalWarp2D
+from tadataka.warp import (warp_depth, Warp2D, Warp3D,
+                           local_warp3d_, LocalWarp2D)
 from tadataka.pose import LocalPose, WorldPose
 
 
@@ -53,7 +54,7 @@ def test_warp2d():
     ])
     depths0 = np.array([2, 4])
 
-    xs1, depths1 = warp3d_(warp3d, xs0, depths0)
+    xs1, depths1 = warp_depth(warp3d, xs0, depths0)
 
     assert_array_almost_equal(xs1, [[0.5, 0], [0.25, -1]])
     assert_array_almost_equal(depths1, [2, 4])
@@ -86,7 +87,7 @@ def test_local_warp2d():
     # [2, 0, 0] + [0, 0, 4] = [2, 0, 4]
     # [4, -4, -8] + [0, 0, 4] = [4, -4, -4]
 
-    xs1, depths1 = local_warp3d_((pose10.R, pose10.t), xs0, depths0)
+    xs1, depths1 = local_warp3d_(pose10.T, xs0, depths0)
     assert_array_almost_equal(xs1, [[0.5, 0.0], [-1.0, 1.0]])
     assert_array_almost_equal(depths1, [4.0, -4.0])
 
