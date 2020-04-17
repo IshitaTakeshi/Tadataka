@@ -69,12 +69,6 @@ def test_inv_motion_matirx():
     assert_array_almost_equal(inv_motion_matrix(T), inv(T))
 
 
-def test_motion_matrix():
-    R = random_rotation_matrix(3)
-    t = np.random.uniform(-1, 1, 3)
-    T = motion_matrix(R, t)
-    assert_array_equal(T[0:3, 0:3], R)
-    assert_array_equal(T[0:3, 3], t)
 def test_calc_relative_transform():
     R_wa = random_rotation_matrix(3)
     t_wa = np.random.uniform(-1, 1, 3)
