@@ -193,7 +193,3 @@ def estimate_pose_change(keypoints0, keypoints1):
     """
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
     return LocalPose(Rotation.from_matrix(R), t)
-
-
-def calc_relative_pose(src, dst):
-    return dst * src.inv()
