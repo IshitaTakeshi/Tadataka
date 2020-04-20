@@ -1,30 +1,29 @@
+import numpy as np
+from skimage.color import rgb2gray
 from tadataka.dataset import NewTsukubaDataset
-from tadataka.vo.semi_dense.frame_selection import ReferenceFrameSelector
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.vo.semi_dense.frame import ReferenceSelector
 from tadataka.vo.semi_dense.frame import Frame
 from tests.dataset.path import new_tsukuba
 
 
 def test_reference_frame_selector():
+    def frame(frame_):
+        return Frame(frame_.camera_model, rgb2gray(frame_.image), frame_.pose)
+
     dataset = NewTsukubaDataset(new_tsukuba)
-    L, R = dataset[0]
-    frame0_, frame1_, frame2_ = L, R, L
-    frame0 = Frame(frame0_)
-    frame1 = Frame(frame1_)
-    frame2 = Frame(frame2_)
+    frame0 = frame(dataset[0][0])
+    frame1 = frame(dataset[1][0])
+    frame2 = frame(dataset[2][0])
+    refframes = [frame0, frame1, frame2]
 
-    selector = ReferenceFrameSelector(frame0, invert_depth(frame0_.depth_map))
-    #                  x,   y
-    assert(selector([250, 370]) is None)
-    assert(selector([100, 200]) is None)
-
-    selector.update(frame1, invert_depth(frame1_.depth_map))
-    #                  x,   y
-    assert(selector([300, 300]) is frame0)
-    assert(selector([610, 300]) is None)
-
-    selector.update(frame2, invert_depth(frame2_.depth_map))
-    #                  x,   y
-    assert(selector([300, 300]) is frame0)
-    assert(selector([360, 250]) is frame1)
-    assert(selector([10, 370]) is None)
+    M = np.ones((50, 50), dtype=np.int64)
+    age_map = np.block([
+        [0 * M, 1 * M],
+        [2 * M, 3 * M]
+    ])
+    selector = ReferenceSelector(refframes, age_map)
+    #                 x,   y
+    assert(selector([25, 25]) is None)
+    assert(selector([75, 25]) is frame2)
+    assert(selector([25, 75]) is frame1)
+    assert(selector([75, 75]) is frame0)
