@@ -1,81 +1,87 @@
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_array_almost_equal)
-import pytest
-from skimage.color import rgb2gray
 from scipy.spatial.transform import Rotation
+from skimage.color import rgb2gray
 
-from tadataka.pose import calc_relative_pose
+from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
+from tadataka.camera import CameraModel, CameraParameters
+from tadataka.vo.semi_dense.hypothesis import Hypothesis
+from tadataka.vo.semi_dense.frame import Frame
+from tadataka.vo.semi_dense.semi_dense import InvDepthEstimator
+from tadataka.vo.semi_dense.gradient import GradientImage
+from tadataka.gradient import grad_x, grad_y
 from tadataka.dataset import NewTsukubaDataset
 from tadataka.coordinates import image_coordinates
-
-from tadataka.vo.semi_dense.semi_dense import (
-    step_size_ratio, depth_search_range, epipolar_search_range_,
-    GradientImage, InverseDepthEstimator, InverseDepthSearchRange)
+from tadataka.vo.semi_dense.common import invert_depth
 
 from tests.dataset.path import new_tsukuba
 
 
-def test_depth_search_range():
-    # invert and reverse the order
-    assert_almost_equal(depth_search_range((0.25, 0.8)), (1.25, 4.0))
-    assert_almost_equal(depth_search_range((0.10, 0.5)), (2.0, 10.0))
+def test_inv_depth_estimator():
+    dataset = NewTsukubaDataset(new_tsukuba)
+    keyframe, refframe = dataset[0]
 
+    camer_model_ref = refframe.camera_model
+    camer_model_key = keyframe.camera_model
 
-def test_inverse_depth_search_range():
-    inv_depth_range = InverseDepthSearchRange(
-        min_inv_depth=0.02, max_inv_depth=20.0, factor=2.0)
-    assert_equal(inv_depth_range(1.0, 0.2), (0.6, 1.4))
-    assert_equal(inv_depth_range(1.0, 1.5), (0.02, 4.0))
-    assert_equal(inv_depth_range(18.0, 1.5), (15.0, 20.0))
+    image_ref = rgb2gray(refframe.image)
+    image_key = rgb2gray(keyframe.image)
 
-    with pytest.raises(AssertionError):
-        # min_inv_depth must be positive
-        InverseDepthSearchRange(min_inv_depth=-0.01, max_inv_depth=1.0)
+    inv_depth_search_range = (0.001, 10.0)
+    sigma_i = 0.01
+    sigma_l = 0.01
+    step_size_ref = 0.01
+    min_gradient = 0.2
 
-    with pytest.raises(AssertionError):
-        # max_inv_depth must be greater than min_inv_depth
-        InverseDepthSearchRange(min_inv_depth=1.0, max_inv_depth=0.9)
+    estimator = InvDepthEstimator(camer_model_key, image_key,
+                                  inv_depth_search_range,
+                                  sigma_i, sigma_l, step_size_ref, min_gradient)
+    pose_wk = keyframe.pose
+    pose_wr = refframe.pose
+    pose_rk = pose_wr.inv() * pose_wk
+    T_rk = pose_rk.T
 
+    def estimate(u_key, prior):
+        return estimator(camer_model_ref, image_ref, T_rk, u_key, prior)
 
-def test_epipolar_search_range():
-    R_key = np.identity(3)
-    t_key = np.array([0, 0, -2])
+    u_key = np.array([110, 400])
+    prior = Hypothesis(-0.1, 10.0)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.NEGATIVE_PRIOR_DEPTH)
 
-    R_ref = Rotation.from_rotvec([0, -np.pi/2, 0]).as_matrix()
-    t_ref = np.array([1, 0, 0])
+    u_key = np.array([110, 400])
+    prior = Hypothesis(15.0, 0.2)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.HYPOTHESIS_OUT_OF_SERCH_RANGE)
 
-    x_key = np.zeros(2)
-    depth_range = [1, 3]
-    x_ref_min, x_ref_max = epipolar_search_range_(
-        (R_key, t_key), (R_ref, t_ref),
-        x_key, depth_range
-    )
+    u_key = np.array([390, 100])
+    prior = Hypothesis(0.5, 0.2)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.INSUFFICIENT_GRADIENT)
 
-    assert_array_almost_equal(x_ref_min, [-1, 0])
-    assert_array_almost_equal(x_ref_max, [1, 0])
+    # u_key is on the image edge
+    u_key = np.array([0, 200])
+    prior = Hypothesis(0.5, 0.2)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.KEY_OUT_OF_RANGE)
 
+    # very short search range
+    u_key = np.array([110, 400])
+    prior = Hypothesis(0.5, 0.001)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.REF_EPIPOLAR_TOO_SHORT)
 
-def test_gradient_image():
-    width, height = 6, 4
-    image_grad_x = np.arange(0, 24).reshape(height, width)
-    image_grad_y = np.arange(24, 48).reshape(height, width)
-    gradient_image = GradientImage(image_grad_x.astype(np.float64),
-                                   image_grad_y.astype(np.float64))
+    u_key = np.array([110, 400])
+    prior = Hypothesis(1 / keyframe.depth_map[u_key[1], u_key[0]], 0.01)
+    hypothesis, flag = estimate(u_key, prior)
+    assert(flag == FLAG.REF_OUT_OF_RANGE)
 
-    u_key = np.array([4.3, 2.1])
-    gx, gy = gradient_image(u_key)
-
-    u, v = 4, 2
-
-    expected_x = (0.7 * 0.9 * image_grad_x[v, u] +
-                  0.3 * 0.9 * image_grad_x[v, u+1] +
-                  0.7 * 0.1 * image_grad_x[v+1, u] +
-                  0.3 * 0.1 * image_grad_x[v+1, u+1])
-    assert_almost_equal(gx, expected_x)
-
-    expected_y = (0.7 * 0.9 * image_grad_y[v, u] +
-                  0.3 * 0.9 * image_grad_y[v, u+1] +
-                  0.7 * 0.1 * image_grad_y[v+1, u] +
-                  0.3 * 0.1 * image_grad_y[v+1, u+1])
-    assert_almost_equal(gy, expected_y)
+    x, y = u_key = np.array([420, 450])
+    prior = Hypothesis(invert_depth(keyframe.depth_map[y, x]), 0.01)
+    (inv_depth, variance), flag = estimate(u_key, prior)
+    print("pred, true = ", invert_depth(inv_depth), keyframe.depth_map[y, x])
+    assert(flag == FLAG.SUCCESS)
+    assert(inv_depth > 0.0)
+    assert(abs(invert_depth(inv_depth) - keyframe.depth_map[y, x]) < 1.0)
+    assert(variance > 0.0)  # hard to test the value of variance
