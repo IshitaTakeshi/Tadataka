@@ -1,4 +1,3 @@
-from numba import njit
 import numpy as np
 
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
@@ -51,7 +50,6 @@ def homogeneous_matrix(A, b):
     return W
 
 
-@njit
 def to_homogeneous(X):
     """
     Args:
@@ -66,6 +64,14 @@ def to_homogeneous(X):
     return np.hstack((X, ones))
 
 
+def from_homogeneous(X):
+    if X.ndim == 1:
+        d = X.shape[0] -1
+        return X[0:d]
+    d = X.shape[1] - 1
+    return X[:, 0:d]
+
+
 def motion_matrix(R, t):
     T = np.empty((4, 4))
     T[0:3, 0:3] = R
@@ -73,11 +79,6 @@ def motion_matrix(R, t):
     T[3, 0:3] = 0
     T[3, 3] = 1
     return T
-
-
-def from_homogeneous(X):
-    d = X.shape[1] - 1
-    return X[:, 0:d]
 
 
 def homogeneous_transformation(X, T):
