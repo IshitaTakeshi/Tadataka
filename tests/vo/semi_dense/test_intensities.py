@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.testing import assert_array_equal
-from tadataka.vo.semi_dense.intensities import search_intensities
+from tadataka.vo.semi_dense._intensities import search_intensities
 
 
 def test_intensity_search():

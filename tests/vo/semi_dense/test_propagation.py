@@ -1,14 +1,13 @@
 import numpy as np
-from numpy.testing import (assert_array_almost_equal,
-                           assert_equal, assert_almost_equal)
+from numpy.testing import (assert_almost_equal, assert_array_almost_equal,
+                           assert_array_equal, assert_equal)
 from scipy.spatial.transform import Rotation
 from tadataka.pose import WorldPose
 from tadataka.warp import Warp2D
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.fusion import fusion
-from tadataka.vo.semi_dense.propagation import (
-    propagate_variance, coordinates_, substitute_
-)
+from tadataka.vo.semi_dense.propagation import (propagate_variance,
+                                                substitute_, substitute)
 
 
 def test_substitute_():
@@ -58,55 +57,32 @@ def test_propagate_variance():
     )
 
 
-def test_coordinates_():
-    depth_map0 = np.array([
-        [2.0, 3.0],
-        [8.0, 2.0]
+def test_substitute():
+    width, height = 2, 3
+    us = np.array([
+        #  x    y
+        [0.0, 0.0],
+        [0.4, 0.5],
+        [1.0, 2.1],
+        [1.2, 2.4]
     ])
-    cm = CameraModel(
-        CameraParameters(focal_length=[1, 1], offset=[0.5, 0.5]),
-        distortion_model=None
+    inv_depths = np.array([2.0, 8.0, 2.0, 1.0])
+    variances = np.array([0.5, 1.0, 4.0, 6.0])
+    inv_depth_map, variance_map = substitute(
+        us, inv_depths, variances, (height, width),
+        default_inv_depth=4.0, default_variance=3.0
     )
 
-    rotation = Rotation.identity()
-    pose0 = WorldPose(rotation, np.array([0, 0, 0]))
-    pose1 = WorldPose(rotation, np.array([-2, 0, -2]))
-    warp10 = Warp2D(cm, cm, pose0, pose1)
-    # xs             #  x  y   z
-    # [-0.5, -0.5],  # [0, 0]  2.0
-    # [0.5, -0.5],   # [1, 0]  3.0
-    # [-0.5, 0.5],   # [0, 1]  8.0
-    # [0.5, 0.5]     # [1, 1]  2.0
+    assert_array_equal(
+        inv_depth_map,
+        [[8.0, 4.0],
+         [4.0, 4.0],
+         [4.0, 1.6]]
+    )
 
-    # inv projection
-    # [-1.0, -1.0, 2.0],
-    # [1.5, -1.5, 3.0],
-    # [-4.0, 4.0, 8.0],
-    # [1.0, 1.0, 2.0],
-
-    # after transform
-    # [1.0, -1.0, 4.0],
-    # [3.5, -1.5, 5.0],
-    # [-2.0, 4.0, 10.0],
-    # [3.0, 1.0, 4.0]
-
-    # reprojection
-    # [0.25, -0.25]
-    # [0.7, -0.3]
-    # [-0.2, 0.4]
-    # [0.75, 0.25]
-
-    # image coordinates
-    # [0.75, 0.25]
-    # [1.2, 0.2]
-    # [0.3, 0.9]
-    # [1.25, 0.75]
-
-    us0, us1, depths0, depths1 = coordinates_(warp10, depth_map0)
-    # image coordinates
-    assert_array_almost_equal(us1,
-        [[0.75, 0.25],
-         [1.2, 0.2],
-         [0.3, 0.9],
-         [1.25, 0.75]]
+    assert_array_equal(
+        variance_map,
+        [[1.0, 3.0],
+         [3.0, 3.0],
+         [3.0, 2.4]]
     )
