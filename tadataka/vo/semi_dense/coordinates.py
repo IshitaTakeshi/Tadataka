@@ -1,18 +1,5 @@
-from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.coordinates import image_coordinates
 from tadataka.utils import is_in_image_range
-
-
-def substitute(array2d, us, values):
-    assert(us.shape[0] == values.shape[0])
-    xs, ys = us[:, 0], us[:, 1]
-    array2d[ys, xs] = values
-    return array2d
-
-
-def get(array2d, us):
-    xs, ys = us[:, 0], us[:, 1]
-    return array2d[ys, xs]
 
 
 def coordinates_(warp10, depth_map0):
