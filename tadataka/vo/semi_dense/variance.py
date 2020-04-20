@@ -1,4 +1,11 @@
 import numpy as np
+from tadataka.matrix import get_rotation_translation
+from tadataka.warp import warp2d_
+from tadataka.vo.semi_dense.common import invert_depth
+
+
+def calc_observation_variance(alpha, geo_variance, photo_variance):
+    return alpha * alpha * (geo_variance + photo_variance)
 
 
 def photometric_variance(gradient_along_epipolar_line, sigma_i):
