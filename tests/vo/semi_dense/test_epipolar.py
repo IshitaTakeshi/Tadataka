@@ -1,10 +1,12 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_array_almost_equal
-
+from scipy.spatial.transform import Rotation
 from tadataka.camera import CameraModel, CameraParameters, FOV
+from tadataka.matrix import motion_matrix
 from tadataka.vo.semi_dense.epipolar import (
-    reference_coordinates, key_coordinates_)
+    reference_coordinates, key_coordinates, key_epipolar_direction)
+from tests.utils import random_rotation_matrix
 
 
 def test_reference_coordinates():
@@ -36,18 +38,22 @@ def test_reference_coordinates():
 
 
 def test_key_coordinates():
-    t = np.array([-4.0, -8.0, 2.0])  # pi(t) == [-2, -4]
-    pi_t = t[0:2] / t[2]
     x = np.array([7.0, 8.0])
+    direction = np.array([9, 12])
     step_size = 5.0
-    sampling_steps = np.array([-2, -1, 0, 1, 2])
 
     # step should be [3, 4]
     assert_array_almost_equal(
-        key_coordinates_(x, pi_t, step_size, sampling_steps),
+        key_coordinates(direction, x, step_size),
         [[7 - 2 * 3, 8 - 2 * 4],
          [7 - 1 * 3, 8 - 1 * 4],
          [7 - 0 * 3, 8 - 0 * 4],
          [7 + 1 * 3, 8 + 1 * 4],
          [7 + 2 * 3, 8 + 2 * 4]]
     )
+
+
+def test_key_epipolar_direction():
+    t_rk = np.array([3, 0, 6])
+    x_key = np.array([0, 0.5])
+    assert_array_equal(key_epipolar_direction(t_rk, x_key), [-0.5, 0.5])
