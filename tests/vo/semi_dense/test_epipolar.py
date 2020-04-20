@@ -5,11 +5,12 @@ from scipy.spatial.transform import Rotation
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.matrix import motion_matrix
 from tadataka.vo.semi_dense.epipolar import (
-    reference_coordinates, key_coordinates, key_epipolar_direction)
+    key_coordinates_, key_epipolar_direction, key_coordinates,
+    ref_coordinates, ref_search_range)
 from tests.utils import random_rotation_matrix
 
 
-def test_reference_coordinates():
+def test_ref_coordinates():
     width, height = 160, 200
     image_shape = [height, width]
     camera_model = CameraModel(
@@ -20,7 +21,7 @@ def test_reference_coordinates():
     search_step = 5.0
     x_min = np.array([-15.0, -20.0])
     x_max = np.array([15.0, 20.0])
-    xs = reference_coordinates((x_min, x_max), search_step)
+    xs = ref_coordinates((x_min, x_max), search_step)
 
     xs_true = np.array([
         [-15, -20],
