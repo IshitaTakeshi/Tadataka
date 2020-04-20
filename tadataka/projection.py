@@ -1,4 +1,3 @@
-from numba import njit
 import numpy as np
 
 from tadataka.matrix import to_homogeneous
@@ -7,7 +6,6 @@ from tadataka.matrix import to_homogeneous
 EPSILON = 1e-16
 
 
-@njit
 def pi(P):
     if P.ndim == 1:
         return P[0:2] / (P[2] + EPSILON)
@@ -21,7 +19,6 @@ def pi(P):
     return XY / (Z + EPSILON)
 
 
-@njit
 def inv_pi(xs, depths):
     if xs.ndim == 1:
         return depths * to_homogeneous(xs)
