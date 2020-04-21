@@ -61,6 +61,8 @@ setup(
         'opencv-python',
         'opencv-contrib-python',
         'pandas',
+        'Pillow',
+        'pyyaml>=5.3'
         'scikit-image',
         'scikit-learn',
         'setuptools>=18.0',  # >= 18.0 can handle cython
@@ -68,7 +70,6 @@ setup(
         'sympy',
         'sparseba',
         'tqdm',
-        'pyyaml>=5.3'
     ],
     ext_modules=ext_modules,
     cmdclass = {'build_ext': CustomBuildExt},
