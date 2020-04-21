@@ -17,6 +17,31 @@ class CustomBuildExt(build_ext):
         build_ext.run(self)
 
 
+ext_modules=[
+    Extension(
+        "tadataka.camera._radtan",
+        sources=["tadataka/camera/_radtan.pyx",
+                 "tadataka/camera/_radtan_distort.c",
+                 "tadataka/camera/_radtan_distort_jacobian.c"],
+        extra_compile_args=["-Wall", "-Ofast"]
+    ),
+    Extension(
+        "tadataka.interpolation._interpolation",
+        sources=["tadataka/interpolation/_interpolation.pyx",
+                 "tadataka/interpolation/_bilinear.c"],
+        extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
+    ),
+    Extension(
+        "tadataka.vo.semi_dense._intensities",
+        sources=["tadataka/vo/semi_dense/_intensities.pyx"],
+        extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
+    ),
+]
+
+for module in ext_modules:
+    module.cython_directives = {"language_level": 3}
+
+
 setup(
     name='tadataka',
     description='Tadataka',
@@ -45,25 +70,6 @@ setup(
         'tqdm',
         'pyyaml>=5.3'
     ],
-    ext_modules=[
-        Extension(
-            "tadataka.camera._radtan",
-            sources=["tadataka/camera/_radtan.pyx",
-                     "tadataka/camera/_radtan_distort.c",
-                     "tadataka/camera/_radtan_distort_jacobian.c"],
-            extra_compile_args=["-Wall", "-Ofast"]
-        ),
-        Extension(
-            "tadataka.interpolation._interpolation",
-            sources=["tadataka/interpolation/_interpolation.pyx",
-                     "tadataka/interpolation/_bilinear.c"],
-            extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
-        ),
-        Extension(
-            "tadataka.vo.semi_dense._intensities",
-            sources=["tadataka/vo/semi_dense/_intensities.pyx"],
-            extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
-        ),
-    ],
+    ext_modules=ext_modules,
     cmdclass = {'build_ext': CustomBuildExt},
 )
