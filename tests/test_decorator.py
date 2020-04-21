@@ -1,14 +1,12 @@
 import numpy as np
 from numpy.testing import assert_array_equal
-from skimage.data import camera
 
 from tadataka.decorator import allow_1d
 
 
-image = camera()
-
-
 def test_allow_1d():
+    image = np.random.random((512, 512))
+
     x, y = 10, 20
     coordinate = np.array([x, y])
 
