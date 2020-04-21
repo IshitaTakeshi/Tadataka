@@ -71,7 +71,7 @@ class DepthsFromTriangulation(object):
 
 
 def calc_depth0_(R10, t10, x0, x1):
-    index = np.argmax(t10[0:2])
+    index = np.argmax(np.abs(t10[0:2]))
     y0 = to_homogeneous(x0)
     n = t10[index] - t10[2] * x1[index]
     d = np.dot(R10[2], y0) * x1[index] - np.dot(R10[index], y0)

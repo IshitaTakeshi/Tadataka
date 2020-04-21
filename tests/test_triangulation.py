@@ -140,21 +140,27 @@ def test_depths_from_triangulation():
 def test_calc_depth0_():
     point = np.array([0, 0, 5], dtype=np.float64)
 
-    rotvec0 = np.random.uniform(-np.pi, np.pi, 3)
-    rotation1 = Rotation.from_rotvec(rotvec0)
+    def run(pose0w, pose1w):
+        p0 = transform(pose0w.R, pose0w.t, point)
+        p1 = transform(pose1w.R, pose1w.t, point)
+        x0 = pi(p0)
+        x1 = pi(p1)
+
+        pose10 = pose1w * pose0w.inv()
+        depth = calc_depth0_(pose10.R, pose10.t, x0, x1)
+        assert_array_almost_equal(depth, p0[2])
+
+    rotation1 = Rotation.from_rotvec(np.random.uniform(-np.pi, np.pi, 3))
     t1 = np.array([4, 1, 6])
 
     pose0w = Pose.identity()
     pose1w = Pose(rotation1, t1)
+    run(pose0w, pose1w)
 
-    p0 = transform(pose0w.R, pose0w.t, point)
-    p1 = transform(pose1w.R, pose1w.t, point)
-    x0 = pi(p0)
-    x1 = pi(p1)
-
-    pose10 = pose1w * pose0w.inv()
-    depth = calc_depth0_(pose10.R, pose10.t, x0, x1)
-    assert_array_almost_equal(depth, p0[2])
+    rotation = Rotation.identity()
+    pose0w = Pose(rotation, np.array([-5, 0, 0]))
+    pose1w = Pose(rotation, np.array([5, 0, 0]))
+    run(pose0w, pose1w)
 
 
 def test_calc_depth0():
@@ -174,4 +180,4 @@ def test_calc_depth0():
 
     x0 = pi(transform(pose_0w.R, pose_0w.t, point))
     x1 = pi(transform(pose_1w.R, pose_1w.t, point))
-    assert(calc_depth0(pose_w0, pose_w1, x0, x1), 2)
+    assert_almost_equal(calc_depth0(pose_w0, pose_w1, x0, x1), 2)
