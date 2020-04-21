@@ -1,6 +1,5 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
-from Cython.Build import cythonize
 
 
 def sympy_codegen():
@@ -46,21 +45,21 @@ setup(
         'tqdm',
         'pyyaml>=5.3'
     ],
-    ext_modules=cythonize([
+    ext_modules=[
         Extension(
-            'tadataka.camera._radtan',
+            "tadataka.camera._radtan",
             sources=["tadataka/camera/_radtan.pyx",
                      "tadataka/camera/_radtan_distort.c",
                      "tadataka/camera/_radtan_distort_jacobian.c"],
             extra_compile_args=["-Wall", "-Ofast"]
         ),
         Extension(
-            'tadataka.interpolation._interpolation',
+            "tadataka.interpolation._interpolation",
             sources=["tadataka/interpolation/_interpolation.pyx",
                      "tadataka/interpolation/_bilinear.c"],
             extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
         ),
-    ]),
+    ],
     cmdclass = {'build_ext': CustomBuildExt},
 
 )
