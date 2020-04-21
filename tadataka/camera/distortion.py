@@ -1,8 +1,12 @@
 # reference
 # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
-from tadataka.camera._radtan import radtan_distort
-from tadataka.camera._radtan import radtan_undistort
+try:
+    from tadataka.camera._radtan import radtan_distort
+    from tadataka.camera._radtan import radtan_undistort
+except ImportError:
+    import warnings
+    warnings.warn("tadataka.camera._radtan is not built yet")
 
 import numpy as np
 
