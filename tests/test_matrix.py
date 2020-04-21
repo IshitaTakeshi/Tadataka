@@ -12,7 +12,7 @@ from tadataka.camera import CameraParameters
 from tadataka.matrix import (
     solve_linear, motion_matrix, inv_motion_matrix, get_rotation_translation,
     decompose_essential, estimate_fundamental, fundamental_to_essential,
-    to_homogeneous, calc_relative_transform)
+    to_homogeneous, from_homogeneous, calc_relative_transform)
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 from tadataka.so3 import tangent_so3
@@ -42,6 +42,12 @@ def test_to_homogeneous():
         to_homogeneous(np.array([2, 3])),
         [2, 3, 1]
     )
+
+
+def test_from_homogeneous():
+    assert_array_equal(from_homogeneous(np.array([2, 3, 1])), [2, 3])
+    assert_array_equal(from_homogeneous(np.array([[2, 3, 1], [3, 4, 1]])),
+                       [[2, 3], [3, 4]])
 
 
 def test_motion_matrix():
