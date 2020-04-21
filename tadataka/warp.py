@@ -3,7 +3,7 @@ from tadataka.matrix import calc_relative_transform
 from tadataka.rigid_transform import transform_se3
 from tadataka.decorator import allow_1d
 from tadataka.projection import inv_pi, pi
-from tadataka.pose import LocalPose, WorldPose
+from tadataka.pose import Pose
 
 
 def warp2d_(T_10, xs0, depths0):
@@ -26,15 +26,15 @@ def warp2d(T_wa, T_wb, xs, depths):
 
 
 class Warp3D(object):
-    def __init__(self, pose0, pose1):
-        assert(isinstance(pose0, WorldPose))
-        assert(isinstance(pose1, WorldPose))
-        self.T0 = pose0.T
-        self.T1 = pose1.T
+    def __init__(self, pose_w0, pose_w1):
+        assert(isinstance(pose_w0, Pose))
+        assert(isinstance(pose_w1, Pose))
+        self.T_w0 = pose_w0.T
+        self.T_w1 = pose_w1.T
 
     @allow_1d(which_argument=1)
     def __call__(self, P):
-        return warp3d(self.T0, self.T1, P)
+        return warp3d(self.T_w0, self.T_w1, P)
 
 
 def warp_depth(warp: Warp3D, xs0, depths0):
@@ -47,10 +47,10 @@ def warp_depth(warp: Warp3D, xs0, depths0):
 class Warp2D(object):
     """Warp coordinate between image planes"""
     def __init__(self, camera_model0, camera_model1,
-                 pose0: WorldPose, pose1: WorldPose):
+                 pose_w0: Pose, pose_w1: Pose):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
-        self.warp3d = Warp3D(pose0, pose1)
+        self.warp3d = Warp3D(pose_w0, pose_w1)
 
     def __call__(self, us0, depths0):
         """
@@ -78,7 +78,7 @@ class Warp2D(object):
 
 
 class LocalWarp2D(object):
-    def __init__(self, camera_model0, camera_model1, pose10: LocalPose):
+    def __init__(self, camera_model0, camera_model1, pose10: Pose):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
         self.T10 = pose10.T

@@ -13,7 +13,7 @@ from tadataka.correspondence import (
 )
 from tadataka.depth import compute_depth_mask
 from tadataka.utils import merge_dicts, value_list
-from tadataka.pose import LocalPose, solve_pnp, estimate_pose_change
+from tadataka.pose import Pose, solve_pnp, estimate_pose_change
 from tadataka.triangulation import TwoViewTriangulation
 from tadataka.keyframe_index import KeyframeIndices
 from tadataka.local_ba import try_run_ba
@@ -178,7 +178,7 @@ class FeatureBasedVO(object):
 
         if len(self.active_viewpoints) == 0:
             correspondence1 = init_correspondence()
-            pose1 = LocalPose.identity()
+            pose1 = Pose.identity()
             point_dict = dict()
         else:
             try:

@@ -10,7 +10,7 @@ from tadataka.dataset.frame import Frame
 from tadataka.dataset.base import BaseDataset
 from tadataka.dataset.tum import load_image_paths, synchronize
 from tadataka.utils import value_list
-from tadataka.pose import WorldPose
+from tadataka.pose import Pose
 
 
 DEPTH_FACTOR = 5000.
@@ -133,5 +133,5 @@ class TumRgbdDataset(BaseDataset):
         I = imread(self.paths_rgb[index])
         D = imread(self.paths_depth[index])
         D = D / self.depth_factor
-        pose = WorldPose(self.rotations[index], self.positions[index])
-        return Frame(self.camera_model, pose, I, D)
+        pose_world_camera = Pose(self.rotations[index], self.positions[index])
+        return Frame(self.camera_model, pose_world_camera, I, D)

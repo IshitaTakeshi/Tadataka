@@ -4,7 +4,6 @@ import pytest
 from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraModel, CameraParameters
-from tadataka.pose import LocalPose, WorldPose
 from tadataka.projection import pi, inv_pi
 
 

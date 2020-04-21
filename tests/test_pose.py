@@ -9,8 +9,8 @@ from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
 from tadataka.dataset.observations import generate_translations
 from tadataka.pose import (
-    calc_relative_pose, estimate_pose_change, n_triangulated,
-    solve_pnp, triangulation_indices, _Pose, LocalPose, WorldPose
+    estimate_pose_change, n_triangulated,
+    solve_pnp, triangulation_indices, Pose
 )
 from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
@@ -78,32 +78,32 @@ def test_eq():
     t0 = np.zeros(3)
     t1 = np.arange(3)
 
-    assert(_Pose(rotaiton0, t0) == _Pose(rotaiton0, t0))
-    assert(_Pose(rotaiton1, t1) == _Pose(rotaiton1, t1))
-    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton0, t1))
-    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton1, t0))
-    assert(_Pose(rotaiton0, t0) != _Pose(rotaiton1, t1))
+    assert(Pose(rotaiton0, t0) == Pose(rotaiton0, t0))
+    assert(Pose(rotaiton1, t1) == Pose(rotaiton1, t1))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton0, t1))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t0))
+    assert(Pose(rotaiton0, t0) != Pose(rotaiton1, t1))
 
 
 def test_identity():
-    pose = _Pose.identity()
+    pose = Pose.identity()
     assert_array_equal(pose.rotation.as_rotvec(), np.zeros(3))
     assert_array_equal(pose.t, np.zeros(3))
 
 
 def test_R():
-    pose = _Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+    pose = Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
     assert_array_almost_equal(pose.R, np.identity(3))
 
     rotvec, t = np.array([np.pi, 0, 0]), np.zeros(3)
-    pose = _Pose(Rotation.from_rotvec(rotvec), t)
+    pose = Pose(Rotation.from_rotvec(rotvec), t)
     assert_array_almost_equal(pose.R, np.diag([1, -1, -1]))
 
 
 def test_T():
     rotvec = np.array([0, np.pi/2, 0])
     t = np.array([-3, -2, 3])
-    pose = _Pose(Rotation.from_rotvec(rotvec), t)
+    pose = Pose(Rotation.from_rotvec(rotvec), t)
     assert_array_almost_equal(
         pose.T,
         [[0, 0, 1, -3],
@@ -120,7 +120,7 @@ def test_inv():
 
         t = np.random.uniform(-10, 10, 3)
 
-        p = _Pose(rotation, t)
+        p = Pose(rotation, t)
 
         q = p * p.inv()
         assert_array_almost_equal(q.rotation.as_rotvec(), np.zeros(3))
@@ -129,8 +129,8 @@ def test_inv():
 
 def test_mul():
     # case1
-    pose1 = _Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
-    pose2 = _Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose1 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
+    pose2 = Pose(Rotation.from_rotvec(np.zeros(3)), np.ones(3))
     pose3 = pose1 * pose2
     assert_array_equal(pose3.rotation.as_rotvec(), np.zeros(3))
     assert_array_equal(pose3.t, 2 * np.ones(3))
@@ -141,8 +141,8 @@ def test_mul():
     rotvec21 = 0.1 * axis
     t10 = np.array([-0.1, 2.0, 0.1])
     t21 = np.array([0.2, 0.4, -0.1])
-    pose10 = _Pose(Rotation.from_rotvec(rotvec10), t10)
-    pose21 = _Pose(Rotation.from_rotvec(rotvec21), t21)
+    pose10 = Pose(Rotation.from_rotvec(rotvec10), t10)
+    pose21 = Pose(Rotation.from_rotvec(rotvec21), t21)
     pose20 = pose21 * pose10
 
     assert_array_almost_equal(pose20.rotation.as_rotvec(), 0.5 * axis)
@@ -157,8 +157,8 @@ def test_mul():
     rotvec10 = np.random.random(3)
     t10 = np.random.uniform(-10, 10, 3)
 
-    pose10 = WorldPose(Rotation.from_rotvec(rotvec10), t10)
-    pose21 = WorldPose(Rotation.from_rotvec(rotvec21), t21)
+    pose10 = Pose(Rotation.from_rotvec(rotvec10), t10)
+    pose21 = Pose(Rotation.from_rotvec(rotvec21), t21)
     pose20 = pose21 * pose10
 
     assert_array_almost_equal(
@@ -231,121 +231,17 @@ def test_estimate_pose_change():
     case2()
 
 
-def test_calc_relative_pose():
-    rotation0 = Rotation.from_rotvec([0.3, -0.1, 0.2])
-    rotation1 = Rotation.from_rotvec([-0.1, -1.1, 1.4])
-    t0 = np.array([3.0, 0.0, 2.1])
-    t1 = np.array([-4.3, 6.1, -1.1])
-
-    point = np.array([4.0, 2.0, -5.0])  # point in the world coordinate
-
-    def case_local():
-        # pose0 represents transformation from the world coordinate
-        # onto the 0th camera coordinate
-        # pose1 represents transformation from the world coordinate
-        # onto the 1st camera coordinate
-        # pose10 should be the transformation
-        # from the 0th camera coordinate
-        # onto the 1st camera coordinate
-        pose0 = LocalPose(rotation0, t0)
-        pose1 = LocalPose(rotation1, t1)
-
-        pose10 = calc_relative_pose(pose0, pose1)
-
-        p0 = transform(pose0.R, pose0.t, point)
-        p1_pred = transform(pose10.R, pose10.t, p0)
-
-        p1_true = transform(pose1.R, pose1.t, point)
-
-        assert_array_almost_equal(p1_true, p1_pred)
-
-    def case_world():
-        # pose0 transforms a point in the world coordinate
-        # to another location (say this is the 0th location) in the world
-        # pose1 transforms a point in the world coordinate
-        # to another location (say this is the 1st location) in the world
-        # pose10 should be the transformation
-        # from the 0th location to the 1st location
-        pose0 = WorldPose(rotation0, t0)
-        pose1 = WorldPose(rotation1, t1)
-
-        pose10 = calc_relative_pose(pose0, pose1)
-
-        p0 = transform(pose0.R, pose0.t, point)
-        p1_pred = transform(pose10.R, pose10.t, p0)
-
-        p1_true = transform(pose1.R, pose1.t, point)
-
-        assert_array_almost_equal(p1_true, p1_pred)
-
-    case_local()
-    case_world()
-
-
-def test_to_local():
-    rotation = Rotation.from_matrix([
-        [0, 0, 1],
-        [0, 1, 0],
-        [-1, 0, 0]
-    ])
-    t = np.array([1, 0, 0])
-    local_pose = WorldPose(rotation, t).to_local()
-    assert(isinstance(local_pose, LocalPose))
-
-    assert_array_almost_equal(
-        local_pose.R,
-        [[0, 0, -1],
-         [0, 1, 0],
-         [1, 0, 0]]
-    )
-    assert_array_almost_equal(local_pose.t, [0, 0, -1])
-
-
-def test_to_world():
-    rotation = Rotation.from_matrix([
-        [0, 0, -1],
-        [0, 1, 0],
-        [1, 0, 0]
-    ])
-    t = np.array([0, 0, -1])
-    world_pose = LocalPose(rotation, t).to_world()
-
-    assert(isinstance(world_pose, WorldPose))
-
-    assert_array_almost_equal(
-        world_pose.R,
-        [[0, 0, 1],
-         [0, 1, 0],
-         [-1, 0, 0]]
-    )
-    assert_array_almost_equal(world_pose.t, [1, 0, 0])
-
-
 def test_type():
-    assert(isinstance(LocalPose.identity(), LocalPose))
-    assert(isinstance(WorldPose.identity(), WorldPose))
+    assert(isinstance(Pose.identity(), Pose))
+    assert(isinstance(Pose.identity(), Pose))
 
     xi = np.random.random(6)
-    assert(isinstance(LocalPose.from_se3(xi), LocalPose))
-    assert(isinstance(WorldPose.from_se3(xi), WorldPose))
+    assert(isinstance(Pose.from_se3(xi), Pose))
+    assert(isinstance(Pose.from_se3(xi), Pose))
 
     rotvec = Rotation.from_rotvec(np.random.random(3))
     t = np.random.random(3)
-    assert(isinstance(LocalPose(rotvec, t).inv(), LocalPose))
-    assert(isinstance(WorldPose(rotvec, t).inv(), WorldPose))
-    assert(isinstance(LocalPose(rotvec, t) * LocalPose(rotvec, t), LocalPose))
-    assert(isinstance(WorldPose(rotvec, t) * WorldPose(rotvec, t), WorldPose))
-
-    message = "Types do not match: LocalPose and WorldPose"
-    with pytest.raises(ValueError, match=message):
-        LocalPose(rotvec, t) * WorldPose(rotvec, t)
-
-    with pytest.raises(ValueError, match=message):
-        LocalPose(rotvec, t) == WorldPose(rotvec, t)
-
-    message = "Types do not match: WorldPose and LocalPose"
-    with pytest.raises(ValueError, match=message):
-        WorldPose(rotvec, t) * LocalPose(rotvec, t)
-
-    with pytest.raises(ValueError, match=message):
-        WorldPose(rotvec, t) == LocalPose(rotvec, t)
+    assert(isinstance(Pose(rotvec, t).inv(), Pose))
+    assert(isinstance(Pose(rotvec, t).inv(), Pose))
+    assert(isinstance(Pose(rotvec, t) * Pose(rotvec, t), Pose))
+    assert(isinstance(Pose(rotvec, t) * Pose(rotvec, t), Pose))

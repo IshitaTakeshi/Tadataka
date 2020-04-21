@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation
 from sparseba import SBA, can_run_ba
 
 from tadataka.rigid_transform import transform
-from tadataka.pose import LocalPose
+from tadataka.pose import Pose
 from tadataka.so3_codegen import projection, pose_jacobian, point_jacobian
 
 
@@ -147,7 +147,7 @@ def run_ba(viewpoint_indices, point_indices,
                                      relative_error_threshold=0.20)
 
     rotations = [Rotation.from_rotvec(rotvec) for rotvec in rotvecs]
-    poses = [LocalPose(r, t) for r, t in zip(rotations, ts)]
+    poses = [Pose(r, t) for r, t in zip(rotations, ts)]
     return poses, points
 
 

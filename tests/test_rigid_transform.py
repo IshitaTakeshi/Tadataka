@@ -3,9 +3,9 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from scipy.spatial.transform import Rotation
 
-from tadataka.pose import WorldPose
+from tadataka.matrix import motion_matrix
 from tadataka.rigid_transform import (inv_transform_all, transform_all,
-                                      transform_each, Transform)
+                                      transform_each, Transform, transform_se3)
 
 
 def test_transform_each():
@@ -124,7 +124,7 @@ def test_inv_transform_all():
                        expected)
 
 
-def test_transform():
+def test_transform_class():
     P = np.array([
         [1, 2, 5],
         [4, -2, 3],

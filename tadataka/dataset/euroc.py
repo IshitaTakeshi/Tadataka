@@ -12,7 +12,7 @@ from tadataka.camera.distortion import RadTan
 from tadataka.camera.parameters import CameraParameters
 from tadataka.camera.model import CameraModel
 from tadataka.matrix import get_rotation_translation, motion_matrix
-from tadataka.pose import WorldPose
+from tadataka.pose import Pose
 
 
 def camera_dir(dataset_root, camera_index):

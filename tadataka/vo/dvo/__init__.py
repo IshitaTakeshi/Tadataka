@@ -17,7 +17,7 @@ from tadataka.camera import CameraModel, CameraParameters
 from tadataka.rigid_transform import transform
 from tadataka.interpolation import interpolation
 from tadataka.vo.dvo.jacobian import calc_image_gradient, calc_jacobian
-from tadataka.pose import WorldPose
+from tadataka.pose import Pose
 from tadataka.robust.weights import (compute_weights_huber,
                                      compute_weights_student_t,
                                      compute_weights_tukey)
@@ -92,13 +92,14 @@ class _PoseChangeEstimator(object):
         prev_error = error(pose10)
         for k in range(self.max_iter):
             P1 = transform(pose10.R, pose10.t, P0)
+
             xi = calc_pose_update(self.camera_model1, residuals,
                                   GX1, GY1, P1, weights)
             if xi is None:
                 warn()
                 return pose10
 
-            dpose = WorldPose.from_se3(xi)
+            dpose = Pose.from_se3(xi)
             candidate = dpose * pose10
 
             curr_error = error(candidate)
@@ -123,7 +124,7 @@ class PoseChangeEstimator(object):
         self.camera_model0 = camera_model0
         self.camera_model1 = camera_model1
 
-    def __call__(self, I0, D0, I1, weights=None, pose10=WorldPose.identity()):
+    def __call__(self, I0, D0, I1, weights=None, pose10=Pose.identity()):
         assert(I0.shape == D0.shape == I1.shape)
         assert(np.ndim(I0) == 2)
         assert(np.ndim(D0) == 2)

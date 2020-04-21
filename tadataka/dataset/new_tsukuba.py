@@ -11,7 +11,7 @@ import numpy as np
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.dataset.frame import Frame
 from tadataka.dataset.base import BaseDataset
-from tadataka.pose import WorldPose
+from tadataka.pose import Pose
 
 
 def load_depth(path):
@@ -154,9 +154,9 @@ class NewTsukubaDataset(BaseDataset):
         rotation = self.rotations[index]
 
         offset = calc_baseline_offset(rotation, self.baseline_length)
-        pose_l = WorldPose(rotation, position_center - offset / 2.0)
-        pose_r = WorldPose(rotation, position_center + offset / 2.0)
+        pose_wl = Pose(rotation, position_center - offset / 2.0)
+        pose_wr = Pose(rotation, position_center + offset / 2.0)
         return (
-            Frame(self.camera_model, pose_l, image_l, depth_l),
-            Frame(self.camera_model, pose_r, image_r, depth_r)
+            Frame(self.camera_model, pose_wl, image_l, depth_l),
+            Frame(self.camera_model, pose_wr, image_r, depth_r)
         )

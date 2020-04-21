@@ -5,7 +5,6 @@ from tadataka import _triangulation as TR
 from tadataka.exceptions import InvalidDepthException
 from tadataka.feature import empty_match
 from tadataka.matrix import to_homogeneous
-from tadataka.pose import LocalPose
 
 
 class TwoViewTriangulation(object):
@@ -36,8 +35,6 @@ class Triangulation(object):
 
 class DepthsFromTriangulation(object):
     def __init__(self, pose0, pose1):
-        assert(isinstance(pose0, LocalPose))
-        assert(isinstance(pose1, LocalPose))
         self.R0, self.t0 = pose0.R, pose0.t
         self.R1, self.t1 = pose1.R, pose1.t
 

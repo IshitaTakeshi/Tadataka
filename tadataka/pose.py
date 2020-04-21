@@ -25,7 +25,7 @@ def check_type_(pose1, pose2):
     raise ValueError(f"Types do not match: {name1} and {name2}")
 
 
-class _Pose(object):
+class Pose(object):
     def __init__(self, rotation, translation):
         assert(isinstance(rotation, Rotation))
         self.rotation = rotation  # SciPy's Rotation object
@@ -77,18 +77,6 @@ def convert_coordinate(rotation, t):
     return inv_rotation, -np.dot(inv_rotation.as_matrix(), t)
 
 
-class WorldPose(_Pose):
-    """Pose in the world coordinate system"""
-    def to_local(self):
-        return LocalPose(*convert_coordinate(self.rotation, self.t))
-
-
-class LocalPose(_Pose):
-    """Pose in the local (camera) coordinate system"""
-    def to_world(self):
-        return WorldPose(*convert_coordinate(self.rotation, self.t))
-
-
 def calc_reprojection_threshold(keypoints, k=2.0):
     center = np.mean(keypoints, axis=0, keepdims=True)
     squared_distances = np.sum(np.power(keypoints - center, 2), axis=1)
@@ -121,7 +109,7 @@ def solve_pnp(points, keypoints):
     if len(inliers.flatten()) == 0:
         raise NotEnoughInliersException("No inliers found")
 
-    return LocalPose(Rotation.from_rotvec(omega.flatten()), t.flatten())
+    return Pose(Rotation.from_rotvec(omega.flatten()), t.flatten())
 
 
 # We triangulate only subset of keypoints to determine valid
@@ -192,4 +180,4 @@ def estimate_pose_change(keypoints0, keypoints1):
     where keypoints0 = pi(X0), keypoints1 = pi(X1)
     """
     R, t = pose_change_from_stereo(keypoints0, keypoints1)
-    return LocalPose(Rotation.from_matrix(R), t)
+    return Pose(Rotation.from_matrix(R), t)

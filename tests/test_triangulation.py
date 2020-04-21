@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation
 
 from tadataka.camera import CameraParameters
 from tadataka.dataset.observations import generate_translations
-from tadataka.pose import LocalPose, _Pose
+from tadataka.pose import Pose
 from tadataka.projection import PerspectiveProjection, pi
 from tadataka.rigid_transform import transform
 from tadataka._triangulation import linear_triangulation
@@ -73,8 +73,8 @@ def test_linear_triangulation():
 
 def test_two_view_triangulation():
     triangulator = TwoViewTriangulation(
-        LocalPose(Rotation.from_matrix(R0), t0),
-        LocalPose(Rotation.from_matrix(R1), t1)
+        Pose(Rotation.from_matrix(R0), t0),
+        Pose(Rotation.from_matrix(R1), t1)
     )
 
     points, depths = triangulator.triangulate(keypoints0, keypoints1)
@@ -93,9 +93,9 @@ def test_two_view_triangulation():
 
 def test_triangulation():
     triangulator = Triangulation(
-        [LocalPose(Rotation.from_matrix(R0), t0),
-         LocalPose(Rotation.from_matrix(R1), t1),
-         LocalPose(Rotation.from_matrix(R2), t2)]
+        [Pose(Rotation.from_matrix(R0), t0),
+         Pose(Rotation.from_matrix(R1), t1),
+         Pose(Rotation.from_matrix(R2), t2)]
     )
 
     keypoints = np.stack((
@@ -131,8 +131,8 @@ def test_depths_from_triangulation():
     x0 = pi(p0)
     x1 = pi(p1)
 
-    pose0 = LocalPose(rotation0, t0)
-    pose1 = LocalPose(rotation1, t1)
+    pose0 = Pose(rotation0, t0)
+    pose1 = Pose(rotation1, t1)
     depths = DepthsFromTriangulation(pose0, pose1)(x0, x1)
     assert_array_almost_equal(depths, [p0[2], p1[2]])
 
@@ -144,8 +144,8 @@ def test_calc_depth0_():
     rotation1 = Rotation.from_rotvec(rotvec0)
     t1 = np.array([4, 1, 6])
 
-    pose0w = _Pose.identity()
-    pose1w = _Pose(rotation1, t1)
+    pose0w = Pose.identity()
+    pose1w = Pose(rotation1, t1)
 
     p0 = transform(pose0w.R, pose0w.t, point)
     p1 = transform(pose1w.R, pose1w.t, point)
@@ -164,8 +164,8 @@ def test_calc_depth0():
     rotation1 = Rotation.from_rotvec([0, -np.pi/2, 0])
     t1 = np.array([0, 0, 2])
 
-    pose_w0 = _Pose(rotation0, t0)
-    pose_w1 = _Pose(rotation1, t1)
+    pose_w0 = Pose(rotation0, t0)
+    pose_w1 = Pose(rotation1, t1)
 
     point = np.array([-1, 0, 1], dtype=np.float64)
 

@@ -6,21 +6,21 @@ from scipy.spatial.transform import Rotation
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.warp import (warp_depth, Warp2D, Warp3D,
                            warp2d_, LocalWarp2D)
-from tadataka.pose import LocalPose, WorldPose
+from tadataka.pose import Pose
 
 
 def test_warp3d():
     # rotate (3 / 4) * pi around the y-axis
-    rotation0 = Rotation.from_rotvec([0, (3 / 4) * np.pi, 0])
-    t0 = np.array([0, 0, 3])
-    pose0 = WorldPose(rotation0, t0)
+    rotation_w0 = Rotation.from_rotvec([0, (3 / 4) * np.pi, 0])
+    t_w0 = np.array([0, 0, 3])
+    pose_w0 = Pose(rotation_w0, t_w0)
 
     # rotate - pi / 2 around the y-axis
-    rotation1 = Rotation.from_rotvec([0, -np.pi / 2, 0])
-    t1 = np.array([4, 0, 3])
-    pose1 = WorldPose(rotation1, t1)
+    rotation_w1 = Rotation.from_rotvec([0, -np.pi / 2, 0])
+    t_w1 = np.array([4, 0, 3])
+    pose_w1 = Pose(rotation_w1, t_w1)
 
-    warp3d = Warp3D(pose0, pose1)
+    warp3d = Warp3D(pose_w0, pose_w1)
 
     P0 = np.array([
         [0, 0, 2 * np.sqrt(2)],
@@ -40,13 +40,13 @@ def test_warp3d():
 def test_warp2d():
     rotation = Rotation.from_rotvec([0, np.pi/2, 0])
 
-    t0 = np.array([0, 0, 3])
-    pose0 = WorldPose(rotation, t0)
+    t_w0 = np.array([0, 0, 3])
+    pose_w0 = Pose(rotation, t_w0)
 
-    t1 = np.array([0, 0, 4])
-    pose1 = WorldPose(rotation, t1)
+    t_w1 = np.array([0, 0, 4])
+    pose_w1 = Pose(rotation, t_w1)
 
-    warp3d = Warp3D(pose0, pose1)
+    warp3d = Warp3D(pose_w0, pose_w1)
 
     xs0 = np.array([
         [0, 0],
@@ -69,7 +69,7 @@ def test_warp2d():
     )
 
     us0 = 2.0 * xs0
-    warp2d = Warp2D(camera_model0, camera_model1, pose0, pose1)
+    warp2d = Warp2D(camera_model0, camera_model1, pose_w0, pose_w1)
     us1, depths1 = warp2d(us0, depths0)
     assert_array_almost_equal(us1, 3.0 * xs1)
 
@@ -77,7 +77,7 @@ def test_warp2d():
 def test_local_warp2d():
     rotation = Rotation.from_rotvec([0, np.pi/2, 0])
     t = np.array([0, 0, 4])
-    pose10 = LocalPose(rotation, t)
+    pose10 = Pose(rotation, t)
 
     xs0 = np.array([
         [0, 0],

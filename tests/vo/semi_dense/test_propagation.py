@@ -2,7 +2,6 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_array_almost_equal,
                            assert_array_equal, assert_equal)
 from scipy.spatial.transform import Rotation
-from tadataka.pose import WorldPose
 from tadataka.warp import Warp2D
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.fusion import fusion
