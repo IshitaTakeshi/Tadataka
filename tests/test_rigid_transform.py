@@ -148,3 +148,12 @@ def test_transform_class():
         [[1.1, 1.5, 3.2],    # [   0.1  -0.5   0.2] + [   1   2   3]
          [1.4, 1.7, 2.8]]    # [   0.4  -0.3  -0.2] + [   1   2   3]
     )
+
+
+def test_transform_se3():
+    R_10 = np.random.random((3, 3))
+    t_10 = np.random.random(3)
+    P0 = np.random.uniform(-10, 10, (10, 3))
+    T_10 = motion_matrix(R_10, t_10)
+    P1 = transform_se3(T_10, P0)
+    assert_array_almost_equal(P1, np.dot(R_10, P0.T).T + t_10)
