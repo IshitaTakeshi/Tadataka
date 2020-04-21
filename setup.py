@@ -59,7 +59,11 @@ setup(
                      "tadataka/interpolation/_bilinear.c"],
             extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
         ),
+        Extension(
+            "tadataka.vo.semi_dense._intensities",
+            sources=["tadataka/vo/semi_dense/_intensities.pyx"],
+            extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
+        ),
     ],
     cmdclass = {'build_ext': CustomBuildExt},
-
 )
