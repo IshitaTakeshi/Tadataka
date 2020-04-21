@@ -1,4 +1,3 @@
-from numba import njit
 import numpy as np
 
 from tadataka.decorator import allow_1d

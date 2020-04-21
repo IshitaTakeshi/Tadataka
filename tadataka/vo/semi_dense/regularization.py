@@ -3,10 +3,8 @@ from scipy.signal import convolve2d
 from tadataka.math import weighted_mean
 from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.stat import is_statically_same
-from numba import njit
 
 
-@njit
 def create_mask_(inv_depth_map, variance):
     height, width = inv_depth_map.shape
 
@@ -21,14 +19,12 @@ def create_mask_(inv_depth_map, variance):
     return mask
 
 
-@njit
 def regularize_(D, W, v):
     mask = create_mask_(D, v).astype(np.float64)
     weights = W * mask
     return weighted_mean(D, weights)
 
 
-@njit
 def regularize(inv_depth_map, variance_map, conv_size=3):
     assert(inv_depth_map.shape == variance_map.shape)
     assert(conv_size % 2 == 1)

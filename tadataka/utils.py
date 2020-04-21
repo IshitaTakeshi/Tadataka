@@ -1,4 +1,3 @@
-from numba import njit
 import numpy as np
 
 from tadataka.decorator import allow_1d
@@ -33,16 +32,17 @@ def value_list(dict_, keys):
     return [dict_[k] for k in keys]
 
 
-@njit
 def _is_in_image_range(keypoints, image_shape):
     height, width = image_shape
     xs, ys = keypoints[:, 0], keypoints[:, 1]
     # using this form to accept float coordinates
+    # if width is 200, [0.0, 199.0] is accepted
     mask_x = np.logical_and(0 <= xs, xs <= width-1)
     mask_y = np.logical_and(0 <= ys, ys <= height-1)
     return np.logical_and(mask_x, mask_y)
 
 
+# TODO move this function to 'range.py' or some file of more explicit name
 @allow_1d(which_argument=0)
 def is_in_image_range(keypoints, image_shape):
     """

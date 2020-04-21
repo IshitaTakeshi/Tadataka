@@ -1,7 +1,3 @@
-from numba import njit
-
-
-@njit
 def is_statically_same(inv_depth1, inv_depth2, variance, factor):
     # equivalent_condition:
     #   np.abs(inv_depth1-inv_depth2) <= factor * np.sqrt(variance1)
@@ -10,7 +6,6 @@ def is_statically_same(inv_depth1, inv_depth2, variance, factor):
     return ds <= fs * variance
 
 
-@njit
 def are_statically_same(inv_depth1, inv_depth2, variance1, variance2, factor):
     c1 = is_statically_same(inv_depth1, inv_depth2, variance1, factor)
     c2 = is_statically_same(inv_depth1, inv_depth2, variance2, factor)
