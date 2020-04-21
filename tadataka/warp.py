@@ -9,7 +9,8 @@ from tadataka.pose import Pose
 def warp2d_(T_10, xs0, depths0):
     P0 = inv_pi(xs0, depths0)
     P1 = transform_se3(T_10, P0)
-    xs1, depths1 = pi(P1), P1[:, 2]
+    xs1 = pi(P1)
+    depths1 = P1[:, 2] if np.ndim(P1) == 2 else P1[2]
     return xs1, depths1
 
 
