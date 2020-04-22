@@ -17,3 +17,7 @@ class GradientImage(object):
 
 def gradient1d(intensities):
     return intensities[1:] - intensities[:-1]
+
+
+def calc_gradient(intensities):
+    return np.linalg.norm(gradient1d(intensities))

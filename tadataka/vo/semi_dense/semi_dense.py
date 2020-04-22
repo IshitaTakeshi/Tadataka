@@ -22,7 +22,7 @@ from tadataka.vo.semi_dense.epipolar import (
     ref_coordinates, ref_search_range
 )
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
-from tadataka.vo.semi_dense.gradient import GradientImage, gradient1d
+from tadataka.vo.semi_dense.gradient import GradientImage, calc_gradient
 from tadataka.vo.semi_dense.variance import (
     calc_alpha, calc_observation_variance,
     photometric_variance, geometric_variance
@@ -34,10 +34,6 @@ from tadataka.warp import warp2d, warp3d
 
 def all_points_in_image(us, image_shape):
     return is_in_image_range(us, image_shape).all()
-
-
-def calc_gradient(intensities):
-    return np.linalg.norm(gradient1d(intensities))
 
 
 class InvDepthEstimator(object):
