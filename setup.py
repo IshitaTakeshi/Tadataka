@@ -62,7 +62,7 @@ setup(
         'opencv-contrib-python',
         'pandas',
         'Pillow',
-        'pyyaml>=5.3'
+        'pyyaml>=5.3',
         'scikit-image',
         'scikit-learn',
         'setuptools>=18.0',  # >= 18.0 can handle cython
