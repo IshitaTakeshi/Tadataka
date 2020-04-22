@@ -13,7 +13,7 @@ from tadataka.vo.semi_dense.gradient import GradientImage
 from tadataka.gradient import grad_x, grad_y
 from tadataka.dataset import NewTsukubaDataset
 from tadataka.coordinates import image_coordinates
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 
 from tests.dataset.path import new_tsukuba
 
@@ -82,10 +82,10 @@ def test_inv_depth_estimator():
     # assert(flag == FLAG.REF_FAR_OUT_OF_RANGE)
 
     x, y = u_key = np.array([420, 450])
-    prior = Hypothesis(invert_depth(keyframe.depth_map[y, x]), 0.01)
+    prior = Hypothesis(safe_invert(keyframe.depth_map[y, x]), 0.01)
     (inv_depth, variance), flag = estimate(u_key, prior)
-    print("pred, true = ", invert_depth(inv_depth), keyframe.depth_map[y, x])
+    print("pred, true = ", safe_invert(inv_depth), keyframe.depth_map[y, x])
     assert(flag == FLAG.SUCCESS)
     assert(inv_depth > 0.0)
-    assert(abs(invert_depth(inv_depth) - keyframe.depth_map[y, x]) < 1.0)
+    assert(abs(safe_invert(inv_depth) - keyframe.depth_map[y, x]) < 1.0)
     assert(variance > 0.0)  # hard to test the value of variance
