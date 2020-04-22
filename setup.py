@@ -61,7 +61,7 @@ setup(
         'opencv-python',
         'opencv-contrib-python',
         'pandas',
-        'Pillow',
+        'Pillow==7.0.0',
         'pyyaml>=5.3',
         'scikit-image',
         'scikit-learn',
