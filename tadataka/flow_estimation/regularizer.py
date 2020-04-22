@@ -1,9 +1,6 @@
 import numpy as np
-from numba import jitclass
-import numba
 
 
-@jitclass([('sigma_squared', numba.float64)])
 class GemanMcClure(object):
     def __init__(self, sigma):
         assert(sigma != 0)
