@@ -75,7 +75,11 @@ def test_inv_depth_estimator():
     u_key = np.array([110, 400])
     prior = Hypothesis(1 / keyframe.depth_map[u_key[1], u_key[0]], 0.01)
     hypothesis, flag = estimate(u_key, prior)
-    assert(flag == FLAG.REF_OUT_OF_RANGE)
+    assert(flag == FLAG.REF_CLOSE_OUT_OF_RANGE)
+
+    # TODO what kind of input makes this condition true?
+    # hypothesis, flag = estimate(u_key, prior)
+    # assert(flag == FLAG.REF_FAR_OUT_OF_RANGE)
 
     x, y = u_key = np.array([420, 450])
     prior = Hypothesis(invert_depth(keyframe.depth_map[y, x]), 0.01)

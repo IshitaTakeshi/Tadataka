@@ -90,8 +90,12 @@ class InvDepthEstimator(object):
 
         us_ref = camera_model_ref.unnormalize(xs_ref)
 
-        if not all_points_in_image(us_ref, image_ref.shape):
-            return prior, FLAG.REF_OUT_OF_RANGE
+        if not is_in_image_range(us_ref[0], image_ref.shape):
+            return prior, FLAG.REF_CLOSE_OUT_OF_RANGE
+
+        # TODO when does this condition become true?
+        if not is_in_image_range(us_ref[-1], image_ref.shape):
+            return prior, FLAG.REF_FAR_OUT_OF_RANGE
 
         intensities_ref = interpolation_(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
