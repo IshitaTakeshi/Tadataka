@@ -35,13 +35,12 @@ def load_camera_params(dataset_root, camera_index):
     with open(path, 'r') as f:
         d = yaml.load(f, Loader=yaml.FullLoader)
 
-    resolution = d['resolution']
     intrinsics = np.array(d['intrinsics'])
     dist_coeffs = np.array(d['distortion_coefficients'])
 
-    T = np.array(d['T_BS']['data']).reshape(4, 4)
+    T_bs = np.array(d['T_BS']['data']).reshape(4, 4)
 
-    return resolution, intrinsics, dist_coeffs, T
+    return intrinsics, dist_coeffs, T_bs
 
 
 def wxyz_to_xyzw(wxyz):
@@ -57,16 +56,16 @@ def load_poses(path, delimiter=','):
     return timestamps, rotations, positions
 
 
-def load_ground_truth(dataset_root):
+def load_body_poses(dataset_root):
     path = Path(dataset_root, "state_groundtruth_estimate0", "data.csv")
     return load_poses(path)
 
 
 class EurocDataset(BaseDataset):
     def __init__(self, dataset_root):
-        [image0_w, image0_h], intrinsics0, dist_coeffs0, self.T0 =\
+        intrinsics0, dist_coeffs0, self.T_bc0 =\
             load_camera_params(dataset_root, 0)
-        [image1_w, image1_h], intrinsics1, dist_coeffs1, self.T1 =\
+        intrinsics1, dist_coeffs1, self.T_bc1 =\
             load_camera_params(dataset_root, 1)
 
         self.camera_model0 = CameraModel(
@@ -82,29 +81,32 @@ class EurocDataset(BaseDataset):
 
         timestamps0, image_paths0 = load_image_paths(dataset_root, 0)
         timestamps1, image_paths1 = load_image_paths(dataset_root, 1)
-        timestamps_gt, rotations, positions = load_ground_truth(dataset_root)
+        timestamps_body, rotations_wb, t_wb = load_body_poses(dataset_root)
 
-        matches = tum.synchronize(timestamps_gt, timestamps0,
+        matches = tum.synchronize(timestamps_body, timestamps0,
                                   timestamps_ref=timestamps1)
-        indices_gt = matches[:, 0]
+        indices_wb = matches[:, 0]
         indices0 = matches[:, 1]
         indices1 = matches[:, 2]
-        self.rotations = value_list(rotations, indices_gt)
-        self.positions = value_list(positions, indices_gt)
+        self.rotations_wb = value_list(rotations_wb, indices_wb)
+        self.t_wb = value_list(t_wb, indices_wb)
         self.image_paths0 = value_list(image_paths0, indices0)
         self.image_paths1 = value_list(image_paths1, indices1)
         self.length = matches.shape[0]
 
     def load(self, index):
-        T = motion_matrix(self.rotations[index].as_matrix(), self.positions[index])
-        R0, position0 = get_rotation_translation(np.dot(T, self.T0))
-        R1, position1 = get_rotation_translation(np.dot(T, self.T1))
+        T_wb = Pose(self.rotations_wb[index], self.t_wb[index]).T
+        T_wc0 = np.dot(T_wb, self.T_bc0)
+        T_wc1 = np.dot(T_wb, self.T_bc1)
 
-        pose0 = WorldPose(Rotation.from_matrix(R0), position0)
-        pose1 = WorldPose(Rotation.from_matrix(R1), position1)
+        R_wc0, t_wc0 = get_rotation_translation(T_wc0)
+        R_wc1, t_wc1 = get_rotation_translation(T_wc1)
+
+        pose_wc0 = Pose(Rotation.from_matrix(R_wc0), t_wc0)
+        pose_wc1 = Pose(Rotation.from_matrix(R_wc1), t_wc1)
 
         I0 = imread(self.image_paths0[index])
         I1 = imread(self.image_paths1[index])
 
-        return (Frame(self.camera_model0, pose0, I0, None),
-                Frame(self.camera_model1, pose1, I1, None))
+        return (Frame(self.camera_model0, pose_wc0, I0, None),
+                Frame(self.camera_model1, pose_wc1, I1, None))
