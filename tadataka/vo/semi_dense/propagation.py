@@ -3,7 +3,7 @@ import numpy as np
 from tadataka.coordinates import substitute, get
 from tadataka.vo.semi_dense.stat import are_statically_same
 from tadataka.vo.semi_dense.fusion import fusion
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.coordinates import warp_coordinates
 
 
@@ -21,7 +21,7 @@ def handle_collision_(inv_depth_a, inv_depth_b, variance_a, variance_b):
         return fusion(inv_depth_a, inv_depth_b, variance_a, variance_b)
 
     # b is hidden by a
-    if invert_depth(inv_depth_a) < invert_depth(inv_depth_b):
+    if safe_invert(inv_depth_a) < safe_invert(inv_depth_b):
         return (inv_depth_a, variance_a)
     else:
         return (inv_depth_b, variance_b)

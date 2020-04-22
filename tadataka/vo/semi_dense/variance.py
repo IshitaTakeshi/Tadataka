@@ -1,7 +1,7 @@
 import numpy as np
 from tadataka.matrix import get_rotation_translation
 from tadataka.warp import warp2d_
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 
 
 def calc_observation_variance(alpha, geo_variance, photo_variance):
@@ -46,7 +46,7 @@ def alpha_index(search_step):
 
 
 def calc_alpha(T_rk, x_key, direction, prior_inv_depth):
-    x_ref, _ = warp2d_(T_rk, x_key, invert_depth(prior_inv_depth))
+    x_ref, _ = warp2d_(T_rk, x_key, safe_invert(prior_inv_depth))
     R_rk, t_rk = get_rotation_translation(T_rk)
     index = alpha_index(direction)
     return calc_alpha_(x_key, x_ref[index], direction[index],

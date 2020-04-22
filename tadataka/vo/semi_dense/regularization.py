@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import convolve2d
 from tadataka.math import weighted_mean
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.stat import is_statically_same
 
 
@@ -30,7 +30,7 @@ def regularize(inv_depth_map, variance_map, conv_size=3):
     assert(conv_size % 2 == 1)
 
     height, width = inv_depth_map.shape
-    weight_map = invert_depth(variance_map)
+    weight_map = safe_invert(variance_map)
     offset = conv_size // 2
 
     regularized = np.copy(inv_depth_map)

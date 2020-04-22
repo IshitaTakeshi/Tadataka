@@ -12,7 +12,7 @@ from tadataka.rigid_transform import inv_transform
 from tadataka.projection import inv_pi, pi
 from tadataka.utils import is_in_image_range
 from tadataka.vector import normalize_length
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.depth import (
     calc_ref_inv_depth, calc_key_depth,
     InvDepthSearchRange, depth_search_range
@@ -111,7 +111,7 @@ class InvDepthEstimator(object):
             photo_variance=photometric_variance(gradient_key / step_size_key,
                                                 self.sigma_i)
         )
-        return Hypothesis(invert_depth(depth_key), variance), FLAG.SUCCESS
+        return Hypothesis(safe_invert(depth_key), variance), FLAG.SUCCESS
 
 
 class InvDepthMapEstimator(object):
