@@ -7,15 +7,12 @@ def sympy_codegen():
     radtan_codegen.generate()
 
 
-class get_numpy_include(object):
-    def __str__(self):
-        import numpy as np
-        return np.get_include()
-
-
 class CustomBuildExt(build_ext):
     def run(self):
         sympy_codegen()
+
+        import numpy as np
+        self.include_dirs.append(np.get_include())
 
         build_ext.run(self)
 
@@ -35,20 +32,17 @@ cython_ext_modules=[
         sources=["tadataka/camera/_radtan.pyx",
                  "tadataka/camera/_radtan_distort.c",
                  "tadataka/camera/_radtan_distort_jacobian.c"],
-        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast"]
     ),
     Extension(
         "tadataka.interpolation._interpolation",
         sources=["tadataka/interpolation/_interpolation.pyx",
                  "tadataka/interpolation/_bilinear.c"],
-        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
     ),
     Extension(
         "tadataka.vo.semi_dense._intensities",
         sources=["tadataka/vo/semi_dense/_intensities.pyx"],
-        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
     ),
 ]
