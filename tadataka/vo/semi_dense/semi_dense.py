@@ -22,7 +22,8 @@ from tadataka.vo.semi_dense.epipolar import (
     ref_coordinates, ref_search_range
 )
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
-from tadataka.vo.semi_dense.gradient import GradientImage, calc_gradient
+from tadataka.vo.semi_dense.gradient import GradientImage
+from tadataka.vo.semi_dense._gradient import calc_gradient_norm
 from tadataka.vo.semi_dense.variance import (
     calc_alpha, calc_observation_variance,
     photometric_variance, geometric_variance
@@ -73,7 +74,7 @@ class InvDepthEstimator(object):
             return prior, FLAG.KEY_OUT_OF_RANGE
 
         intensities_key = interpolation_(self.image_key, us_key)
-        gradient_key = calc_gradient(intensities_key)
+        gradient_key = calc_gradient_norm(intensities_key)
 
         if gradient_key < self.min_gradient:
             return prior, FLAG.INSUFFICIENT_GRADIENT
