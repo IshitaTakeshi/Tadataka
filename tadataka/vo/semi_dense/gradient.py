@@ -13,11 +13,3 @@ class GradientImage(object):
         gx = interpolation_(self.grad_x, u_key)
         gy = interpolation_(self.grad_y, u_key)
         return np.array([gx, gy])
-
-
-def gradient1d(intensities):
-    return intensities[1:] - intensities[:-1]
-
-
-def calc_gradient(intensities):
-    return np.linalg.norm(gradient1d(intensities))
