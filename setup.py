@@ -7,39 +7,70 @@ def sympy_codegen():
     radtan_codegen.generate()
 
 
+class get_numpy_include(object):
+    def __str__(self):
+        import numpy as np
+        return np.get_include()
+
+
 class CustomBuildExt(build_ext):
     def run(self):
-        import numpy as np
-
         sympy_codegen()
 
-        self.include_dirs.append(np.get_include())
         build_ext.run(self)
 
 
-ext_modules=[
+class get_pybind_include(object):
+    def __init__(self, user):
+        self.user = user
+
+    def __str__(self):
+        import pybind11
+        return pybind11.get_include(self.user)
+
+
+cython_ext_modules=[
     Extension(
         "tadataka.camera._radtan",
         sources=["tadataka/camera/_radtan.pyx",
                  "tadataka/camera/_radtan_distort.c",
                  "tadataka/camera/_radtan_distort_jacobian.c"],
+        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast"]
     ),
     Extension(
         "tadataka.interpolation._interpolation",
         sources=["tadataka/interpolation/_interpolation.pyx",
                  "tadataka/interpolation/_bilinear.c"],
+        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
     ),
     Extension(
         "tadataka.vo.semi_dense._intensities",
         sources=["tadataka/vo/semi_dense/_intensities.pyx"],
+        include_dirs=[get_numpy_include()],
         extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
     ),
 ]
 
-for module in ext_modules:
+
+for module in cython_ext_modules:
     module.cython_directives = {"language_level": 3}
+
+
+pybind11_ext_modules = [
+    Extension(
+        "tadataka.vo.semi_dense._gradient",
+        sources=["tadataka/vo/semi_dense/_gradient.cpp"],
+        include_dirs=[
+            get_pybind_include(False),
+            get_pybind_include(True),
+            "thirdparty/eigen"
+        ],
+        language="c++",
+        extra_compile_args=["-O3", "-Wall", "-shared", "-std=c++11", "-fPIC"],
+    ),
+]
 
 
 setup(
@@ -62,6 +93,7 @@ setup(
         'opencv-contrib-python',
         'pandas',
         'Pillow==7.0.0',
+        'pybind11',
         'pyyaml>=5.3',
         'scikit-image',
         'scikit-learn',
@@ -71,6 +103,6 @@ setup(
         'sparseba',
         'tqdm',
     ],
-    ext_modules=ext_modules,
+    ext_modules=cython_ext_modules+pybind11_ext_modules,
     cmdclass = {'build_ext': CustomBuildExt},
 )
