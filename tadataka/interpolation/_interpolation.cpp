@@ -4,7 +4,7 @@
 namespace py = pybind11;
 
 
-double __interpolation(const Eigen::MatrixXd &image,
+double __interpolation(const double *image, const int width,
                        const double cx, const double cy) {
   double lx = floor(cx);
   double ly = floor(cy);
@@ -12,7 +12,7 @@ double __interpolation(const Eigen::MatrixXd &image,
   int lyi = (int)ly;
 
   if(lx == cx && ly == cy) {
-    return image(lyi, lxi);
+    return image[lyi * width + lxi];
   }
 
   double ux = lx + 1.0;
@@ -21,40 +21,49 @@ double __interpolation(const Eigen::MatrixXd &image,
   int uyi = (int)uy;
 
   if(lx == cx) {
-    return (image(lyi, lxi) * (ux - cx) * (uy - cy) +
-            image(uyi, lxi) * (ux - cx) * (cy - ly));
+    return (image[lyi * width + lxi] * (ux - cx) * (uy - cy) +
+            image[uyi * width + lxi] * (ux - cx) * (cy - ly));
   }
 
   if(ly == cy) {
-    return (image(lyi, lxi) * (ux - cx) * (uy - cy) +
-            image(lyi, uxi) * (cx - lx) * (uy - cy));
+    return (image[lyi * width + lxi] * (ux - cx) * (uy - cy) +
+            image[lyi * width + uxi] * (cx - lx) * (uy - cy));
   }
 
-  return (image(lyi, lxi) * (ux - cx) * (uy - cy) +
-          image(lyi, uxi) * (cx - lx) * (uy - cy) +
-          image(uyi, lxi) * (ux - cx) * (cy - ly) +
-          image(uyi, uxi) * (cx - lx) * (cy - ly));
+  return (image[lyi * width + lxi] * (ux - cx) * (uy - cy) +
+          image[lyi * width + uxi] * (cx - lx) * (uy - cy) +
+          image[uyi * width + lxi] * (ux - cx) * (cy - ly) +
+          image[uyi * width + uxi] * (cx - lx) * (cy - ly));
 }
 
 
-double interpolation_(const Eigen::MatrixXd &image,
-                      const Eigen::Matrix<double, 2, 1> &coordinate) {
-  return __interpolation(image, coordinate(0), coordinate(1));
+void _interpolation(
+    const double* image, const int image_width,
+    const double* coordinates, const int n_coordinates,
+    double* intensities) {
+  for(int i = 0; i < n_coordinates; i++) {
+    intensities[i] = __interpolation(image, image_width,
+                                     coordinates[2*i], coordinates[2*i+1]);
+  }
 }
+
+
+template<int rows, int cols>
+using RowMajorMatrixXd = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
 
 
 Eigen::VectorXd interpolation(
-    const Eigen::MatrixXd &image,
-    const Eigen::Matrix<double, Eigen::Dynamic, 2> &coordinates) {
+    const RowMajorMatrixXd<Eigen::Dynamic, Eigen::Dynamic> &image,
+    const RowMajorMatrixXd<Eigen::Dynamic, 2> &coordinates) {
   const int N = coordinates.rows();
   Eigen::VectorXd intensities(N);
-  for(int i = 0; i < N; i++) {
-    intensities(i) = interpolation_(image, coordinates.row(i));
-  }
+  _interpolation(image.data(), image.cols(), coordinates.data(), N,
+                 intensities.data());
   return intensities;
 }
 
 
 PYBIND11_MODULE(_interpolation, m) {
-  m.def("interpolation", &interpolation);
+  m.def("interpolation", &interpolation,
+        py::return_value_policy::reference_internal);
 }
