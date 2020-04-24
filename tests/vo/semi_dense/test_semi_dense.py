@@ -84,7 +84,6 @@ def test_inv_depth_estimator():
     x, y = u_key = np.array([420, 450])
     prior = Hypothesis(safe_invert(keyframe.depth_map[y, x]), 0.01)
     (inv_depth, variance), flag = estimate(u_key, prior)
-    print("pred, true = ", safe_invert(inv_depth), keyframe.depth_map[y, x])
     assert(flag == FLAG.SUCCESS)
     assert(inv_depth > 0.0)
     assert(abs(safe_invert(inv_depth) - keyframe.depth_map[y, x]) < 1.0)
