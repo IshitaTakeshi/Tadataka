@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from tadataka.coordinates import image_coordinates
-from tadataka.interpolation import interpolation_
+from tadataka.interpolation import interpolation
 from tadataka.gradient import grad_x, grad_y
 from tadataka.matrix import to_homogeneous, inv_motion_matrix, get_translation
 from tadataka.rigid_transform import inv_transform
@@ -73,7 +73,7 @@ class InvDepthEstimator(object):
         if not all_points_in_image(us_key, self.image_key.shape):
             return prior, FLAG.KEY_OUT_OF_RANGE
 
-        intensities_key = interpolation_(self.image_key, us_key)
+        intensities_key = interpolation(self.image_key, us_key)
         gradient_key = calc_gradient_norm(intensities_key)
 
         if gradient_key < self.min_gradient:
@@ -94,7 +94,7 @@ class InvDepthEstimator(object):
         if not is_in_image_range(us_ref[-1], image_ref.shape):
             return prior, FLAG.REF_FAR_OUT_OF_RANGE
 
-        intensities_ref = interpolation_(image_ref, us_ref)
+        intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
         depth_key = calc_key_depth(T_rk, x_key, xs_ref[argmin])
 

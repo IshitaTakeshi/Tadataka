@@ -1,6 +1,6 @@
 import numpy as np
 
-from tadataka.interpolation import interpolation_
+from tadataka.interpolation import interpolation
 
 
 class GradientImage(object):
@@ -10,6 +10,6 @@ class GradientImage(object):
 
     def __call__(self, u_key):
         u_key = u_key.astype(np.float64)
-        gx = interpolation_(self.grad_x, u_key)
-        gy = interpolation_(self.grad_y, u_key)
+        gx = interpolation(self.grad_x, u_key)
+        gy = interpolation(self.grad_y, u_key)
         return np.array([gx, gy])
