@@ -9,8 +9,8 @@ using RowMajorMatrixXd = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
 
 
 Eigen::VectorXd interpolation(
-    const RowMajorMatrixXd<Eigen::Dynamic, Eigen::Dynamic> &image,
-    const RowMajorMatrixXd<Eigen::Dynamic, 2> &coordinates) {
+    Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, Eigen::Dynamic>> &image,
+    Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 2>> &coordinates) {
   const int N = coordinates.rows();
   Eigen::VectorXd intensities(N);
   _interpolation(image.data(), image.cols(),
@@ -20,5 +20,6 @@ Eigen::VectorXd interpolation(
 
 
 PYBIND11_MODULE(_interpolation, m) {
-  m.def("interpolation", &interpolation);
+  m.def("interpolation", &interpolation,
+        py::return_value_policy::reference_internal);
 }
