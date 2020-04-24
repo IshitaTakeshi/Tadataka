@@ -57,6 +57,13 @@ pybind11_compile_args = ["-O3", "-Wall", "-shared", "-fPIC", pybind11_compiler]
 
 pybind11_ext_modules = [
     Extension(
+        "tadataka.vo.semi_dense._epipolar",
+        sources=["tadataka/vo/semi_dense/_epipolar.cpp"],
+        include_dirs=pybind11_include_dirs,
+        language="c++",
+        extra_compile_args=pybind11_compile_args
+    ),
+    Extension(
         "tadataka.vo.semi_dense._gradient",
         sources=["tadataka/vo/semi_dense/_gradient.cpp"],
         include_dirs=pybind11_include_dirs,
