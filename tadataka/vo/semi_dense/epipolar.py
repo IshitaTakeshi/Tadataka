@@ -5,6 +5,7 @@ from tadataka.vector import normalize_length
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import inv_motion_matrix, get_translation
 from tadataka.warp import warp2d_
+from tadataka.vo.semi_dense._epipolar import key_coordinates_
 
 
 EPSILON = 1e-16
@@ -30,19 +31,14 @@ def ref_coordinates(x_range, step_size):
 sampling_steps = np.array([-2, -1, 0, 1, 2])
 
 
-def key_coordinates_(epipolar_direction, x_key, step_size):
-    direction = normalize_length(epipolar_direction)
-    step = step_size * direction
-    return coordinates_along_line(x_key, step, sampling_steps)
-
-
 def key_epipolar_direction(t_rk, x_key):
     return x_key - pi(t_rk)
 
 
 def key_coordinates(t_rk, x_key, step_size_key):
-    return key_coordinates_(key_epipolar_direction(t_rk, x_key),
-                            x_key, step_size_key)
+    return key_coordinates_(
+            key_epipolar_direction(t_rk, x_key),
+            x_key, step_size_key)
 
 
 def ref_search_range(T_rk, x_key, depth_range):

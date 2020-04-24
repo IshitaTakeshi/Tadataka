@@ -5,8 +5,9 @@ from scipy.spatial.transform import Rotation
 from tadataka.camera import CameraModel, CameraParameters, FOV
 from tadataka.matrix import motion_matrix
 from tadataka.vo.semi_dense.epipolar import (
-    key_coordinates_, key_epipolar_direction, key_coordinates,
+    key_epipolar_direction, key_coordinates,
     ref_coordinates, ref_search_range)
+from tadataka.vo.semi_dense._epipolar import key_coordinates_
 from tests.utils import random_rotation_matrix
 
 
