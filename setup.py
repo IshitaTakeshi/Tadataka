@@ -67,7 +67,7 @@ pybind11_ext_modules = [
         sources=["tadataka/interpolation/_interpolation.cpp"],
         include_dirs=pybind11_include_dirs,
         language="c++",
-        extra_compile_args=pybind11_compile_args
+        extra_compile_args=pybind11_compile_args+["-mavx", "-mavx2"]
     ),
 ]
 
