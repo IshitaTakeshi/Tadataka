@@ -1,7 +1,7 @@
 import numpy as np
 
 from tadataka.matrix import to_homogeneous
-
+from tadataka import _projection as cpp_projection
 
 EPSILON = 1e-16
 
@@ -20,9 +20,7 @@ def pi(P):
 
 
 def inv_pi(xs, depths):
-    if xs.ndim == 1:
-        return depths * to_homogeneous(xs)
-    return depths.reshape(-1, 1) * to_homogeneous(xs)
+    return cpp_projection.inv_pi(xs, depths)
 
 
 class PerspectiveProjection(object):
