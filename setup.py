@@ -49,7 +49,8 @@ for module in cython_ext_modules:
 
 pybind11_include_dirs = [get_pybind_include(False),
                          get_pybind_include(True),
-                         "thirdparty/eigen"]
+                         "thirdparty/eigen",
+                         os.getcwd()]
 
 pybind11_compiler = "-std=c++14"
 pybind11_compile_args = ["-O3", "-Wall", "-shared", "-fPIC", pybind11_compiler]
@@ -64,7 +65,8 @@ pybind11_ext_modules = [
     ),
     Extension(
         "tadataka.interpolation._interpolation",
-        sources=["tadataka/interpolation/_interpolation.cpp"],
+        sources=["tadataka/interpolation/_interpolation.cpp",
+                 "tadataka/interpolation/_bilinear.cpp"],
         include_dirs=pybind11_include_dirs,
         language="c++",
         extra_compile_args=pybind11_compile_args+["-mavx", "-mavx2"]
