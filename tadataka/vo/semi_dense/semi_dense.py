@@ -52,7 +52,6 @@ class InvDepthEstimator(object):
         self.image_grad = GradientImage(grad_x(image_key), grad_y(image_key))
         self.inv_depth_range = InvDepthSearchRange(*inv_depth_search_range)
 
-    @profile
     def __call__(self, camera_model_ref, image_ref, T_rk, u_key, prior):
         if prior.inv_depth <= 0:
             return prior, FLAG.NEGATIVE_PRIOR_DEPTH
