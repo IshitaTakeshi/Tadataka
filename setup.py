@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
@@ -35,12 +36,6 @@ cython_ext_modules=[
         extra_compile_args=["-Wall", "-Ofast"]
     ),
     Extension(
-        "tadataka.interpolation._interpolation",
-        sources=["tadataka/interpolation/_interpolation.pyx",
-                 "tadataka/interpolation/_bilinear.c"],
-        extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
-    ),
-    Extension(
         "tadataka.vo.semi_dense._intensities",
         sources=["tadataka/vo/semi_dense/_intensities.pyx"],
         extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
@@ -52,17 +47,27 @@ for module in cython_ext_modules:
     module.cython_directives = {"language_level": 3}
 
 
+pybind11_include_dirs = [get_pybind_include(False),
+                         get_pybind_include(True),
+                         "thirdparty/eigen"]
+
+pybind11_compiler = "-std=c++14"
+pybind11_compile_args = ["-O3", "-Wall", "-shared", "-fPIC", pybind11_compiler]
+
 pybind11_ext_modules = [
     Extension(
         "tadataka.vo.semi_dense._gradient",
         sources=["tadataka/vo/semi_dense/_gradient.cpp"],
-        include_dirs=[
-            get_pybind_include(False),
-            get_pybind_include(True),
-            "thirdparty/eigen"
-        ],
+        include_dirs=pybind11_include_dirs,
         language="c++",
-        extra_compile_args=["-O3", "-Wall", "-shared", "-std=c++11", "-fPIC"],
+        extra_compile_args=pybind11_compile_args
+    ),
+    Extension(
+        "tadataka.interpolation._interpolation",
+        sources=["tadataka/interpolation/_interpolation.cpp"],
+        include_dirs=pybind11_include_dirs,
+        language="c++",
+        extra_compile_args=pybind11_compile_args
     ),
 ]
 
