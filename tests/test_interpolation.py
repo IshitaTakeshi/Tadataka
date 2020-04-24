@@ -81,22 +81,23 @@ def test_interpolation():
 
 
 def test_cpp_interpolation_():
+    np.random.seed(3939)
+
     image = data.clock().astype(np.float64)
     height, width = image.shape
+
     N = 2000
     X = np.random.uniform(0, width-1, N)
     Y = np.random.uniform(0, height-1, N)
     C = np.column_stack((X, Y))
-    expected = map_coordinates(image, np.vstack((Y, X)), order=1)
 
-    assert_array_almost_equal(cpp_interpolation.interpolation(image, C),
-                              expected)
+    expected = map_coordinates(image, np.vstack((Y, X)), order=1)
+    intensities = cpp_interpolation.interpolation(image, C)
+    assert_array_almost_equal(intensities, expected)
 
     C = np.array([[width-1, 0],
                   [0, height-1],
                   [width-1, height-1]])
+    intensities = cpp_interpolation.interpolation(image, C.astype(np.float64))
     expected = image[C[:, 1], C[:, 0]]
-    assert_almost_equal(
-        cpp_interpolation.interpolation(image, C.astype(np.float64)),
-        expected
-    )
+    assert_array_almost_equal(intensities, expected)
