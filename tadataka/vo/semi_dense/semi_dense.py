@@ -111,23 +111,36 @@ class InvDepthEstimator(object):
         return Hypothesis(safe_invert(depth_key), variance), FLAG.SUCCESS
 
 
+class AgeDependentValues(object):
+    def __init__(self, age_map, values):
+        self.age_map = age_map
+        self.values = values
+
+    def __call__(self, u):
+        x, y = u
+        age = self.age_map[y, x]
+        if age == 0:
+            return None
+
+        return self.values[-age]
+
+
 class InvDepthMapEstimator(object):
     def __init__(self, estimator):
         self._estimator = estimator
 
-    def __call__(self, inv_depth_map, variance_map, age_map, refframes):
+    def __call__(self, inv_depth_map, variance_map,
+                 age_map, refframes):
+        age_dict = AgeDependentValues(age_map, refframes)
         assert(inv_depth_map.shape == variance_map.shape == age_map.shape)
-        shape = inv_depth_map.shape
-        flag_map = np.full(shape, FLAG.NOT_PROCESSED)
-        for u_key in image_coordinates(shape):
-            x, y = u_key
-            age = age_map[y, x]
-            if age == 0:
+
+        flag_map = np.full(inv_depth_map.shape, FLAG.NOT_PROCESSED)
+        for u_key in tqdm(image_coordinates(inv_depth_map.shape)):
+            ref = age_dict(u_key)
+            if ref is None:
                 continue
 
             x, y = u_key
-
-            ref = refframes[-age]
             prior = Hypothesis(inv_depth_map[y, x], variance_map[y, x])
             result, flag = self._estimator(*ref, u_key, prior)
 
