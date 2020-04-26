@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_array_almost_equal)
+from numpy.testing import (assert_almost_equal, assert_array_equal,
+                           assert_equal, assert_array_almost_equal)
 from scipy.spatial.transform import Rotation
 from skimage.color import rgb2gray
 
@@ -8,7 +8,9 @@ from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.hypothesis import Hypothesis
 from tadataka.vo.semi_dense.frame import Frame
-from tadataka.vo.semi_dense.semi_dense import InvDepthEstimator
+from tadataka.vo.semi_dense.semi_dense import (
+    InvDepthEstimator, InvDepthMapEstimator
+)
 from tadataka.vo.semi_dense.gradient import GradientImage
 from tadataka.gradient import grad_x, grad_y
 from tadataka.dataset import NewTsukubaDataset
@@ -88,3 +90,40 @@ def test_inv_depth_estimator():
     assert(inv_depth > 0.0)
     assert(abs(safe_invert(inv_depth) - keyframe.depth_map[y, x]) < 1.0)
     assert(variance > 0.0)  # hard to test the value of variance
+
+
+def test_inv_depth_map_estimator():
+    def estimator_(a, b, flag, u_key, prior):
+        result = Hypothesis(prior.inv_depth * a, prior.variance * b)
+        return result, flag
+
+    prior_inv_depth_map = np.array([
+        [10.0, 11.0],
+        [12.0, 13.0]
+    ])
+    prior_variance_map = np.array([
+        [100.0, 101.0],
+        [102.0, 103.0]
+    ])
+    age_map = np.array([
+        [1, 0],
+        [3, 2]
+    ])
+    refframes = [(2, 3, FLAG.NEGATIVE_PRIOR_DEPTH),
+                 (4, 5, FLAG.SUCCESS),
+                 (3, 0, FLAG.KEY_OUT_OF_RANGE)]
+    estimator = InvDepthMapEstimator(estimator_)
+    inv_depth_map, variance_map, flag_map = estimator(
+        prior_inv_depth_map, prior_variance_map,
+        age_map, refframes
+    )
+
+    assert_array_equal(inv_depth_map,
+                       [[10.0 * 3, 11.0],
+                        [12.0 * 2, 13.0 * 4]])
+    assert_array_equal(variance_map,
+                       [[100.0 * 0, 101.0],
+                        [102.0 * 3, 103.0 * 5]])
+    assert_array_equal(flag_map,
+                       [[FLAG.KEY_OUT_OF_RANGE, FLAG.NOT_PROCESSED],
+                        [FLAG.NEGATIVE_PRIOR_DEPTH, FLAG.SUCCESS]])

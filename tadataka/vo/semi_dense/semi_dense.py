@@ -112,24 +112,27 @@ class InvDepthEstimator(object):
 
 
 class InvDepthMapEstimator(object):
-    def __init__(self, *args, **kwargs):
-        self._estimator = InvDepthEstimator(*args, **kwargs)
+    def __init__(self, estimator):
+        self._estimator = estimator
 
-    def __call__(self, reference_selector, inv_depth_map, variance_map):
-        image_shape = inv_depth_map.shape
-
-        flag_map = np.full(image_shape, FLAG.NOT_PROCESSED)
-        for u_key in tqdm(image_coordinates(image_shape)):
+    def __call__(self, inv_depth_map, variance_map, age_map, refframes):
+        assert(inv_depth_map.shape == variance_map.shape == age_map.shape)
+        shape = inv_depth_map.shape
+        flag_map = np.full(shape, FLAG.NOT_PROCESSED)
+        for u_key in image_coordinates(shape):
             x, y = u_key
-            refframe = reference_selector(u_key)
-            if refframe is None:
+            age = age_map[y, x]
+            if age == 0:
                 continue
 
-            inv_depth, variance, flag = self._estimator(
-                refframe, u_key, inv_depth_map[y, x], variance_map[y, x]
-            )
+            x, y = u_key
 
-            inv_depth_map[y, x] = inv_depth
-            variance_map[y, x] = variance
+            ref = refframes[-age]
+            prior = Hypothesis(inv_depth_map[y, x], variance_map[y, x])
+            result, flag = self._estimator(*ref, u_key, prior)
+
+            inv_depth_map[y, x] = result.inv_depth
+            variance_map[y, x] = result.variance
             flag_map[y, x] = flag
+
         return inv_depth_map, variance_map, flag_map
