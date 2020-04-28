@@ -5,23 +5,25 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from tadataka import camera
-from tadataka.pose import WorldPose
+from tadataka.pose import Pose
 from tadataka.camera import CameraModel, CameraParameters
+from tadataka.gradient import grad_x, grad_y
 from tadataka.warp import warp2d, Warp2D
 from tadataka.dataset import NewTsukubaDataset, TumRgbdDataset
-from tadataka.vo.dvo import PoseChangeEstimator
-from tadataka.vo.semi_dense.age import increment_age
+from tadataka.vo.semi_dense.age import AgeMap, increment_age
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
 from tadataka.vo.semi_dense.fusion import fusion
-from tadataka.vo.semi_dense.frame import Frame
-from tadataka.vo.semi_dense.common import invert_depth
-from tadataka.metric import photometric_error
+from tadataka.vo.semi_dense.frame import ReferenceSelector
+from tadataka.numeric import safe_invert
+from tadataka.metric import PhotometricError
 from tadataka.warp import LocalWarp2D
-from tadataka.vo.semi_dense.propagation import (
-    propagate, detect_intensity_change)
-from tadataka.vo.semi_dense.semi_dense import InverseDepthMapEstimator
+from tadataka.vo.semi_dense.propagation import Propagation
+from tadataka.vo.semi_dense.gradient import GradientImage
+
+from tadataka.vo.semi_dense.semi_dense import (
+    InvDepthEstimator, InvDepthMapEstimator, AgeDependentValues
+)
 from tadataka.vo.semi_dense.regularization import regularize
-from tadataka.vo.semi_dense.frame_selection import ReferenceSelector
 from examples.plot import plot_depth, plot_trajectory
 
 
@@ -43,25 +45,6 @@ def plot_reprojection(keyframe, refframe):
     ax.scatter(qx, qy)
 
     plt.show()
-
-
-def update(keyframe, ref_selector, prior_inv_depth_map, prior_variance_map):
-    estimator = InverseDepthMapEstimator(
-        keyframe,
-        sigma_i=0.1, sigma_l=0.2,
-        step_size_ref=0.01, min_gradient=20.0
-    )
-
-    inv_depth_map, variance_map, flag_map = estimator(
-        ref_selector, prior_inv_depth_map, prior_variance_map
-    )
-
-    inv_depth_map, variance_map = fusion(prior_inv_depth_map, inv_depth_map,
-                                         prior_variance_map, variance_map)
-
-    inv_depth_map = regularize(inv_depth_map, variance_map)
-
-    return inv_depth_map, variance_map, flag_map
 
 
 def to_perspective(camera_model):
@@ -96,102 +79,111 @@ def get(frame, scale=1.0):
     image = rgb2gray(frame.image)
     shape = (int(image.shape[0] * scale), int(image.shape[1] * scale))
     image = resize(image, shape)
-    return camera_model, image
+    return camera_model, image, frame.pose
 
 
-def dvo(camera_model0, camera_model1, image0, image1, depth_map, weights):
+def dvo(camera_model0, camera_model1, image0, image1, depth_map0, weights):
     estimator = PoseChangeEstimator(camera_model0, camera_model1,
                                     n_coarse_to_fine=7)
-    return estimator(image0, depth_map, image1, weights)
+    return estimator(image0, depth_map0, image1, weights)
+
+
+def update(estimator, prior_depth_map, prior_variance_map,
+           reference_selector):
+    prior_inv_depth_map = safe_invert(prior_depth_map)
+    inv_depth_map, variance_map, flag_map = estimator(
+        prior_inv_depth_map, prior_variance_map,
+        reference_selector
+    )
+
+    inv_depth_map, variance_map = fusion(prior_inv_depth_map, inv_depth_map,
+                                         prior_variance_map, variance_map)
+
+    inv_depth_map = regularize(inv_depth_map, variance_map)
+
+    return safe_invert(inv_depth_map), variance_map, flag_map
+
+
+from tests.dataset.path import new_tsukuba
+
+
+def to_relative(ref, pose_wk):
+    camera_model_ref, image_ref, pose_wr = ref
+    pose_rk = pose_wr.inv() * pose_wk
+    return (camera_model_ref, image_ref, pose_rk.T)
+
+
+estimator_params = {
+    "sigma_i": 0.1,
+    "sigma_l": 0.2,
+    "step_size_ref": 0.005,
+    "min_gradient": 0.2
+}
+
+
+class Estimator(object):
+    def __init__(self, first_frame):
+        _, image, _ = first_frame
+
+        self.refframes = [first_frame]
+
+        self.depth_range = [60, 1000]
+        default_variance = 100
+        self.propagate = Propagation(default_depth=200,
+                                     default_variance=default_variance,
+                                     uncertaintity_bias=1.0)
+        self.depth_map = np.random.uniform(*self.depth_range, image.shape)
+        self.variance_map = default_variance * np.ones(image.shape)
+        self.age_map = np.zeros(image.shape, dtype=np.int64)
+
+    def make_estimator(self, camera_model_key, image_key):
+        min_depth, max_depth = self.depth_range
+        inv_depth_range = [1 / max_depth, 1 / min_depth]
+        return InvDepthMapEstimator(
+            InvDepthEstimator(camera_model_key, image_key,
+                              inv_depth_range, **estimator_params)
+        )
+
+    def __call__(self, current_keyframe):
+        last_camera_model, _, last_pose = self.refframes[-1]
+        last_depth_map = self.depth_map
+        last_variance_map = self.variance_map
+
+        current_camera_model, current_image, current_pose = current_keyframe
+        warp_cl = Warp2D(last_camera_model, current_camera_model,
+                         last_pose, current_pose)
+        self.age_map = increment_age(self.age_map, warp_cl, last_depth_map)
+        current_depth_map, current_variance_map = self.propagate(
+            warp_cl, last_depth_map, last_variance_map
+        )
+
+        assert(self.age_map.max() == len(self.refframes))
+
+        reference_selector = AgeDependentValues(
+            self.age_map,
+            [to_relative(f, current_pose) for f in self.refframes]
+        )
+        self.depth_map, self.variance_map, flag_map = update(
+            self.make_estimator(current_camera_model, current_image),
+            current_depth_map, current_variance_map, reference_selector
+        )
+
+        self.refframes.append(current_keyframe)
+        return self.depth_map, self.variance_map, flag_map
 
 
 def main():
-    scale = 1.0
-    dataset = NewTsukubaDataset("datasets/NewTsukubaStereoDataset",
-                                condition="fluorescent")
-    color_frames = [fl for fl, fr in dataset[0:1000]]
-    # dataset = TumRgbdDataset("datasets/rgbd_dataset_freiburg1_desk",
-    #                          which_freiburg=1)
-    # color_frames = dataset[:30]
+    dataset = NewTsukubaDataset("datasets/NewTsukubaStereoDataset")
+    frames = [dataset[i][0] for i in range(200, 250, 5)]
 
-    # shape_ = get(color_frames[0])[1].shape[0:2]
-    # pose0 = WorldPose.identity()
-    # age_map0 = np.zeros(shape_, dtype=np.int64)
-    # inv_depth_map0 = np.random.uniform(0.1, 10.0, shape_)
-    # variance_map0 = np.ones(shape_)
+    estimator = Estimator(get(frames[0]))
 
-    trajectory_true = []
-    trajectory_pred = []
-    # refframes = []
+    for frame in frames[1:]:
+        depth_map, variance_map, flag_map = estimator(get(frame))
+        plot_depth(frame.image, np.zeros(frame.depth_map.shape),
+                   flag_map, frame.depth_map,
+                   depth_map, variance_map)
 
-    pose_pred = WorldPose.identity()
-    pose_true = WorldPose.identity()
-    for i in tqdm(range(len(color_frames)-1)):
-        frame0_, frame1_ = color_frames[i+0], color_frames[i+1]
-
-        camera_model0, image0 = get(frame0_, scale)
-        camera_model1, image1 = get(frame1_, scale)
-
-        depth_map0 = resize(frame0_.depth_map, image1.shape)
-        # # if i == 0:
-        # #     pose10 = frame1_.pose.inv() * frame0_.pose
-        # # else:
-        pose10_true = frame1_.pose.inv() * frame0_.pose
-        pose10_pred = dvo(camera_model0, camera_model1, image0, image1,
-                          depth_map0, None)
-        error_true = photometric_error(
-            LocalWarp2D(camera_model0, camera_model1, pose10_true),
-                        image0, depth_map0, image1)
-        error_pred = photometric_error(
-            LocalWarp2D(camera_model0, camera_model1, pose10_pred),
-                        image0, depth_map0, image1)
-        print("i =", i)
-        print("pose10_true :", pose10_true)
-        print("pose10_pred :", pose10_pred)
-        # print("diff       ", pose10_true * pose10_pred.inv())
-
-        print("error true = {:.6f}".format(error_true))
-        print("error pred = {:.6f}".format(error_pred))
-
-        if False:  # error_pred > error_true:
-            from examples.plot import plot_warp
-            plot_warp(LocalWarp2D(camera_model0, camera_model1, pose10_true),
-                      image0, depth_map0, image1)
-            plot_warp(LocalWarp2D(camera_model0, camera_model1, pose10_pred),
-                      image0, depth_map0, image1)
-        pose_pred = pose_pred * pose10_pred.inv()
-        pose_true = pose_true * pose10_true.inv()
-        trajectory_pred.append(pose_pred.t)
-        trajectory_true.append(pose_true.t)
-        continue
-
-        # pose1 = pose10 * pose0
-
-        # warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
-        # age_map1 = increment_age(age_map0, warp10, inv_depth_map0)
-
-        # refframes.append(Frame(camera_model0, image0, pose0))
-        # # plot_refframes(refframes, frame1, age_map1)
-
-        # inv_depth_map1, variance_map1, flag_map1 = update(
-        #     Frame(camera_model1, image1, pose1),
-        #     ReferenceSelector(refframes, age_map1),
-        #     *propagate(warp10, inv_depth_map0, variance_map0)
-        # )
-
-        # # plot_depth(image1, age_map1, flag_map1,
-        # #            resize(frame1_.depth_map, image1.shape),
-        # #            invert_depth(inv_depth_map1), variance_map1)
-
-        # age_map0 = age_map1
-        # inv_depth_map0 = inv_depth_map1
-        # variance_map0 = variance_map1
-        # pose0 = pose1
-
-        # trajectory_pred.append(pose1.t)
-        # trajectory_true.append(frame1_.pose.t)
-
-
-    plot_trajectory(np.array(trajectory_true), np.array(trajectory_pred))
+    # plot_trajectory(np.array(trajectory_true), np.array(trajectory_pred))
 
 main()
