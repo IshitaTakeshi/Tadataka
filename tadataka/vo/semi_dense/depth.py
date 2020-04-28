@@ -9,8 +9,8 @@ from tadataka.rigid_transform import transform_se3
 def calc_ref_inv_depth(T_rk, x_key, inv_depth_key):
     depth_key = safe_invert(inv_depth_key)
     p_key = inv_pi(x_key, depth_key)
-    p_ref = transform_se3(T_rk, p_key)
-    depth_ref = p_ref[2]
+    R_rk, t_rk = get_rotation_translation(T_rk)
+    depth_ref = np.dot(R_rk[2], p_key) + t_rk[2]
     return safe_invert(depth_ref)
 
 
