@@ -10,7 +10,7 @@ from tadataka.vo.semi_dense.age import AgeMap
 
 
 def test_increment_age():
-    width, height = 800, 1000
+    width, height = 1200, 800
     shape = height, width
 
     camera_model = CameraModel(
@@ -34,12 +34,12 @@ def test_increment_age():
     age_map1 = age_map.get()
 
     expected = np.zeros(shape)
-    expected[250:750, 200:600] = 1
+    expected[200:600, 300:900] = 1
     assert_array_equal(age_map1, expected)
 
     age_map.increment(camera_model, pose2, depth_map)
     age_map2 = age_map.get()
     expected = np.zeros(shape)
-    expected[250:750, 200:600] = 1
-    expected[375:625, 300:500] = 2
+    expected[200:600, 300:900] = 1
+    expected[300:500, 450:750] = 2
     assert_array_equal(age_map2, expected)
