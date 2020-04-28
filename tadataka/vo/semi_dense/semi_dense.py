@@ -129,14 +129,12 @@ class InvDepthMapEstimator(object):
     def __init__(self, estimator):
         self._estimator = estimator
 
-    def __call__(self, inv_depth_map, variance_map,
-                 age_map, refframes):
-        age_dict = AgeDependentValues(age_map, refframes)
-        assert(inv_depth_map.shape == variance_map.shape == age_map.shape)
+    def __call__(self, inv_depth_map, variance_map, reference_selector):
+        assert(inv_depth_map.shape == variance_map.shape)
 
         flag_map = np.full(inv_depth_map.shape, FLAG.NOT_PROCESSED)
         for u_key in tqdm(image_coordinates(inv_depth_map.shape)):
-            ref = age_dict(u_key)
+            ref = reference_selector(u_key)
             if ref is None:
                 continue
 

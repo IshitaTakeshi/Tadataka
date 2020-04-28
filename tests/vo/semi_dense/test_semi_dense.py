@@ -9,7 +9,7 @@ from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.hypothesis import Hypothesis
 from tadataka.vo.semi_dense.frame import Frame
 from tadataka.vo.semi_dense.semi_dense import (
-    InvDepthEstimator, InvDepthMapEstimator
+    InvDepthEstimator, InvDepthMapEstimator, AgeDependentValues
 )
 from tadataka.vo.semi_dense.gradient import GradientImage
 from tadataka.gradient import grad_x, grad_y
@@ -115,7 +115,7 @@ def test_inv_depth_map_estimator():
     estimator = InvDepthMapEstimator(estimator_)
     inv_depth_map, variance_map, flag_map = estimator(
         prior_inv_depth_map, prior_variance_map,
-        age_map, refframes
+        AgeDependentValues(age_map, refframes)
     )
 
     assert_array_equal(inv_depth_map,
