@@ -3,10 +3,12 @@ from numpy.testing import (assert_almost_equal, assert_array_almost_equal,
                            assert_array_equal, assert_equal)
 from scipy.spatial.transform import Rotation
 from tadataka.warp import Warp2D
+from tadataka.pose import Pose
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.vo.semi_dense.propagation import (propagate_variance,
-                                                substitute_, substitute)
+                                                substitute_, substitute,
+                                                Propagation)
 
 
 def test_substitute_():
@@ -85,3 +87,46 @@ def test_substitute():
          [3.0, 3.0],
          [3.0, 2.4]]
     )
+
+
+def test_propagate():
+    width, height = 120, 120
+    shape = height, width
+
+    camera_model = CameraModel(
+        CameraParameters(focal_length=[100, 100],
+                         offset=[width / 2, height / 2]),
+        distortion_model=None
+    )
+
+    default_depth = 60.0
+    default_variance = 8.0
+    uncertaintity_bias = 3.0
+    propagate = Propagation(default_depth, default_variance,
+                            uncertaintity_bias)
+
+    depth0 = 100
+    variance0 = 20
+
+    depth_map0 = depth0 * np.ones(shape)
+    variance_map0 = variance0 * np.ones(shape)
+
+    warp10 = Warp2D(camera_model, camera_model,
+                    Pose(Rotation.identity(), np.array([0, 0, 0])),
+                    Pose(Rotation.identity(), np.array([0, 0, -200])))
+    depth_map1, variance_map1 = propagate(warp10, depth_map0, variance_map0)
+
+    depth1 = 300
+
+    expected = default_depth * np.ones(shape)
+    expected[40:80, 40:80] = depth1
+    assert_array_almost_equal(depth_map1, expected)
+
+    variance1 = propagate_variance(1 / depth0, 1 / depth1,
+                                   variance0, uncertaintity_bias)
+    # 9 pixels in variance_map0 will be
+    # fused into 1 pixel in variance_map1
+    # Therefore variance should be decreased to 1/9
+    expected = default_variance * np.ones(shape)
+    expected[40:80, 40:80] = variance1 / 9.
+    assert_array_almost_equal(variance_map1, expected)
