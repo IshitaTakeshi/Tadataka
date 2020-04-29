@@ -90,7 +90,7 @@ def test_substitute():
 
 
 def test_propagate():
-    width, height = 120, 120
+    width, height = 12, 12
     shape = height, width
 
     camera_model = CameraModel(
@@ -119,7 +119,7 @@ def test_propagate():
     depth1 = 300
 
     expected = default_depth * np.ones(shape)
-    expected[40:80, 40:80] = depth1
+    expected[4:8, 4:8] = depth1
     assert_array_almost_equal(depth_map1, expected)
 
     variance1 = propagate_variance(1 / depth0, 1 / depth1,
@@ -128,5 +128,5 @@ def test_propagate():
     # fused into 1 pixel in variance_map1
     # Therefore variance should be decreased to 1/9
     expected = default_variance * np.ones(shape)
-    expected[40:80, 40:80] = variance1 / 9.
+    expected[4:8, 4:8] = variance1 / 9.
     assert_array_almost_equal(variance_map1, expected)
