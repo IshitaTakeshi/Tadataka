@@ -6,6 +6,7 @@ from tadataka.warp import Warp2D
 from tadataka.pose import Pose
 from tadataka.camera import CameraModel, CameraParameters
 from tadataka.vo.semi_dense.fusion import fusion
+from tadataka.vo.semi_dense.hypothesis import HypothesisMap
 from tadataka.vo.semi_dense.propagation import (propagate_variance,
                                                 substitute_, substitute,
                                                 Propagation)
@@ -90,7 +91,7 @@ def test_substitute():
 
 
 def test_propagate():
-    width, height = 12, 12
+    width, height = 8, 8
     shape = height, width
 
     camera_model = CameraModel(
@@ -102,31 +103,32 @@ def test_propagate():
     default_depth = 60.0
     default_variance = 8.0
     uncertaintity_bias = 3.0
-    propagate = Propagation(default_depth, default_variance,
+    propagate = Propagation(1 / default_depth, default_variance,
                             uncertaintity_bias)
 
     depth0 = 100
     variance0 = 20
 
-    depth_map0 = depth0 * np.ones(shape)
-    variance_map0 = variance0 * np.ones(shape)
-
     warp10 = Warp2D(camera_model, camera_model,
                     Pose(Rotation.identity(), np.array([0, 0, 0])),
-                    Pose(Rotation.identity(), np.array([0, 0, -200])))
-    depth_map1, variance_map1 = propagate(warp10, depth_map0, variance_map0)
+                    Pose(Rotation.identity(), np.array([0, 0, -300])))
 
-    depth1 = 300
+    inv_depth_map0 = (1 / depth0) * np.ones(shape)
+    variance_map0 = variance0 * np.ones(shape)
+    map0 = HypothesisMap(inv_depth_map0, variance_map0)
+    map1 = propagate(warp10, map0)
+
+    depth1 = 400
 
     expected = default_depth * np.ones(shape)
-    expected[4:8, 4:8] = depth1
-    assert_array_almost_equal(depth_map1, expected)
+    expected[3:5, 3:5] = depth1
+    assert_array_almost_equal(map1.depth, expected)
 
     variance1 = propagate_variance(1 / depth0, 1 / depth1,
                                    variance0, uncertaintity_bias)
-    # 9 pixels in variance_map0 will be
+    # 16 pixels in variance_map0 will be
     # fused into 1 pixel in variance_map1
     # Therefore variance should be decreased to 1/9
     expected = default_variance * np.ones(shape)
-    expected[4:8, 4:8] = variance1 / 9.
-    assert_array_almost_equal(variance_map1, expected)
+    expected[3:5, 3:5] = variance1 / 16.
+    assert_array_almost_equal(map1.variance, expected)

@@ -1,10 +1,11 @@
 import numpy as np
 
 from tadataka.coordinates import substitute, get
-from tadataka.vo.semi_dense.stat import are_statically_same
-from tadataka.vo.semi_dense.fusion import fusion
-from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.coordinates import warp_coordinates
+from tadataka.vo.semi_dense.fusion import fusion
+from tadataka.vo.semi_dense.hypothesis import HypothesisMap
+from tadataka.vo.semi_dense.stat import are_statically_same
+from tadataka.numeric import safe_invert
 
 
 def propagate_variance(inv_depths0, inv_depths1, variances0, uncertaintity):
@@ -55,21 +56,21 @@ def substitute(us, inv_depths, variances, shape,
 
 
 class Propagation(object):
-    def __init__(self, default_depth, default_variance,
+    def __init__(self, default_inv_depth, default_variance,
                  uncertaintity_bias=1.0):
-        self.default_inv_depth = safe_invert(default_depth)
+        self.default_inv_depth = default_inv_depth
         self.default_variance = default_variance
         self.uncertaintity_bias = uncertaintity_bias
 
-    def __call__(self, warp10, depth_map0, variance_map0):
-        us0, us1, depths0, depths1 = warp_coordinates(warp10, depth_map0)
+    def __call__(self, warp10, map0: HypothesisMap):
+        us0, us1, depths0, depths1 = warp_coordinates(warp10, map0.depth)
         inv_depths0 = safe_invert(depths0)
         inv_depths1 = safe_invert(depths1)
         variances1 = propagate_variance(inv_depths0, inv_depths1,
-                                        get(variance_map0, us0),
+                                        get(map0.variance, us0),
                                         self.uncertaintity_bias)
         inv_depth_map1, variance_map1 = substitute(
-            us1, inv_depths1, variances1, depth_map0.shape,
+            us1, inv_depths1, variances1, map0.shape,
             self.default_inv_depth, self.default_variance
         )
-        return safe_invert(inv_depth_map1), variance_map1
+        return HypothesisMap(inv_depth_map1, variance_map1)
