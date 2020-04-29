@@ -111,7 +111,7 @@ class InvDepthEstimator(object):
         return Hypothesis(safe_invert(depth_key), variance), FLAG.SUCCESS
 
 
-class AgeDependentValues(object):
+class ReferenceSelector(object):
     def __init__(self, age_map, values):
         self.age_map = age_map
         self.values = values

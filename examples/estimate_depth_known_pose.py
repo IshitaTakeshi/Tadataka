@@ -23,7 +23,7 @@ from tadataka.vo.semi_dense.propagation import Propagation
 from tadataka.vo.semi_dense.gradient import GradientImage
 
 from tadataka.vo.semi_dense.semi_dense import (
-    InvDepthEstimator, InvDepthMapEstimator, AgeDependentValues
+    InvDepthEstimator, InvDepthMapEstimator, ReferenceSelector
 )
 from tadataka.vo.semi_dense.regularization import regularize
 from examples.plot import plot_depth, plot_trajectory
@@ -158,7 +158,7 @@ class Estimator(object):
 
         self._map, flag_map = update(
             self.make_estimator(current_camera_model, current_image),
-            AgeDependentValues(
+            ReferenceSelector(
                 self.age_map,
                 [to_relative(f, current_pose) for f in self.refframes]
             ),
