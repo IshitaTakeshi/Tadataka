@@ -28,7 +28,7 @@ from tadataka.vo.semi_dense.variance import (
     calc_alpha, calc_observation_variance,
     photometric_variance, geometric_variance
 )
-from tadataka.vo.semi_dense.hypothesis import Hypothesis
+from tadataka.vo.semi_dense.hypothesis import Hypothesis, HypothesisMap
 from tadataka.vo.semi_dense._intensities import search_intensities
 from tadataka.warp import warp2d, warp3d
 
@@ -126,14 +126,14 @@ class ReferenceSelector(object):
 
 
 class InvDepthMapEstimator(object):
-    def __init__(self, estimator):
+    def __init__(self, estimator: InvDepthEstimator):
         self._estimator = estimator
 
-    def __call__(self, inv_depth_map, variance_map, reference_selector):
-        assert(inv_depth_map.shape == variance_map.shape)
-
-        flag_map = np.full(inv_depth_map.shape, FLAG.NOT_PROCESSED)
-        for u_key in tqdm(image_coordinates(inv_depth_map.shape)):
+    def __call__(self, hypothesis: HypothesisMap, reference_selector):
+        flag_map = np.full(hypothesis.shape, FLAG.NOT_PROCESSED)
+        inv_depth_map = hypothesis.inv_depth_map
+        variance_map = hypothesis.variance_map
+        for u_key in tqdm(image_coordinates(hypothesis.shape)):
             ref = reference_selector(u_key)
             if ref is None:
                 continue
@@ -146,4 +146,4 @@ class InvDepthMapEstimator(object):
             variance_map[y, x] = result.variance
             flag_map[y, x] = flag
 
-        return inv_depth_map, variance_map, flag_map
+        return HypothesisMap(inv_depth_map, variance_map), flag_map

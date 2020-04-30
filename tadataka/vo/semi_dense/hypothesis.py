@@ -7,12 +7,12 @@ Hypothesis = namedtuple("Hypothesis", ["inv_depth", "variance"])
 
 
 class HypothesisMap(object):
-    def __init__(self, inv_depth: np.ndarray, variance: np.ndarray):
-        assert(inv_depth.shape == variance.shape)
-        self.inv_depth = inv_depth
-        self.variance = variance
-        self.shape = inv_depth.shape
+    def __init__(self, inv_depth_map: np.ndarray, variance_map: np.ndarray):
+        assert(inv_depth_map.shape == variance_map.shape)
+        self.inv_depth_map = inv_depth_map
+        self.variance_map = variance_map
+        self.shape = inv_depth_map.shape
 
     @property
-    def depth(self):
-        return safe_invert(self.inv_depth)
+    def depth_map(self):
+        return safe_invert(self.inv_depth_map)

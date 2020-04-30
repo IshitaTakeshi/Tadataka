@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation
 from tadataka.warp import Warp2D
 from tadataka.pose import Pose
 from tadataka.camera import CameraModel, CameraParameters
-from tadataka.vo.semi_dense.fusion import fusion
+from tadataka.vo.semi_dense.fusion import fusion_
 from tadataka.vo.semi_dense.hypothesis import HypothesisMap
 from tadataka.vo.semi_dense.propagation import (propagate_variance,
                                                 substitute_, substitute,
@@ -33,7 +33,7 @@ def test_substitute_():
     assert_equal(inv_depth_map[2, 0], 9)  # 1 / 9 <= 1 / 2
     assert_equal(variance_map[2, 0], 2)
 
-    inv_depth, variance = fusion(1, 2, 4, 3)
+    inv_depth, variance = fusion_(1, 2, 4, 3)
     assert_almost_equal(inv_depth_map[1, 2], inv_depth)
     assert_equal(variance_map[1, 2], variance)
 
@@ -70,20 +70,20 @@ def test_substitute():
     ])
     inv_depths = np.array([2.0, 8.0, 2.0, 1.0])
     variances = np.array([0.5, 1.0, 4.0, 6.0])
-    inv_depth_map, variance_map = substitute(
+    hypothesis = substitute(
         us, inv_depths, variances, (height, width),
         default_inv_depth=4.0, default_variance=3.0
     )
 
     assert_array_equal(
-        inv_depth_map,
+        hypothesis.inv_depth_map,
         [[8.0, 4.0],
          [4.0, 4.0],
          [4.0, 1.6]]
     )
 
     assert_array_equal(
-        variance_map,
+        hypothesis.variance_map,
         [[1.0, 3.0],
          [3.0, 3.0],
          [3.0, 2.4]]
@@ -122,7 +122,7 @@ def test_propagate():
 
     expected = default_depth * np.ones(shape)
     expected[3:5, 3:5] = depth1
-    assert_array_almost_equal(map1.depth, expected)
+    assert_array_almost_equal(map1.depth_map, expected)
 
     variance1 = propagate_variance(1 / depth0, 1 / depth1,
                                    variance0, uncertaintity_bias)
@@ -131,4 +131,4 @@ def test_propagate():
     # Therefore variance should be decreased to 1/9
     expected = default_variance * np.ones(shape)
     expected[3:5, 3:5] = variance1 / 16.
-    assert_array_almost_equal(map1.variance, expected)
+    assert_array_almost_equal(map1.variance_map, expected)
