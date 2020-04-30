@@ -91,16 +91,14 @@ def dvo(camera_model0, camera_model1, image0, image1, depth_map0, weights):
 
 
 def update(estimator, reference_selector, prior_map):
-    inv_depth_map, variance_map, flag_map = estimator(
-        prior_map.inv_depth, prior_map.variance,
-        reference_selector
+    map_, flag_map = estimator(
+        prior_map, reference_selector
     )
 
-    inv_depth_map, variance_map = fusion(prior_map.inv_depth, inv_depth_map,
-                                         prior_map.variance, variance_map)
-    inv_depth_map = regularize(inv_depth_map, variance_map)
+    map_ = fusion(prior_map, map_)
+    inv_depth_map = regularize(map_)
 
-    return HypothesisMap(inv_depth_map, variance_map), flag_map
+    return HypothesisMap(inv_depth_map, map_.variance_map), flag_map
 
 
 from tests.dataset.path import new_tsukuba
@@ -120,6 +118,13 @@ estimator_params = {
 }
 
 
+def make_reference_selector(pose_key, refframes, age_map):
+    return ReferenceSelector(
+        age_map,
+        [to_relative(f, pose_key) for f in refframes]
+    )
+
+
 class Estimator(object):
     def __init__(self, first_frame):
         _, image, _ = first_frame
@@ -131,10 +136,9 @@ class Estimator(object):
         self.propagate = Propagation(default_inv_depth=1/200,
                                      default_variance=default_variance,
                                      uncertaintity_bias=1.0)
-        self._map = HypothesisMap(
-            inv_depth=np.random.uniform(*self.inv_depth_range, image.shape),
-            variance=default_variance * np.ones(image.shape)
-        )
+        inv_depth_map = np.random.uniform(*self.inv_depth_range, image.shape)
+        variance_map = default_variance * np.ones(image.shape)
+        self._map = HypothesisMap(inv_depth_map, variance_map)
 
         self.age_map = np.zeros(image.shape, dtype=np.int64)
 
@@ -151,7 +155,7 @@ class Estimator(object):
         current_camera_model, current_image, current_pose = current_keyframe
         warp_cl = Warp2D(last_camera_model, current_camera_model,
                          last_pose, current_pose)
-        self.age_map = increment_age(self.age_map, warp_cl, last_map.depth)
+        self.age_map = increment_age(self.age_map, warp_cl, last_map.depth_map)
         current_map = self.propagate(warp_cl, last_map)
 
         assert(self.age_map.max() == len(self.refframes))
@@ -162,7 +166,7 @@ class Estimator(object):
                 self.age_map,
                 [to_relative(f, current_pose) for f in self.refframes]
             ),
-            current_map,
+            current_map
         )
 
         self.refframes.append(current_keyframe)
@@ -179,7 +183,7 @@ def main():
         map_, flag_map = estimator(get(frame))
         plot_depth(frame.image, np.zeros(frame.depth_map.shape),
                    flag_map, frame.depth_map,
-                   map_.depth, map_.variance)
+                   map_.depth_map, map_.variance_map)
 
 
     # plot_trajectory(np.array(trajectory_true), np.array(trajectory_pred))
