@@ -16,6 +16,7 @@ from tadataka.gradient import grad_x, grad_y
 from tadataka.dataset import NewTsukubaDataset
 from tadataka.coordinates import image_coordinates
 from tadataka.numeric import safe_invert
+from tadataka.vo.semi_dense.hypothesis import HypothesisMap
 
 from tests.dataset.path import new_tsukuba
 
@@ -114,7 +115,7 @@ def test_inv_depth_map_estimator():
                  (3, 0, FLAG.KEY_OUT_OF_RANGE)]
     estimator = InvDepthMapEstimator(estimator_)
     result, flag_map = estimator(
-        prior_inv_depth_map, prior_variance_map,
+        HypothesisMap(prior_inv_depth_map, prior_variance_map),
         ReferenceSelector(age_map, refframes)
     )
 
