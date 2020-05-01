@@ -31,10 +31,6 @@ points_true = np.array([
    [-4, 4, -1]
 ], dtype=np.float64)
 
-projection = PerspectiveProjection(
-    CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
-)
-
 R0 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
 R1 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
 R2 = Rotation.from_euler('xyz', np.random.random(3)).as_matrix()
