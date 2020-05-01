@@ -151,27 +151,3 @@ class PoseChangeEstimator(object):
             W0 = rescale(W0, scale)
 
         return estimator(I0, D0, I1, prior, W0)
-
-
-class DVO(object):
-    def __init__(self):
-        self.pose = WorldPose.identity()
-        self.frames = []
-
-    def estimate(self, frame1):
-        if len(self.frames) == 0:
-            self.frames.append(frame1)
-            return self.pose
-
-        frame0 = self.frames[-1]
-
-        I0, D0 = rgb2gray(frame0.image), frame0.depth_map
-        I1 = rgb2gray(frame1.image)
-
-        estimator = PoseChangeEstimator(frame1.camera_model, I0, D0, I1)
-        dpose = estimator.estimate()
-
-        self.frames.append(frame1)
-
-        self.pose = dpose * self.pose
-        return self.pose
