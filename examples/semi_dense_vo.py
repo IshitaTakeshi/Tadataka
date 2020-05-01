@@ -5,14 +5,16 @@ from skimage.transform import resize
 from tadataka.warp import warp2d, Warp2D
 from tadataka.pose import Pose, estimate_pose_change
 from tadataka.camera import CameraModel, CameraParameters
-from tadataka.vo.semi_dense.age import increment_age
 from tadataka import camera
+from tadataka.vo.dvo import PoseChangeEstimator
 from tadataka.feature import extract_features, Matcher
 from tadataka.dataset import NewTsukubaDataset
+from tadataka.vo.semi_dense.age import increment_age
 from tadataka.vo.semi_dense.regularization import regularize
 from tadataka.vo.semi_dense.hypothesis import HypothesisMap
 from tadataka.vo.semi_dense.propagation import Propagation
 from tadataka.vo.semi_dense.fusion import fusion
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.semi_dense import (
     InvDepthEstimator, InvDepthMapEstimator, ReferenceSelector
 )
@@ -123,6 +125,13 @@ def plot(gt, hypothesis, age, flag_map):
                hypothesis.depth_map, hypothesis.variance_map)
 
 
+def calc_next_pose(posew0, pose10):
+    pose0w = posew0.inv()
+    pose1w = pose10 * pose0w
+    posew1 = pose1w.inv()
+    return posew1
+
+
 def main():
     dataset = NewTsukubaDataset("datasets/NewTsukubaStereoDataset")
 
@@ -139,17 +148,18 @@ def main():
 
     age0 = init_age(image0.shape)
     hypothesis0 = init_hypothesis(image0.shape)
-    posew0 = Pose.identity()
+
+    posew0 = gt0.pose
+    print("posew0", posew0)
     pose10 = estimate_initial_pose(gt0.camera_model, gt1.camera_model,
                                    gt0.image, gt1.image)
 
     t10_norm = 6.00
     pose10.t = t10_norm * pose10.t
-    pose0w = posew0.inv()
-    pose1w = pose10 * pose0w
-    posew1 = pose1w.inv()
+    posew1 = calc_next_pose(posew0, pose10)
 
-    print("pose10 pred", pose10)
+    print("posew1 true", gt1.pose)
+    print("posew1 pred", posew1)
 
     frame0 = camera_model0, image0, posew0
     frame1 = camera_model1, image1, posew1
@@ -158,11 +168,19 @@ def main():
                                           frame0, frame1, refframes0)
     plot(gt1, hypothesis1, age1, flag_map1)
 
-    # frame2 = camera_model2, image2, pose2
-    # refframes1 = [frame0, frame1]
-    # hypothesis2, age2, flag_map2 = update(hypothesis1, age1,
-    #                                       frame1, frame2, refframes1)
-    # plot(gt1, hypothesis1, age1, flag_map1)
+    pose21 = dvo(camera_model1, camera_model2,
+                 image1, image2, hypothesis1)
+
+    posew2 = calc_next_pose(posew1, pose21)
+    frame2 = camera_model2, image2, posew2
+
+    print("posew2 true", gt2.pose)
+    print("posew2 pred", posew2)
+
+    refframes1 = [frame0, frame1]
+    hypothesis2, age2, flag_map2 = update(hypothesis1, age1,
+                                          frame1, frame2, refframes1)
+    plot(gt2, hypothesis2, age2, flag_map2)
 
     # warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
     # age1 = increment_age(age0, warp10, hypothesis0.depth_map)
