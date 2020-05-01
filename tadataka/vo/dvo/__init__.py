@@ -107,8 +107,6 @@ class _PoseChangeEstimator(object):
                 break
             prev_error = curr_error
 
-            print("norm(xi) = {:.6f}  error = {:.6f}".format(norm(xi), curr_error))
-
             pose10 = candidate
         return pose10
 
@@ -130,7 +128,6 @@ class PoseChangeEstimator(object):
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
 
-        print("\n")
         for level in list(reversed(range(self.n_coarse_to_fine))):
             pose10 = self._estimate_at(pose10, level, I0, D0, I1, weights)
 
