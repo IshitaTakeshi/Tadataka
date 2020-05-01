@@ -4,6 +4,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from scipy.spatial.transform import Rotation
 
+from tadataka.projection import pi
 from tadataka.so3 import exp_so3
 from tadataka.camera import CameraParameters
 from tadataka.exceptions import NotEnoughInliersException
@@ -12,46 +13,25 @@ from tadataka.pose import (
     estimate_pose_change, n_triangulated,
     solve_pnp, triangulation_indices, Pose
 )
-from tadataka.projection import PerspectiveProjection
 from tadataka.rigid_transform import transform
 
 from tests.utils import random_rotation_matrix
 
 
-camera_parameters = CameraParameters(focal_length=[1, 1], offset=[0, 0])
-projection = PerspectiveProjection(camera_parameters)
-
-points = np.array([
-   [4, -1, 3],
-   [1, -3, -2],
-   [-2, 3, -2],
-   [-3, -2, -5],
-   [4, 1, 1],
-   [-2, 3, 1],
-   [-4, 4, -1]
-], dtype=np.float64)
-
-omegas = np.array([
-    [0.1, 0.0, 0.0],
-    [0.0, 1.0, 0.0],
-    [-1.2, 0.0, 0.1],
-    [3.2, 1.1, 1.0],
-    [3.1, -0.2, 0.0],
-    [-1.0, 0.2, 3.1]
-])
-
-translations = generate_translations(exp_so3(omegas), points)
-
-
 def test_solve_pnp():
+    points = np.random.uniform(-10, 10, (7, 3))
+    omegas = np.random.uniform(-np.pi, np.pi, (6, 3))
+
+    translations = generate_translations(exp_so3(omegas), points)
+
     for omega_true, t_true in zip(omegas, translations):
         P = transform(exp_so3(omega_true), t_true, points)
-        keypoints_true = projection.compute(P)
+        keypoints_true = pi(P)
 
         pose = solve_pnp(points, keypoints_true)
 
         P = transform(pose.R, pose.t, points)
-        keypoints_pred = projection.compute(P)
+        keypoints_pred = pi(P)
 
         # omega_true and omega_pred can be different but
         # they have to be linearly dependent and satisfy
@@ -61,7 +41,7 @@ def test_solve_pnp():
         assert_array_almost_equal(keypoints_true, keypoints_pred)
 
     P = transform(exp_so3(omegas[0]), translations[0], points)
-    keypoints0 = projection.compute(P)
+    keypoints0 = pi(P)
 
     # 6 correspondences
     # this should be able to run
@@ -179,11 +159,7 @@ def test_triangulation_indices():
 
 
 def test_estimate_pose_change():
-    projection = PerspectiveProjection(
-        CameraParameters(focal_length=[1., 1.], offset=[0., 0.])
-    )
-
-    X_true = np.array([
+    X0 = np.array([
         [-1, -6, 5],
         [9, 1, 8],
         [-9, -2, 6],
@@ -196,32 +172,32 @@ def test_estimate_pose_change():
         [9, -1, 7]
     ], dtype=np.float64)
 
-    R_true = np.array([
+    R10 = np.array([
         [-1, 0, 0],
         [0, 0, 1],
         [0, 1, 0],
     ], dtype=np.float64)
 
     def case1():
-        t_true = np.array([0, 0, 5], dtype=np.float64)
-        P0 = X_true
-        P1 = transform(R_true, t_true, X_true)
-        keypoints0 = projection.compute(P0)
-        keypoints1 = projection.compute(P1)
-        pose = estimate_pose_change(keypoints0, keypoints1)
+        t10 = np.array([0, 0, 5], dtype=np.float64)
+        P0 = X0
+        P1 = transform(R10, t10, X0)
+        keypoints0 = pi(P0)
+        keypoints1 = pi(P1)
+        pose10 = estimate_pose_change(keypoints0, keypoints1)
 
-        assert_array_almost_equal(pose.R, R_true)
-        # test if t and t_true are parallel
+        assert_array_almost_equal(pose10.R, R10)
+        # test if t pred and t true are parallel
         # because we cannot know the scale
-        assert_array_almost_equal(np.cross(pose.t, t_true), np.zeros(3))
+        assert_array_almost_equal(np.cross(pose10.t, t10), np.zeros(3))
 
     def case2():
         # 5 points are behind cameras
-        t_true = np.array([0, 0, 0], dtype=np.float64)
-        P0 = X_true
-        P1 = transform(R_true, t_true, X_true)
-        keypoints0 = projection.compute(P0)
-        keypoints1 = projection.compute(P1)
+        t10 = np.array([0, 0, 0], dtype=np.float64)
+        P0 = X0
+        P1 = transform(R10, t10, X0)
+        keypoints0 = pi(P0)
+        keypoints1 = pi(P1)
 
         message = "Most of points are behind cameras. Maybe wrong matches?"
         with pytest.warns(RuntimeWarning, match=message):

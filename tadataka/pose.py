@@ -9,7 +9,7 @@ import cv2
 from tadataka.depth import (depth_condition, warn_points_behind_cameras,
                             compute_depth_mask)
 from tadataka.exceptions import NotEnoughInliersException
-from tadataka.matrix import (estimate_fundamental, decompose_essential,
+from tadataka.matrix import (estimate_essential, decompose_essential,
                              motion_matrix)
 from tadataka.so3 import exp_so3, log_so3
 from tadataka.se3 import exp_se3_t_
@@ -165,13 +165,11 @@ def pose_change_from_stereo(keypoints0, keypoints1):
 
     assert(keypoints0.shape == keypoints1.shape)
 
-    # we assume that keypoints are normalized
-    E = estimate_fundamental(keypoints0, keypoints1)
+    # we assume that the keypoints are normalized
+    E = estimate_essential(keypoints0, keypoints1)
 
-    # R <- {R1, R2}, t <- {t1, t2} satisfy
-    # K * [R | t] * homegeneous(points) = homogeneous(keypoint)
-    R1A, R1B, t1a, t1b = decompose_essential(E)
-    return select_valid_pose(R1A, R1B, t1a, t1b, keypoints0, keypoints1)
+    R10A, R10B, t10a, t10b = decompose_essential(E)
+    return select_valid_pose(R10A, R10B, t10a, t10b, keypoints0, keypoints1)
 
 
 def estimate_pose_change(keypoints0, keypoints1):
@@ -179,5 +177,5 @@ def estimate_pose_change(keypoints0, keypoints1):
     Estimate pose s.t. X1 = pose.R * X0 + pose.t
     where keypoints0 = pi(X0), keypoints1 = pi(X1)
     """
-    R, t = pose_change_from_stereo(keypoints0, keypoints1)
-    return Pose(Rotation.from_matrix(R), t)
+    R10, t10 = pose_change_from_stereo(keypoints0, keypoints1)
+    return Pose(Rotation.from_matrix(R10), t10)
