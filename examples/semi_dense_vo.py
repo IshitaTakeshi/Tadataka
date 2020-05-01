@@ -56,7 +56,7 @@ def get(frame, scale=1.0):
     image = rgb2gray(frame.image)
     shape = (int(image.shape[0] * scale), int(image.shape[1] * scale))
     image = resize(image, shape)
-    return camera_model, image, frame.pose
+    return camera_model, image
 
 
 def estimate_initial_pose(camera_model0, camera_model1, image0, image1):
@@ -65,11 +65,9 @@ def estimate_initial_pose(camera_model0, camera_model1, image0, image1):
     matches01 = match(features0, features1)
     keypoints0 = features0.keypoints[matches01[:, 0]]
     keypoints1 = features1.keypoints[matches01[:, 1]]
-    return estimate_pose_change(
-        camera_model0.normalize(keypoints0),
-        camera_model1.normalize(keypoints1)
-    )
-    return pose10
+    keypoints0 = camera_model0.normalize(keypoints0)
+    keypoints1 = camera_model1.normalize(keypoints1)
+    return estimate_pose_change(keypoints0, keypoints1)
 
 
 def init_age(shape):
@@ -133,28 +131,38 @@ def main():
     gt2 = dataset[210][0]
     gt3 = dataset[215][0]
     gt4 = dataset[220][0]
-    frame0 = get(gt0)
-    frame1 = get(gt1)
-    frame2 = get(gt2)
-    frame3 = get(gt3)
-    frame4 = get(gt4)
+    camera_model0, image0 = get(gt0)
+    camera_model1, image1 = get(gt1)
+    camera_model2, image2 = get(gt2)
+    camera_model3, image3 = get(gt3)
+    camera_model4, image4 = get(gt4)
 
-    age0 = init_age(frame0[1].shape)
-    hypothesis0 = init_hypothesis(frame0[1].shape)
-    # pose0 = Pose.identity()
-    # pose10 = estimate_initial_pose(camera_model0, camera_model1,
-    #                                image0, image1)
-    # pose1 = pose10 * pose0
+    age0 = init_age(image0.shape)
+    hypothesis0 = init_hypothesis(image0.shape)
+    posew0 = Pose.identity()
+    pose10 = estimate_initial_pose(gt0.camera_model, gt1.camera_model,
+                                   gt0.image, gt1.image)
 
+    t10_norm = 6.00
+    pose10.t = t10_norm * pose10.t
+    pose0w = posew0.inv()
+    pose1w = pose10 * pose0w
+    posew1 = pose1w.inv()
+
+    print("pose10 pred", pose10)
+
+    frame0 = camera_model0, image0, posew0
+    frame1 = camera_model1, image1, posew1
     refframes0 = [frame0]
     hypothesis1, age1, flag_map1 = update(hypothesis0, age0,
                                           frame0, frame1, refframes0)
     plot(gt1, hypothesis1, age1, flag_map1)
 
-    refframes1 = [frame0, frame1]
-    hypothesis2, age2, flag_map2 = update(hypothesis1, age1,
-                                          frame1, frame2, refframes1)
-    plot(gt1, hypothesis1, age1, flag_map1)
+    # frame2 = camera_model2, image2, pose2
+    # refframes1 = [frame0, frame1]
+    # hypothesis2, age2, flag_map2 = update(hypothesis1, age1,
+    #                                       frame1, frame2, refframes1)
+    # plot(gt1, hypothesis1, age1, flag_map1)
 
     # warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
     # age1 = increment_age(age0, warp10, hypothesis0.depth_map)
