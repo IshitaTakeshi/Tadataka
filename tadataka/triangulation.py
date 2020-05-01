@@ -8,13 +8,21 @@ from tadataka.matrix import to_homogeneous
 
 
 class TwoViewTriangulation(object):
-    def __init__(self, pose0, pose1):
-        """
-        pose0, pose1: Poses in the local coordinate system
-        """
-        self.triangulator = Triangulation([pose0, pose1])
+    def __init__(self, pose0w, pose1w):
+        self.triangulator = Triangulation([pose0w, pose1w])
 
-    def triangulate(self, keypoints0, keypoints1):
+    def triangulate(self, keypoints0: np.ndarray, keypoints1: np.ndarray):
+        """
+        Args:
+            keypoints0: Normalized keypoints observed from viewpoint 0
+            keypoints1: Normalized keypoints observed from viewpoint 1
+        Returns:
+            points: shape (points, depths)
+                3D points in the world coordinate
+            depths: shape (n_viewpoints, n_points)
+                Point depths
+        """
+
         assert(keypoints0.shape == keypoints1.shape)
         keypoints = np.stack((keypoints0, keypoints1))
         return self.triangulator.triangulate(keypoints)
@@ -29,6 +37,10 @@ class Triangulation(object):
         self.translations = np.array([pose.t for pose in poses])
 
     def triangulate(self, keypoints):
+        """
+        keypoints: np.ndarray (n_poses, n_keypoints, 2)
+            keypoints observed in each viewpoint
+        """
         return TR.linear_triangulation(self.rotations, self.translations,
                                        keypoints)
 
