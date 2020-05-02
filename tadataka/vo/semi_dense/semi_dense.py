@@ -112,15 +112,17 @@ class InvDepthEstimator(object):
 
 
 class InvDepthMapEstimator(object):
-    def __init__(self, estimator: InvDepthEstimator):
+    def __init__(self, estimator: InvDepthEstimator, reference_selector):
         self._estimator = estimator
+        self.reference_selector = reference_selector
 
-    def __call__(self, hypothesis: HypothesisMap, reference_selector):
+    def __call__(self, hypothesis: HypothesisMap):
+
         flag_map = np.full(hypothesis.shape, FLAG.NOT_PROCESSED)
         inv_depth_map = hypothesis.inv_depth_map
         variance_map = hypothesis.variance_map
         for u_key in tqdm(image_coordinates(hypothesis.shape)):
-            ref = reference_selector(u_key)
+            ref = self.reference_selector(u_key)
             if ref is None:
                 continue
 
