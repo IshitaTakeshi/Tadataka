@@ -16,8 +16,9 @@ from tadataka.vo.semi_dense.propagation import Propagation
 from tadataka.vo.semi_dense.fusion import fusion
 from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.semi_dense import (
-    InvDepthEstimator, InvDepthMapEstimator, ReferenceSelector
+    InvDepthEstimator, InvDepthMapEstimator
 )
+from tadataka.vo.semi_dense.reference import make_reference_selector
 
 from examples.plot import plot_depth
 
@@ -76,17 +77,13 @@ def init_age(shape):
     return np.zeros(shape, dtype=np.int64)
 
 
-def make_estimator(camera_model, image):
+def make_estimator(frame1, age_map1, refframes0):
+    camera_model, image, pose = frame1
     return InvDepthMapEstimator(
         InvDepthEstimator(camera_model, image,
-                          inv_depth_range, **estimator_params)
+                          inv_depth_range, **estimator_params),
+        make_reference_selector(age_map1, refframes0, pose),
     )
-
-
-def to_relative(ref, pose_wk):
-    camera_model_ref, image_ref, pose_wr = ref
-    pose_rk = pose_wr.inv() * pose_wk
-    return (camera_model_ref, image_ref, pose_rk.T)
 
 
 def init_hypothesis(shape):
@@ -95,8 +92,8 @@ def init_hypothesis(shape):
     return HypothesisMap(inv_depth_map, variance_map)
 
 
-def update_hypothesis(estimator, reference_selector, prior_hypothesis):
-    hypothesis, flag_map = estimator(prior_hypothesis, reference_selector)
+def update_hypothesis(estimator, prior_hypothesis):
+    hypothesis, flag_map = estimator(prior_hypothesis)
 
     fused = fusion(prior_hypothesis, hypothesis)
     inv_depth_map = regularize(fused)
@@ -105,15 +102,13 @@ def update_hypothesis(estimator, reference_selector, prior_hypothesis):
 
 
 def update(hypothesis0, age0, frame0, frame1, refframes0):
-    camera_model0, image0, pose0 = frame0
-    camera_model1, image1, pose1 = frame1
+    camera_model0, _, pose0 = frame0
+    camera_model1, _, pose1 = frame1
     warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
     age1 = increment_age(age0, warp10, hypothesis0.depth_map)
 
-    relative_frames = [to_relative(f, pose1) for f in refframes0]
     hypothesis1, flag_map1 = update_hypothesis(
-        make_estimator(camera_model1, image1),
-        ReferenceSelector(age1, relative_frames),
+        make_estimator(frame1, age1, refframes0),
         propagate(warp10, hypothesis0)
     )
     return hypothesis1, age1, flag_map1
@@ -162,70 +157,57 @@ def main():
     print("posew1 pred", posew1)
 
     frame0 = camera_model0, image0, posew0
+
     frame1 = camera_model1, image1, posew1
     refframes0 = [frame0]
     hypothesis1, age1, flag_map1 = update(hypothesis0, age0,
                                           frame0, frame1, refframes0)
     plot(gt1, hypothesis1, age1, flag_map1)
 
+    # ==================================================
+
     pose21 = dvo(camera_model1, camera_model2,
                  image1, image2, hypothesis1)
-
     posew2 = calc_next_pose(posew1, pose21)
-    frame2 = camera_model2, image2, posew2
 
     print("posew2 true", gt2.pose)
     print("posew2 pred", posew2)
 
+    frame2 = camera_model2, image2, posew2
     refframes1 = [frame0, frame1]
     hypothesis2, age2, flag_map2 = update(hypothesis1, age1,
                                           frame1, frame2, refframes1)
     plot(gt2, hypothesis2, age2, flag_map2)
 
-    # warp10 = Warp2D(camera_model0, camera_model1, pose0, pose1)
-    # age1 = increment_age(age0, warp10, hypothesis0.depth_map)
-    # hypothesis1 = update_hypothesis(
-    #     propagate(warp10, hypothesis0),
-    #     reference_selector(age1),
-    #     key=(image1, pose1),
-    #     refs=[(image0, pose0)]
-    # )
+    # ==================================================
 
-    # pose21 = dvo(image1, image2, hypothesis1)
-    # pose2 = pose21 * pose1
-    # warp21 = Warp2D(camera_model1, camera_model2, pose1, pose2)
-    # age2 = increment_age(age1, warp21, hypothesis1.depth_map)
-    # hypothesis2 = update_hypothesis(
-    #     propagate(warp21, hypothesis1),
-    #     key=(image2, pose2),
-    #     refs=[(image0, pose0),
-    #           (image1, pose1)]
-    # )
+    pose32 = dvo(camera_model2, camera_model3,
+                 image2, image3, hypothesis2)
+    posew3 = calc_next_pose(posew2, pose32)
 
-    # pose32 = dvo(image2, image3, hypothesis2)
-    # pose3 = pose32 * pose2
-    # warp32 = Warp3D(camera_model2, camera_model3, pose2, pose3)
-    # age3 = increment_age(age2, warp32, hypothesis2.depth_map)
-    # hypothesis3 = update_hypothesis(
-    #     propagate(warp32, hypothesis2),
-    #     key=(image3, pose3),
-    #     refs=[(image0, pose0),
-    #           (image1, pose1),
-    #           (image2, pose2)]
-    # )
+    print("posew3 true", gt3.pose)
+    print("posew3 pred", posew3)
 
-    # pose43 = dvo(image3, image4, hypothesis3)
-    # pose4 = pose43 * pose3
-    # warp43 = Warp4D(camera_model3, camera_model4, pose3, pose4)
-    # age4 = increment_age(age3, warp43, hypothesis3.depth_map)
-    # hypothesis4 = update_hypothesis(
-    #     propagate(warp43, hypothesis3),
-    #     key=(image4, pose4),
-    #     refs=[(image0, pose0),
-    #           (image1, pose1),
-    #           (image2, pose2),
-    #           (image3, pose3)]
-    # )
+    frame3 = camera_model3, image3, posew3
+    refframes2 = [frame0, frame1, frame2]
+    hypothesis3, age3, flag_map3 = update(hypothesis2, age2,
+                                          frame2, frame3, refframes2)
+    plot(gt3, hypothesis3, age3, flag_map3)
+
+    # ==================================================
+
+    pose43 = dvo(camera_model3, camera_model4,
+                 image3, image4, hypothesis3)
+    posew4 = calc_next_pose(posew3, pose43)
+
+    print("posew4 true", gt4.pose)
+    print("posew4 pred", posew4)
+
+    frame4 = camera_model4, image4, posew4
+    refframes3 = [frame0, frame1, frame2, frame3]
+    hypothesis4, age4, flag_map4 = update(hypothesis3, age3,
+                                          frame3, frame4, refframes3)
+    plot(gt4, hypothesis4, age4, flag_map4)
 
 
 
