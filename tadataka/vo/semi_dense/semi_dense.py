@@ -111,20 +111,6 @@ class InvDepthEstimator(object):
         return Hypothesis(safe_invert(depth_key), variance), FLAG.SUCCESS
 
 
-class ReferenceSelector(object):
-    def __init__(self, age_map, values):
-        self.age_map = age_map
-        self.values = values
-
-    def __call__(self, u):
-        x, y = u
-        age = self.age_map[y, x]
-        if age == 0:
-            return None
-
-        return self.values[-age]
-
-
 class InvDepthMapEstimator(object):
     def __init__(self, estimator: InvDepthEstimator):
         self._estimator = estimator
