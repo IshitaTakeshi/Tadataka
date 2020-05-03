@@ -61,8 +61,8 @@ def make_pybind11_ext_modules(module_sources):
     pybind11_ext_modules = []
     for module_name, sources in module_sources:
         ext = Extension(
-            "tadataka.vo.semi_dense._epipolar",
-            sources=["tadataka/vo/semi_dense/_epipolar.cpp"],
+            module_name,
+            sources=sources,
             include_dirs=pybind11_include_dirs,
             language="c++",
             extra_compile_args=pybind11_compile_args
