@@ -52,47 +52,37 @@ pybind11_include_dirs = [get_pybind_include(False),
                          "thirdparty/eigen",
                          os.getcwd()]
 
-pybind11_compiler = "-std=c++14"
-pybind11_compile_args = ["-O3", "-Wall", "-shared", "-fPIC", pybind11_compiler]
+pybind11_compile_args = [
+    "-O3", "-Wall", "-shared", "-fPIC", "-std=c++14", "-mavx", "-mavx2"
+]
 
-pybind11_ext_modules = [
-    Extension(
-        "tadataka.vo.semi_dense._epipolar",
-        sources=["tadataka/vo/semi_dense/_epipolar.cpp"],
-        include_dirs=pybind11_include_dirs,
-        language="c++",
-        extra_compile_args=pybind11_compile_args
-    ),
-    Extension(
-        "tadataka.vo.semi_dense._gradient",
-        sources=["tadataka/vo/semi_dense/_gradient.cpp"],
-        include_dirs=pybind11_include_dirs,
-        language="c++",
-        extra_compile_args=pybind11_compile_args
-    ),
-    Extension(
-        "tadataka.vo.semi_dense._depth",
-        sources=["tadataka/vo/semi_dense/_depth.cpp",
-                 "tadataka/_projection.cpp"],
-        include_dirs=pybind11_include_dirs,
-        language="c++",
-        extra_compile_args=pybind11_compile_args
-    ),
-    Extension(
-        "tadataka.interpolation._interpolation",
-        sources=["tadataka/interpolation/_interpolation.cpp",
-                 "tadataka/interpolation/_bilinear.cpp"],
-        include_dirs=pybind11_include_dirs,
-        language="c++",
-        extra_compile_args=pybind11_compile_args+["-mavx", "-mavx2"]
-    ),
-    Extension(
-        "tadataka._projection",
-        sources=["tadataka/_projection.cpp"],
-        include_dirs=pybind11_include_dirs,
-        language="c++",
-        extra_compile_args=pybind11_compile_args
-    ),
+
+def make_pybind11_ext_modules(module_sources):
+    pybind11_ext_modules = []
+    for module_name, sources in module_sources:
+        ext = Extension(
+            "tadataka.vo.semi_dense._epipolar",
+            sources=["tadataka/vo/semi_dense/_epipolar.cpp"],
+            include_dirs=pybind11_include_dirs,
+            language="c++",
+            extra_compile_args=pybind11_compile_args
+        )
+        pybind11_ext_modules.append(ext)
+    return pybind11_ext_modules
+
+
+pybind11_module_sources = [
+    ("tadataka.vo.semi_dense._epipolar",
+     ["tadataka/vo/semi_dense/_epipolar.cpp"]),
+    ("tadataka.vo.semi_dense._gradient",
+     ["tadataka/vo/semi_dense/_gradient.cpp"]),
+    ("tadataka.vo.semi_dense._depth",
+     ["tadataka/vo/semi_dense/_depth.cpp", "tadataka/_projection.cpp"]),
+    ("tadataka.interpolation._interpolation",
+     ["tadataka/interpolation/_interpolation.cpp",
+      "tadataka/interpolation/_bilinear.cpp"]),
+    ("tadataka._projection",
+     ["tadataka/_projection.cpp"]),
 ]
 
 
@@ -126,6 +116,9 @@ setup(
         'sparseba',
         'tqdm',
     ],
-    ext_modules=cython_ext_modules+pybind11_ext_modules,
+    ext_modules=(
+        cython_ext_modules +
+        make_pybind11_ext_modules(pybind11_module_sources)
+    ),
     cmdclass = {'build_ext': CustomBuildExt},
 )
