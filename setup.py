@@ -71,6 +71,14 @@ pybind11_ext_modules = [
         extra_compile_args=pybind11_compile_args
     ),
     Extension(
+        "tadataka.vo.semi_dense._depth",
+        sources=["tadataka/vo/semi_dense/_depth.cpp",
+                 "tadataka/_projection.cpp"],
+        include_dirs=pybind11_include_dirs,
+        language="c++",
+        extra_compile_args=pybind11_compile_args
+    ),
+    Extension(
         "tadataka.interpolation._interpolation",
         sources=["tadataka/interpolation/_interpolation.cpp",
                  "tadataka/interpolation/_bilinear.cpp"],

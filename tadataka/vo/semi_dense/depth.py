@@ -4,13 +4,12 @@ from tadataka.projection import inv_pi
 from tadataka.matrix import get_rotation_translation
 from tadataka.triangulation import calc_depth0_
 from tadataka.rigid_transform import transform_se3
+from tadataka.vo.semi_dense._depth import calc_ref_depth
 
 
 def calc_ref_inv_depth(T_rk, x_key, inv_depth_key):
     depth_key = safe_invert(inv_depth_key)
-    p_key = inv_pi(x_key, depth_key)
-    R_rk, t_rk = get_rotation_translation(T_rk)
-    depth_ref = np.dot(R_rk[2], p_key) + t_rk[2]
+    depth_ref = calc_ref_depth(T_rk, x_key, depth_key)
     return safe_invert(depth_ref)
 
 
