@@ -5,22 +5,10 @@ from tadataka.vector import normalize_length
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import inv_motion_matrix, get_translation
 from tadataka.warp import warp2d_
-from tadataka.vo.semi_dense._epipolar import key_coordinates_
+from tadataka.vo.semi_dense._epipolar import key_coordinates_, calc_coordinates
 
 
 EPSILON = 1e-16
-
-
-def coordinates_along_line(start, step, disparities):
-    return start + np.outer(disparities, step)
-
-
-def calc_coordinates(x_min, x_max, step_size):
-    d = x_max - x_min
-    norm = np.linalg.norm(d)
-    direction = d / (norm + EPSILON)
-    N = norm // step_size
-    return coordinates_along_line(x_min, step_size * direction, np.arange(N))
 
 
 def ref_coordinates(x_range, step_size):
