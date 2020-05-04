@@ -13,7 +13,7 @@ from tadataka.matrix import (estimate_fundamental, decompose_essential,
                              motion_matrix)
 from tadataka.so3 import exp_so3, log_so3
 from tadataka.se3 import exp_se3_t_
-from tadataka._triangulation import linear_triangulation
+from tadataka.triangulation import linear_triangulation
 
 
 def check_type_(pose1, pose2):
