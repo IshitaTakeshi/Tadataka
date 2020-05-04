@@ -27,16 +27,17 @@ const Eigen::MatrixXd calc_coordinates(
     Eigen::Ref<const Eigen::RowVector2d> x_max,
     const double step_size) {
 
-    Eigen::RowVector2d direction = x_max - x_min;
-    const double norm = direction.norm();
-    direction = direction / (norm + EPSILON);
-    int N = (int)(norm / step_size);
+  Eigen::RowVector2d direction = x_max - x_min;
+  const double norm = direction.norm();
+  direction = direction / (norm + EPSILON);
 
-    Eigen::MatrixXd xs(N, 2);
-    for(int i = 0; i < N; i++) {
-      xs.row(i) = x_min + i * step_size * direction;
-    }
-    return xs;
+  int N = (int)(norm / step_size);
+
+  Eigen::MatrixXd xs(N, 2);
+  for(int i = 0; i < N; i++) {
+    xs.row(i) = x_min + i * step_size * direction;
+  }
+  return xs;
 }
 
 
