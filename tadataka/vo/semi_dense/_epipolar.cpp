@@ -7,7 +7,7 @@ const double EPSILON = 1e-16;
 
 
 const Eigen::MatrixXd key_coordinates_(
-    Eigen::Ref<const Eigen::RowVector2d> epipolar_direction,
+    Eigen::Ref<const Eigen::Vector2d> epipolar_direction,
     Eigen::Ref<const Eigen::RowVector2d> x_key,
     const double step_size) {
   Eigen::VectorXd sampling_steps(5);
@@ -21,12 +21,13 @@ const Eigen::MatrixXd key_coordinates_(
   return steps;
 }
 
+
 const Eigen::MatrixXd calc_coordinates(
-    Eigen::Ref<const Eigen::Vector2d> x_min,
-    Eigen::Ref<const Eigen::Vector2d> x_max,
+    Eigen::Ref<const Eigen::RowVector2d> x_min,
+    Eigen::Ref<const Eigen::RowVector2d> x_max,
     const double step_size) {
 
-    Eigen::Vector2d direction = x_max - x_min;
+    Eigen::RowVector2d direction = x_max - x_min;
     const double norm = direction.norm();
     direction = direction / (norm + EPSILON);
     int N = (int)(norm / step_size);
