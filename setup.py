@@ -76,6 +76,8 @@ pybind11_module_sources = [
      ["tadataka/vo/semi_dense/_gradient.cpp"]),
     ("tadataka.vo.semi_dense._intensities",
      ["tadataka/vo/semi_dense/_intensities.cpp"]),
+    ("tadataka.vo.semi_dense._variance",
+     ["tadataka/vo/semi_dense/_variance.cpp", "tadataka/_homogeneous.cpp"]),
     ("tadataka.interpolation._interpolation",
      ["tadataka/interpolation/_interpolation.cpp",
       "tadataka/interpolation/_bilinear.cpp"]),

@@ -2,6 +2,7 @@ import numpy as np
 from tadataka.matrix import get_rotation_translation
 from tadataka.warp import warp2d_
 from tadataka.numeric import safe_invert
+from tadataka.vo.semi_dense._variance import calc_alpha_
 
 
 def calc_observation_variance(alpha, geo_variance, photo_variance):
@@ -30,15 +31,6 @@ def geometric_variance(epipolar_direction, image_gradient, sigma_l, epsilon):
         return sl2 / epsilon
 
     return sl2 / product
-
-
-def calc_alpha_(x_key, x_ref_i, direction_i, ri, rz, ti, tz):
-    x = np.append(x_key, 1)
-
-    d = np.dot(rz, x) * ti - np.dot(ri, x) * tz
-    n = x_ref_i * tz - ti
-
-    return direction_i * d / (n * n)
 
 
 def alpha_index(search_step):
