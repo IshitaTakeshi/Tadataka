@@ -16,15 +16,6 @@ from tadataka.se3 import exp_se3_t_
 from tadataka.triangulation import linear_triangulation
 
 
-def check_type_(pose1, pose2):
-    if type(pose1) == type(pose2):
-        return
-
-    name1 = type(pose1).__name__
-    name2 = type(pose2).__name__
-    raise ValueError(f"Types do not match: {name1} and {name2}")
-
-
 class Pose(object):
     def __init__(self, rotation, translation):
         assert(isinstance(rotation, Rotation))
@@ -46,26 +37,22 @@ class Pose(object):
         return "rotvec = [ " + sr + " ]  t = [ " + st + " ]"
 
     @classmethod
-    def identity(PoseClass):
-        return PoseClass(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
+    def identity(self):
+        return Pose(Rotation.from_rotvec(np.zeros(3)), np.zeros(3))
 
     @classmethod
-    def from_se3(PoseClass, xi):
+    def from_se3(self, xi):
         rotvec = xi[3:]
-        return PoseClass(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
+        return Pose(Rotation.from_rotvec(rotvec), exp_se3_t_(xi))
 
     def inv(self):
-        PoseClass = type(self)
-        return PoseClass(*convert_coordinate(self.rotation, self.t))
+        return Pose(*convert_coordinate(self.rotation, self.t))
 
     def __mul__(self, other):
-        check_type_(self, other)
-        PoseClass = type(self)
-        return PoseClass(self.rotation * other.rotation,
-                         np.dot(self.R, other.t) + self.t)
+        return Pose(self.rotation * other.rotation,
+                    np.dot(self.R, other.t) + self.t)
 
     def __eq__(self, other):
-        check_type_(self, other)
         self_rotvec = self.rotation.as_rotvec()
         other_rotvec = other.rotation.as_rotvec()
         return (np.isclose(self_rotvec, other_rotvec).all() and
