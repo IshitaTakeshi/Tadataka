@@ -10,10 +10,9 @@ from tadataka.dataset.observations import generate_translations
 from tadataka.pose import Pose
 from tadataka.projection import PerspectiveProjection, pi
 from tadataka.rigid_transform import transform
-from tadataka._triangulation import linear_triangulation
 from tadataka.triangulation import (
-    Triangulation, TwoViewTriangulation, DepthsFromTriangulation,
-    calc_depth0, calc_depth0_)
+    DepthsFromTriangulation, Triangulation, TwoViewTriangulation,
+    linear_triangulation, calc_depth0, calc_depth0_)
 
 
 # TODO add the case such that x[3] = 0
