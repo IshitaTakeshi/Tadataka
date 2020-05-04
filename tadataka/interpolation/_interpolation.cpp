@@ -1,11 +1,10 @@
-#include "tadataka/interpolation/_bilinear.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-namespace py = pybind11;
+#include "tadataka/interpolation/_bilinear.h"
+#include "tadataka/_types.h"
 
-template<int rows, int cols>
-using RowMajorMatrixXd = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
+namespace py = pybind11;
 
 
 Eigen::VectorXd interpolation(
