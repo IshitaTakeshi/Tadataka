@@ -34,12 +34,7 @@ cython_ext_modules=[
                  "tadataka/camera/_radtan_distort.c",
                  "tadataka/camera/_radtan_distort_jacobian.c"],
         extra_compile_args=["-Wall", "-Ofast"]
-    ),
-    Extension(
-        "tadataka.vo.semi_dense._intensities",
-        sources=["tadataka/vo/semi_dense/_intensities.pyx"],
-        extra_compile_args=["-Wall", "-Ofast", "-mavx", "-mavx2"]
-    ),
+    )
 ]
 
 
@@ -72,12 +67,14 @@ def make_pybind11_ext_modules(module_sources):
 
 
 pybind11_module_sources = [
+    ("tadataka.vo.semi_dense._depth",
+     ["tadataka/vo/semi_dense/_depth.cpp", "tadataka/_projection.cpp"]),
     ("tadataka.vo.semi_dense._epipolar",
      ["tadataka/vo/semi_dense/_epipolar.cpp"]),
     ("tadataka.vo.semi_dense._gradient",
      ["tadataka/vo/semi_dense/_gradient.cpp"]),
-    ("tadataka.vo.semi_dense._depth",
-     ["tadataka/vo/semi_dense/_depth.cpp", "tadataka/_projection.cpp"]),
+    ("tadataka.vo.semi_dense._intensities",
+     ["tadataka/vo/semi_dense/_intensities.cpp"]),
     ("tadataka.interpolation._interpolation",
      ["tadataka/interpolation/_interpolation.cpp",
       "tadataka/interpolation/_bilinear.cpp"]),
