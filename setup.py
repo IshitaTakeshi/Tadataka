@@ -68,25 +68,27 @@ def make_pybind11_ext_modules(module_sources):
 
 
 pybind11_module_sources = [
+    ("tadataka._homogeneous",
+     ["tadataka/_homogeneous.cpp"]),
+    ("tadataka._matrix",
+     ["tadataka/_matrix.cpp"]),
+    ("tadataka._projection",
+     ["tadataka/_projection.cpp"]),
+    ("tadataka._triangulation",
+     ["tadataka/_triangulation.cpp", "tadataka/_homogeneous.cpp"]),
     ("tadataka.vo.semi_dense._depth",
      ["tadataka/vo/semi_dense/_depth.cpp", "tadataka/_projection.cpp"]),
     ("tadataka.vo.semi_dense._epipolar",
      ["tadataka/vo/semi_dense/_epipolar.cpp"]),
     ("tadataka.vo.semi_dense._gradient",
      ["tadataka/vo/semi_dense/_gradient.cpp"]),
-    ("tadataka.vo.semi_dense._intensities",
-     ["tadataka/vo/semi_dense/_intensities.cpp"]),
     ("tadataka.vo.semi_dense._variance",
      ["tadataka/vo/semi_dense/_variance.cpp", "tadataka/_homogeneous.cpp"]),
+    ("tadataka.vo.semi_dense._intensities",
+     ["tadataka/vo/semi_dense/_intensities.cpp"]),
     ("tadataka.interpolation._interpolation",
      ["tadataka/interpolation/_interpolation.cpp",
       "tadataka/interpolation/_bilinear.cpp"]),
-    ("tadataka._homogeneous",
-     ["tadataka/_homogeneous.cpp"]),
-    ("tadataka._triangulation",
-     ["tadataka/_triangulation.cpp", "tadataka/_homogeneous.cpp"]),
-    ("tadataka._projection",
-     ["tadataka/_projection.cpp"]),
 ]
 
 

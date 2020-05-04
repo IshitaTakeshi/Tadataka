@@ -1,14 +1,8 @@
 import numpy as np
 
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
-
-
-def get_rotation(T):
-    return T[0:3, 0:3]
-
-
-def get_translation(T):
-    return T[0:3, 3]
+from tadataka import _homogeneous
+from tadataka._matrix import get_rotation, get_translation
 
 
 def get_rotation_translation(T):
@@ -57,11 +51,10 @@ def to_homogeneous(X):
     Returns:
         Homogeneous coordinates of shape (n_points, dim + 1)
     """
-    if X.ndim == 1:
-        return np.append(X, 1)
 
-    ones = np.ones((X.shape[0], 1))
-    return np.hstack((X, ones))
+    if X.ndim == 1:
+        return _homogeneous.to_homogeneous_vector(X)
+    return _homogeneous.to_homogeneous_vectors(X)
 
 
 def from_homogeneous(X):
