@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <pybind11/eigen.h>
 
+#include "tadataka/_projection.hpp"
 #include "tadataka/_types.hpp"
 
 
@@ -9,12 +10,7 @@ namespace py = pybind11;
 const double EPSILON = 1e-16;
 
 
-const Eigen::Vector2d pi(const Eigen::Ref<const Eigen::Vector3d>& p) {
-  return p(Eigen::seq(0, 1)) / (p(2) + EPSILON);
-}
-
-
-const Eigen::MatrixXd pi(
+const RowMajorMatrixXd<Eigen::Dynamic, 2> pi(
     const Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 3>>& P) {
   auto zs = P(Eigen::all, 2).array() + EPSILON;
   return P(Eigen::all, Eigen::seq(0, 1)).array().colwise() / zs;
@@ -51,8 +47,6 @@ PYBIND11_MODULE(_projection, m) {
         py::overload_cast<
           const Eigen::Matrix<double, Eigen::Dynamic, 2>,
                               const Eigen::VectorXd>(&inv_pi));
-  m.def("pi",
-        py::overload_cast<const Eigen::Ref<const Eigen::Vector3d>&>(&pi));
   m.def("pi",
         py::overload_cast<
           const Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 3>>&>(&pi));
