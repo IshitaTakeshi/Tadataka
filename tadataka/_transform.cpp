@@ -9,8 +9,8 @@ namespace py = pybind11;
 
 
 void transform(Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
-               Eigen::Ref<const Vectors3D> P0,
-               Eigen::Ref<Vectors3D> P1) {
+               Eigen::Ref<const RowVectors3D> P0,
+               Eigen::Ref<RowVectors3D> P1) {
   assert(P0.rows() == P1.rows());
   assert(P0.cols() == P1.cols());
 
