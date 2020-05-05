@@ -18,11 +18,12 @@ void warp2d(
     Eigen::Ref<Eigen::VectorXd>& depths1) {
   RowVectors3D P = inv_pi(xs0, depths0); // P0
   transform(T_10, P, P);  // P1 = T_10 * P0
-  xs1 = pi(P);  // P1
+  project_vectors(P, xs1);  // P1
   depths1 = P(Eigen::all, 2);
 }
 
 
 PYBIND11_MODULE(_warp, m) {
-  m.def("warp2d", &warp2d, py::return_value_policy::reference_internal);
+  m.def("warp2d", &warp2d,
+        py::return_value_policy::reference_internal);
 }
