@@ -8,7 +8,7 @@ namespace py = pybind11;
 
 
 void transform(
-    Eigen::Ref<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> T10,
+    Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
     Eigen::Ref<const Vectors3D> P0,
     Eigen::Ref<Vectors3D> P1) {
 
