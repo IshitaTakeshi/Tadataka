@@ -74,7 +74,7 @@ def test_warp2d():
     assert_array_almost_equal(us1, 3.0 * xs1)
 
 
-def test_local_warp2d():
+def test_warp2d_():
     rotation = Rotation.from_rotvec([0, np.pi/2, 0])
     t = np.array([0, 0, 4])
     pose10 = Pose(rotation, t)
