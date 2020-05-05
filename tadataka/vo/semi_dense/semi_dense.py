@@ -79,9 +79,9 @@ class InvDepthEstimator(object):
         if gradient_key < self.min_gradient:
             return prior, FLAG.INSUFFICIENT_GRADIENT
 
-        x_range_ref = ref_search_range(T_rk, x_key,
-                                       depth_search_range(*inv_depth_range))
-        xs_ref = ref_coordinates(x_range_ref, self.step_size_ref)
+        x_min_ref, x_max_ref = ref_search_range(
+            T_rk, x_key, depth_search_range(*inv_depth_range))
+        xs_ref = ref_coordinates((x_min_ref, x_max_ref), self.step_size_ref)
         if len(xs_ref) < len(xs_key):
             return prior, FLAG.REF_EPIPOLAR_TOO_SHORT
 
@@ -98,7 +98,6 @@ class InvDepthEstimator(object):
         argmin = search_intensities(intensities_key, intensities_ref)
         depth_key = calc_key_depth(T_rk, x_key, xs_ref[argmin])
 
-        x_max_ref, x_min_ref = x_range_ref
         direction = normalize_length(x_max_ref - x_min_ref)
         variance = calc_observation_variance(
             alpha=calc_alpha(T_rk, x_key, direction, prior.inv_depth),
@@ -117,7 +116,6 @@ class InvDepthMapEstimator(object):
         self.reference_selector = reference_selector
 
     def __call__(self, hypothesis: HypothesisMap):
-
         flag_map = np.full(hypothesis.shape, FLAG.NOT_PROCESSED)
         inv_depth_map = hypothesis.inv_depth_map
         variance_map = hypothesis.variance_map
