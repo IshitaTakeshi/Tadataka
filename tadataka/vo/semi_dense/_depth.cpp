@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
-#include "tadataka/_projection.h"
+#include "tadataka/_projection.hpp"
 
 
 namespace py = pybind11;

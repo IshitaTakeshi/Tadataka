@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-// #include "_homogeneous.h"
+#include "_homogeneous.hpp"
 
 namespace py = pybind11;
 

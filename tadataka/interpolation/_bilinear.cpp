@@ -1,5 +1,5 @@
 #include <math.h>
-#include "_bilinear.h"
+#include "_bilinear.hpp"
 
 
 double __interpolation(const double *image, const int width,

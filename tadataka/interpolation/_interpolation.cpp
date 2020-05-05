@@ -1,8 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-#include "tadataka/interpolation/_bilinear.h"
-#include "tadataka/_types.h"
+#include "tadataka/interpolation/_bilinear.hpp"
+#include "tadataka/_types.hpp"
 
 namespace py = pybind11;
 
