@@ -76,6 +76,8 @@ pybind11_module_sources = [
      ["tadataka/_matrix.cpp"]),
     ("tadataka._projection",
      ["tadataka/_projection.cpp"]),
+    ("tadataka._transform",
+     ["tadataka/_transform.cpp", "tadataka/_matrix.cpp"]),
     ("tadataka._triangulation",
      ["tadataka/_triangulation.cpp", "tadataka/_homogeneous.cpp"]),
     ("tadataka.vo.semi_dense._depth",
