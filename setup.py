@@ -45,7 +45,6 @@ for module in cython_ext_modules:
 pybind11_include_dirs = [get_pybind_include(False),
                          get_pybind_include(True),
                          "thirdparty/eigen",
-                         "thirdparty/catch",
                          os.getcwd()]
 
 pybind11_compile_args = [
@@ -90,7 +89,8 @@ pybind11_module_sources = [
     ("tadataka.vo.semi_dense._gradient",
      ["tadataka/vo/semi_dense/_gradient.cpp"]),
     ("tadataka.vo.semi_dense._variance",
-     ["tadataka/vo/semi_dense/_variance.cpp", "tadataka/_homogeneous.cpp"]),
+     ["tadataka/vo/semi_dense/_variance.cpp", "tadataka/_homogeneous.cpp",
+      "tadataka/_matrix.cpp", "tadataka/_projection.cpp"]),
     ("tadataka.vo.semi_dense._intensities",
      ["tadataka/vo/semi_dense/_intensities.cpp"]),
     ("tadataka.interpolation._interpolation",
