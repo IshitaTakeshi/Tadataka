@@ -8,9 +8,17 @@
 namespace py = pybind11;
 
 
-void transform(Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
-               Eigen::Ref<const RowVectors3D> P0,
-               Eigen::Ref<RowVectors3D> P1) {
+void transform(const Eigen::Ref<const RowMajorMatrixXd<3, 3>> R10,
+               const Eigen::Ref<const Eigen::VectorXd> t10,
+               const Eigen::Ref<const Eigen::RowVectorXd> p0,
+               Eigen::Ref<Eigen::RowVectorXd> p1) {
+  p1 = (R10 * p0.transpose() + t10).transpose();
+}
+
+
+void transform(const Eigen::Ref<const RowMajorMatrixXd<4, 4>>& T10,
+               const Eigen::Ref<const RowVectors3D>& P0,
+               Eigen::Ref<RowVectors3D>& P1) {
   assert(P0.rows() == P1.rows());
   assert(P0.cols() == P1.cols());
 
@@ -18,14 +26,16 @@ void transform(Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
   const auto t10 = get_translation(T10);
 
   for(int i = 0; i < P0.rows(); i++) {
-    auto p0 = P0.row(i).transpose();
-    auto p1 = R10 * p0 + t10;
-    P1.row(i) = p1.transpose();
+    transform(R10, t10, P0.row(i), P1.row(i));
   }
 }
 
 
 PYBIND11_MODULE(_transform, m) {
-  m.def("transform", &transform,
+  m.def("transform",
+        py::overload_cast<
+        const Eigen::Ref<const RowMajorMatrixXd<4, 4>>&,
+        const Eigen::Ref<const RowVectors3D>&,
+        Eigen::Ref<RowVectors3D>&>(&transform),
         py::return_value_policy::reference_internal);
 }
