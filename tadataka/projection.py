@@ -12,8 +12,13 @@ def pi(P):
     Project 3D points onto normalized image plane
     """
     if P.ndim == 1:
-        return _projection.pi(P).ravel()
-    return _projection.pi(P)
+        u = np.empty(2)
+        _projection.project_vector(P, u)
+        return u
+
+    U = np.empty((P.shape[0], 2))
+    _projection.project_vectors(P, U)
+    return U
 
 
 

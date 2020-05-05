@@ -10,10 +10,21 @@ namespace py = pybind11;
 const double EPSILON = 1e-16;
 
 
-const RowMajorMatrixXd<Eigen::Dynamic, 2> pi(
-    const Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 3>>& P) {
-  auto zs = P(Eigen::all, 2).array() + EPSILON;
-  return P(Eigen::all, Eigen::seq(0, 1)).array().colwise() / zs;
+void project_vector(
+    const Eigen::Ref<const Eigen::Vector3d>& p,
+    Eigen::Ref<Eigen::Vector2d> u) {
+  const double z = p(2) + EPSILON;
+  u = p(Eigen::seq(0, 1)) / z;
+}
+
+
+void project_vectors(
+    const Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 3>>& P,
+    Eigen::Ref<RowMajorMatrixXd<Eigen::Dynamic, 2>> U) {
+  for(int i = 0; i < P.rows(); i++) {
+    const double z = P(i, 2) + EPSILON;
+    U(i, Eigen::seq(0, 1)) = P(i, Eigen::seq(0, 1)) / z;
+  }
 }
 
 
@@ -47,7 +58,9 @@ PYBIND11_MODULE(_projection, m) {
         py::overload_cast<
           const Eigen::Matrix<double, Eigen::Dynamic, 2>,
                               const Eigen::VectorXd>(&inv_pi));
-  m.def("pi",
-        py::overload_cast<
-          const Eigen::Ref<const RowMajorMatrixXd<Eigen::Dynamic, 3>>&>(&pi));
+
+  m.def("project_vector", &project_vector,
+        py::return_value_policy::reference_internal);
+  m.def("project_vectors", &project_vectors,
+        py::return_value_policy::reference_internal);
 }
