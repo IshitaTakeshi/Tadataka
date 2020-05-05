@@ -68,6 +68,8 @@ def make_pybind11_ext_modules(module_sources):
 
 
 pybind11_module_sources = [
+    ("tadataka.camera._normalizer",
+     ["tadataka/camera/_normalizer.cpp"]),
     ("tadataka._homogeneous",
      ["tadataka/_homogeneous.cpp"]),
     ("tadataka._matrix",

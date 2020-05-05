@@ -1,3 +1,9 @@
+try:
+    from tadataka.camera._normalizer import normalize, unnormalize
+except ImportError:
+    import warnings
+    warnings.warn("tadataka.camera._normalizer is not built yet")
+
 
 class Normalizer(object):
     def __init__(self, camera_parameters):
@@ -13,9 +19,9 @@ class Normalizer(object):
         Returns:
             Normalized keypoints of the shape (n_keypoints, 2)
         """
-        return (keypoints - self.offset) / self.focal_length
+        return normalize(keypoints, self.focal_length, self.offset)
 
-    def unnormalize(self, normalized_keypoints):
+    def unnormalize(self, keypoints):
         """
         Inverse transformation from the normalized plane
         x = fx * (X / Z) + cx
@@ -24,4 +30,4 @@ class Normalizer(object):
         Returns:
             Keypoints of the shape (n_keypoints, 2)
         """
-        return normalized_keypoints * self.focal_length + self.offset
+        return unnormalize(keypoints, self.focal_length, self.offset)
