@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <pybind11/pybind11.h>
 
 #include "_matrix.hpp"
@@ -7,10 +8,11 @@
 namespace py = pybind11;
 
 
-void transform(
-    Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
-    Eigen::Ref<const Vectors3D> P0,
-    Eigen::Ref<Vectors3D> P1) {
+void transform(Eigen::Ref<const RowMajorMatrixXd<4, 4>> T10,
+               Eigen::Ref<const Vectors3D> P0,
+               Eigen::Ref<Vectors3D> P1) {
+  assert(P0.rows() == P1.rows());
+  assert(P0.cols() == P1.cols());
 
   const auto R10 = get_rotation(T10);
   const auto t10 = get_translation(T10);
