@@ -10,12 +10,12 @@ def sympy_codegen():
 
 class CustomBuildExt(build_ext):
     def run(self):
+        super().run()
+
         sympy_codegen()
 
         import numpy as np
         self.include_dirs.append(np.get_include())
-
-        super().run()
 
 
 cython_ext_modules=[
