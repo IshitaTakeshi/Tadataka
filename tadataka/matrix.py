@@ -1,7 +1,7 @@
 import numpy as np
 
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
-from tadataka import _homogeneous
+from rust_bindings import homogeneous
 from tadataka._matrix import get_rotation, get_translation
 
 
@@ -53,8 +53,8 @@ def to_homogeneous(X):
     """
 
     if X.ndim == 1:
-        return _homogeneous.to_homogeneous_vector(X)
-    return _homogeneous.to_homogeneous_vectors(X)
+        return homogeneous.to_homogeneous_vec(X)
+    return homogeneous.to_homogeneous_vecs(X)
 
 
 def from_homogeneous(X):

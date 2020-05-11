@@ -34,12 +34,12 @@ def test_solve_linear():
 
 def test_to_homogeneous():
     assert_array_equal(
-        to_homogeneous(np.array([[2, 3], [4, 5]])),
+        to_homogeneous(np.array([[2, 3], [4, 5]], dtype=np.float64)),
         [[2, 3, 1], [4, 5, 1]]
     )
 
     assert_array_equal(
-        to_homogeneous(np.array([2, 3])),
+        to_homogeneous(np.array([2, 3], dtype=np.float64)),
         [2, 3, 1]
     )
 

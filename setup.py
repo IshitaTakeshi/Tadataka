@@ -1,6 +1,6 @@
 import os
 from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
+from setuptools_rust import RustExtension, build_ext
 
 
 def sympy_codegen():
@@ -15,16 +15,7 @@ class CustomBuildExt(build_ext):
         import numpy as np
         self.include_dirs.append(np.get_include())
 
-        build_ext.run(self)
-
-
-class get_pybind_include(object):
-    def __init__(self, user):
-        self.user = user
-
-    def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
+        super().run()
 
 
 cython_ext_modules=[
@@ -40,6 +31,15 @@ cython_ext_modules=[
 
 for module in cython_ext_modules:
     module.cython_directives = {"language_level": 3}
+
+
+class get_pybind_include(object):
+    def __init__(self, user):
+        self.user = user
+
+    def __str__(self):
+        import pybind11
+        return pybind11.get_include(self.user)
 
 
 pybind11_include_dirs = [get_pybind_include(False),
@@ -69,8 +69,6 @@ def make_pybind11_ext_modules(module_sources):
 pybind11_module_sources = [
     ("tadataka.camera._normalizer",
      ["tadataka/camera/_normalizer.cpp"]),
-    ("tadataka._homogeneous",
-     ["tadataka/_homogeneous.cpp"]),
     ("tadataka._matrix",
      ["tadataka/_matrix.cpp"]),
     ("tadataka._projection",
@@ -93,9 +91,6 @@ pybind11_module_sources = [
       "tadataka/_matrix.cpp", "tadataka/_projection.cpp"]),
     ("tadataka.vo.semi_dense._intensities",
      ["tadataka/vo/semi_dense/_intensities.cpp"]),
-    ("tadataka.interpolation._interpolation",
-     ["tadataka/interpolation/_interpolation.cpp",
-      "tadataka/interpolation/_bilinear.cpp"]),
 ]
 
 
@@ -107,6 +102,12 @@ setup(
     author_email='ishitah.takeshi@gmail.com',
     license='Apache 2.0',
     packages=['tadataka'],
+    rust_extensions=[
+        RustExtension("rust_bindings.interpolation"),
+        RustExtension("rust_bindings.homogeneous"),
+        RustExtension("rust_bindings.projection"),
+    ],
+    setup_requires=["setuptools-rust"],
     install_requires=[
         'autograd',
         'bidict',
@@ -133,5 +134,6 @@ setup(
         cython_ext_modules +
         make_pybind11_ext_modules(pybind11_module_sources)
     ),
-    cmdclass = {'build_ext': CustomBuildExt},
+    cmdclass={'build_ext': CustomBuildExt},
+    zip_safe=False,
 )

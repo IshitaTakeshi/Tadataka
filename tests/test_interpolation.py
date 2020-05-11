@@ -5,7 +5,6 @@ from skimage import data
 
 import pytest
 
-from tadataka.interpolation import _interpolation as cpp_interpolation
 from tadataka.interpolation import interpolation
 
 
@@ -78,26 +77,3 @@ def test_interpolation():
 
     with pytest.raises(ValueError):
         interpolation(image, [0.0, -0.01])
-
-
-def test_cpp_interpolation_():
-    np.random.seed(3939)
-
-    image = data.clock().astype(np.float64)
-    height, width = image.shape
-
-    N = 2000
-    X = np.random.uniform(0, width-1, N)
-    Y = np.random.uniform(0, height-1, N)
-    C = np.column_stack((X, Y))
-
-    expected = map_coordinates(image, np.vstack((Y, X)), order=1)
-    intensities = cpp_interpolation.interpolation(image, C)
-    assert_array_almost_equal(intensities, expected)
-
-    C = np.array([[width-1, 0],
-                  [0, height-1],
-                  [width-1, height-1]])
-    intensities = cpp_interpolation.interpolation(image, C.astype(np.float64))
-    expected = image[C[:, 1], C[:, 0]]
-    assert_array_almost_equal(intensities, expected)
