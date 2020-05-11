@@ -24,8 +24,8 @@ def get_resized(frame, scale):
 def test_pose_change_estimator():
     dataset = NewTsukubaDataset(new_tsukuba)
 
-    frame0_, frame1_ = dataset[0][0], dataset[4][0]
-    scale = 0.7
+    frame0_, frame1_ = dataset[0][0], dataset[4][1]
+    scale = 0.2
     camera_model0, I0, D0 = get_resized(frame0_, scale)
     camera_model1, I1, __ = get_resized(frame1_, scale)
 
@@ -42,6 +42,7 @@ def test_pose_change_estimator():
         assert(error(pose10_pred) < error(pose_identity))
         assert(error(pose10_pred) < error(pose10_true) * rate)
 
+    print("before evaluate")
     evaluate(weights=None, rate=2.)
     evaluate(weights=np.ones(I0.shape), rate=2.)
     evaluate(weights="tukey", rate=3.)  # currently tukey cannot work well
