@@ -44,6 +44,43 @@ fn inv_project_vecs(xs: ArrayView2<'_, f64>, depths: ArrayView1<'_, f64>) -> Arr
     ps
 }
 
+fn from_homogeneous_vec(x: ArrayView1<'_, f64>) -> Array1<f64> {
+    let n = x.shape()[0];
+    x.slice(s![0..n-1]).to_owned()
+}
+
+fn from_homogeneous_vecs(xs: ArrayView2<'_, f64>) -> Array2<f64> {
+    let n = xs.shape()[0];
+    xs.slice(s![.., 0..n-1]).to_owned()
+}
+
+fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
+             -> Array2<f64> {
+    let points1 = transform10.dot(&to_homogeneous_vecs(points0));
+    from_homogeneous_vecs(points1.view())
+}
+
+#[pymodule]
+fn warp(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    fn warp(transform10: ArrayView2<'_, f64>,
+            xs0: ArrayView2<'_, f64>, depths0: ArrayView1<'_, f64>)
+        -> Array2<f64> {
+        let points0 = inv_project_vecs(xs0, depths0);
+        let points1 = transform(transform10, points0.view());
+        project_vecs(points1.view())
+    }
+
+    #[pyfn(m, "warp")]
+    fn warp_py(py: Python<'_>, transform10: &PyArray2<f64>,
+               xs: &PyArray2<f64>, depths: &PyArray1<f64>) -> Py<PyArray2<f64>> {
+        warp(transform10.as_array(), xs.as_array(), depths.as_array())
+            .into_pyarray(py)
+            .to_owned()
+    }
+
+    Ok(())
+}
+
 #[pymodule]
 fn homogeneous(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "to_homogeneous_vec")]
