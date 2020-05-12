@@ -114,7 +114,7 @@ setup(
         'cython',
         'matplotlib',
         'numba',
-        'numpy',
+        'numpy>=1.17.3',
         # TODO make independent from opencv
         'opencv-python==4.2.0.34',
         'opencv-contrib-python==4.2.0.34',
