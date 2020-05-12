@@ -116,8 +116,8 @@ setup(
         'numba',
         'numpy',
         # TODO make independent from opencv
-        'opencv-python',
-        'opencv-contrib-python',
+        'opencv-python==4.2.0',
+        'opencv-contrib-python==4.2.0',
         'pandas',
         'pybind11',
         'pyyaml>=5.3',
