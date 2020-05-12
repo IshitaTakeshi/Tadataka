@@ -119,7 +119,6 @@ setup(
         'opencv-python',
         'opencv-contrib-python',
         'pandas',
-        'Pillow==7.0.0',
         'pybind11',
         'pyyaml>=5.3',
         'scikit-image',
