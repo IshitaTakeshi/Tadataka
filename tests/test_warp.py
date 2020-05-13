@@ -51,8 +51,8 @@ def test_warp2d():
     xs0 = np.array([
         [0, 0],
         [0, -1]
-    ])
-    depths0 = np.array([2, 4])
+    ], dtype=np.float64)
+    depths0 = np.array([2, 4], dtype=np.float64)
 
     xs1, depths1 = warp_depth(warp3d, xs0, depths0)
 
@@ -82,8 +82,8 @@ def test_warp2d_():
     xs0 = np.array([
         [0, 0],
         [2, -1]
-    ])
-    depths0 = np.array([2, 4])
+    ], dtype=np.float64)
+    depths0 = np.array([2, 4], dtype=np.float64)
     # [2, 0, 0] + [0, 0, 4] = [2, 0, 4]
     # [4, -4, -8] + [0, 0, 4] = [4, -4, -4]
 
