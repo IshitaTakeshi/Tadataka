@@ -1,5 +1,8 @@
+#![feature(test)]
 #[macro_use(s)]
 extern crate ndarray;
+extern crate test;
+
 use ndarray::{stack, Array, Array1, Array2, ArrayView1, ArrayView2, Axis};
 use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python};
@@ -94,6 +97,7 @@ fn warp(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_warp() {
@@ -116,6 +120,32 @@ mod tests {
                  -1.0, 1.0]
         ).unwrap();
         assert_eq!(warp_(T10.view(), xs0.view(), depths0.view()), xs1);
+    }
+
+    #[bench]
+    fn bench_warp(b: &mut Bencher) {
+        let T10 = Array::from_shape_vec(
+            (4, 4),
+            vec![ 0., 0., 1., 0.,
+                  0., 1., 0., 0.,
+                 -1., 0., 0., 4.,
+                  0., 0., 0., 1.]
+        ).unwrap();
+        let xs0 = Array::from_shape_vec(
+            (2, 2),
+            vec![0.,  0.,
+                 2., -1.]
+        ).unwrap();
+        let depths0 = Array::from_shape_vec(2, vec![2., 4.]).unwrap();
+        let xs1 = Array::from_shape_vec(
+            (2, 2),
+            vec![0.5, 0.0,
+                 -1.0, 1.0]
+        ).unwrap();
+        let T10_view = T10.view();
+        let xs0_view = xs0.view();
+        let depths0_view = depths0.view();
+        b.iter(|| warp_(T10_view, xs0_view, depths0_view))
     }
 
     #[test]
