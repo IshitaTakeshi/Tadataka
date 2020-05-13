@@ -46,40 +46,141 @@ fn inv_project_vecs(xs: ArrayView2<'_, f64>, depths: ArrayView1<'_, f64>) -> Arr
 
 fn from_homogeneous_vec(x: ArrayView1<'_, f64>) -> Array1<f64> {
     let n = x.shape()[0];
-    x.slice(s![0..n-1]).to_owned()
+    x.slice(s![0..n - 1]).to_owned()
 }
 
 fn from_homogeneous_vecs(xs: ArrayView2<'_, f64>) -> Array2<f64> {
-    let n = xs.shape()[0];
-    xs.slice(s![.., 0..n-1]).to_owned()
+    let n_cols = xs.shape()[1];
+    xs.slice(s![.., 0..n_cols-1]).to_owned()
 }
 
 fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
-             -> Array2<f64> {
-    let points1 = transform10.dot(&to_homogeneous_vecs(points0));
+    -> Array2<f64> {
+    let points0 = to_homogeneous_vecs(points0);
+    let points0 = points0.t();
+    let points1 = transform10.dot(&points0);
+    let points1 = points1.t();
     from_homogeneous_vecs(points1.view())
+}
+
+fn warp_(
+    transform10: ArrayView2<'_, f64>,
+    xs0: ArrayView2<'_, f64>,
+    depths0: ArrayView1<'_, f64>,
+) -> Array2<f64> {
+    let points0 = inv_project_vecs(xs0, depths0);
+    let points1 = transform(transform10, points0.view());
+    project_vecs(points1.view())
 }
 
 #[pymodule]
 fn warp(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    fn warp(transform10: ArrayView2<'_, f64>,
-            xs0: ArrayView2<'_, f64>, depths0: ArrayView1<'_, f64>)
-        -> Array2<f64> {
-        let points0 = inv_project_vecs(xs0, depths0);
-        let points1 = transform(transform10, points0.view());
-        project_vecs(points1.view())
-    }
-
     #[pyfn(m, "warp")]
-    fn warp_py(py: Python<'_>, transform10: &PyArray2<f64>,
-               xs: &PyArray2<f64>, depths: &PyArray1<f64>) -> Py<PyArray2<f64>> {
-        warp(transform10.as_array(), xs.as_array(), depths.as_array())
+    fn warp_py(
+        py: Python<'_>,
+        transform10: &PyArray2<f64>,
+        xs: &PyArray2<f64>,
+        depths: &PyArray1<f64>,
+    ) -> Py<PyArray2<f64>> {
+        warp_(transform10.as_array(), xs.as_array(), depths.as_array())
             .into_pyarray(py)
             .to_owned()
     }
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_warp() {
+        let T10 = Array::from_shape_vec(
+            (4, 4),
+            vec![ 0., 0., 1., 0.,
+                  0., 1., 0., 0.,
+                 -1., 0., 0., 4.,
+                  0., 0., 0., 1.]
+        ).unwrap();
+        let xs0 = Array::from_shape_vec(
+            (2, 2),
+            vec![0.,  0.,
+                 2., -1.]
+        ).unwrap();
+        let depths0 = Array::from_shape_vec(2, vec![2., 4.]).unwrap();
+        let xs1 = Array::from_shape_vec(
+            (2, 2),
+            vec![0.5, 0.0,
+                 -1.0, 1.0]
+        ).unwrap();
+        assert_eq!(warp_(T10.view(), xs0.view(), depths0.view()), xs1);
+    }
+
+    #[test]
+    fn test_transform() {
+        let P0 = Array::from_shape_vec(
+            (2, 3),
+            vec![1.,  2., 5.,
+                 4., -2., 3.]
+        ).unwrap();
+
+        let T10 = Array::from_shape_vec(
+            (4, 4),
+            vec![1., 0.,  0., 1.,
+                 0., 0., -1., 2.,
+                 0., 1.,  0., 3.,
+                 0., 0.,  0., 1.]
+        ).unwrap();
+
+        let P1 = Array::from_shape_vec(
+            (2, 3),
+            vec![2., -3., 5.,
+                 5., -1., 1.]
+        ).unwrap();
+
+        assert_eq!(transform(T10.view(), P0.view()), P1)
+    }
+
+    #[test]
+    fn test_to_homogeneous_vecs() {
+        let P = Array::from_shape_vec(
+            (2, 2),
+            vec![2., 3.,
+                 4., 5.]
+        ).unwrap();
+        let expected = Array::from_shape_vec(
+            (2, 3),
+            vec![2., 3., 1.,
+                 4., 5., 1.]
+        ).unwrap();
+        assert_eq!(to_homogeneous_vecs(P.view()), expected);
+    }
+
+    #[test]
+    fn test_to_homogeneous_vec() {
+        let p = Array::from_shape_vec(2, vec![2., 3.]).unwrap();
+        let expected = Array::from_shape_vec(3, vec![2., 3., 1.]).unwrap();
+        assert_eq!(to_homogeneous_vec(p.view()), expected);
+    }
+
+    #[test]
+    fn test_from_homogeneous_vecs() {
+        let P = Array::from_shape_vec(
+            (2, 3),
+            vec![2., 3., 1.,
+                 4., 5., 1.]
+        ).unwrap();
+        let expected = Array::from_shape_vec(
+            (2, 2),
+            vec![2., 3.,
+                 4., 5.]
+        ).unwrap();
+        assert_eq!(from_homogeneous_vecs(P.view()), expected);
+    }
+}
+
 
 #[pymodule]
 fn homogeneous(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -111,8 +212,7 @@ fn projection(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     }
 
     #[pyfn(m, "inv_project_vec")]
-    fn inv_project_vec_py(py: Python<'_>, x: &PyArray1<f64>, depth: f64)
-        -> Py<PyArray1<f64>> {
+    fn inv_project_vec_py(py: Python<'_>, x: &PyArray1<f64>, depth: f64) -> Py<PyArray1<f64>> {
         inv_project_vec(x.as_array(), depth)
             .into_pyarray(py)
             .to_owned()
