@@ -44,14 +44,14 @@ fn inv_project_vecs(xs: ArrayView2<'_, f64>, depths: ArrayView1<'_, f64>) -> Arr
     ps
 }
 
-fn from_homogeneous_vec(x: ArrayView1<'_, f64>) -> Array1<f64> {
+fn from_homogeneous_vec<'a>(x: &'a ArrayView1<'a, f64>) -> ArrayView1<'a, f64> {
     let n = x.shape()[0];
-    x.slice(s![0..n - 1]).to_owned()
+    x.slice(s![0..n - 1])
 }
 
-fn from_homogeneous_vecs(xs: ArrayView2<'_, f64>) -> Array2<f64> {
+fn from_homogeneous_vecs<'a>(xs: &'a ArrayView2<'a, f64>) -> ArrayView2<'a, f64> {
     let n_cols = xs.shape()[1];
-    xs.slice(s![.., 0..n_cols-1]).to_owned()
+    xs.slice(s![.., 0..n_cols-1])
 }
 
 fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
@@ -60,7 +60,7 @@ fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
     let points0 = points0.t();
     let points1 = transform10.dot(&points0);
     let points1 = points1.t();
-    from_homogeneous_vecs(points1.view())
+    from_homogeneous_vecs(&points1.view()).to_owned()
 }
 
 fn warp_(
@@ -177,7 +177,7 @@ mod tests {
             vec![2., 3.,
                  4., 5.]
         ).unwrap();
-        assert_eq!(from_homogeneous_vecs(P.view()), expected);
+        assert_eq!(from_homogeneous_vecs(&P.view()), expected);
     }
 }
 
