@@ -103,9 +103,11 @@ setup(
     license='Apache 2.0',
     packages=['tadataka'],
     rust_extensions=[
-        RustExtension("rust_bindings.interpolation"),
-        RustExtension("rust_bindings.homogeneous"),
-        RustExtension("rust_bindings.projection"),
+        RustExtension("rust_bindings.homogeneous", debug=False),
+        RustExtension("rust_bindings.interpolation", debug=False),
+        RustExtension("rust_bindings.transform", debug=False),
+        RustExtension("rust_bindings.projection", debug=False),
+        RustExtension("rust_bindings.warp", debug=False),
     ],
     setup_requires=["setuptools-rust"],
     install_requires=[
