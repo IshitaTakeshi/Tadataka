@@ -2,10 +2,14 @@ import numpy as np
 
 from tadataka.decorator import allow_1d
 from tadataka.utils import is_in_image_range
-from tadataka.interpolation import _interpolation as cpp_interpolation
+from rust_bindings import interpolation as _interpolation
 
 
 @allow_1d(which_argument=1)
+def interpolation_(image, C):
+    return _interpolation.interpolation(image, C)
+
+
 def interpolation(image, C):
     """
     Args:
@@ -22,4 +26,4 @@ def interpolation(image, C):
             "Coordinates {} out of image range".format(C[~mask])
         )
 
-    return cpp_interpolation.interpolation(image, C)
+    return interpolation_(image, C)
