@@ -12,5 +12,6 @@ fn transform(py: Python<'_>, transform10: &PyArray2<f64>,
 #[pymodule(transform)]
 fn transform_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(transform))?;
+
     Ok(())
 }

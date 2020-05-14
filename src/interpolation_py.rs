@@ -19,5 +19,6 @@ fn interpolation(py: Python<'_>, image: &PyArray2<f64>,
 #[pymodule(interpolation)]
 fn interpolation_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(interpolation))?;
+
     Ok(())
 }

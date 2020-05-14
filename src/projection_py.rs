@@ -3,7 +3,6 @@ use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::{pyfunction, pymodule, Py, PyModule, PyResult, Python};
 use pyo3::wrap_pyfunction;
 
-
 #[pyfunction]
 fn project_vec(py: Python<'_>, x: &PyArray1<f64>) -> Py<PyArray1<f64>> {
     projection::project_vec(x.as_array()).into_pyarray(py).to_owned()

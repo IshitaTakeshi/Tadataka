@@ -17,5 +17,6 @@ fn warp(py: Python<'_>, transform10: &PyArray2<f64>,
 #[pymodule(warp)]
 fn warp_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(warp))?;
+
     Ok(())
 }

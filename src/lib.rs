@@ -3,12 +3,13 @@
 extern crate ndarray;
 
 pub mod homogeneous;
-pub mod homogeneous_pymodule;
 pub mod interpolation;
-pub mod interpolation_pymodule;
 pub mod projection;
-pub mod projection_pymodule;
 pub mod transform;
-pub mod transform_pymodule;
 pub mod warp;
-pub mod warp_pymodule;
+
+pub mod homogeneous_py;
+pub mod interpolation_py;
+pub mod projection_py;
+pub mod transform_py;
+pub mod warp_py;
