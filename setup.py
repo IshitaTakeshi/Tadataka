@@ -1,6 +1,5 @@
 import os
 from setuptools import setup, Extension
-from setuptools import build_ext
 from setuptools_rust import RustExtension, Binding
 from setuptools_rust import build_ext as rust_build_ext
 
@@ -10,11 +9,8 @@ def sympy_codegen():
     radtan_codegen.generate()
 
 
-class CustomBuildExt(build_ext):
+class CustomBuildExt(rust_build_ext):
     def run(self):
-        rust_build_ext.run()
-
-        import numpy as np
         self.include_dirs.append(np.get_include())
 
         sympy_codegen()
@@ -120,7 +116,6 @@ setup(
         'cython',
         'matplotlib',
         'numba',
-        'numpy>=1.17.3',
         # TODO make independent from opencv
         'opencv-python==4.2.0.34',
         'opencv-contrib-python==4.2.0.34',
@@ -129,7 +124,6 @@ setup(
         'pyyaml>=5.3',
         'scikit-image',
         'scikit-learn',
-        'setuptools>=18.0',  # >= 18.0 can handle cython
         'scipy>=1.4.1',
         'sympy',
         'sparseba',
