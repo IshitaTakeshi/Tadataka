@@ -1,2 +1,5 @@
 [build-system]
-requires = ["setuptools>41.1", "setuptools-rust==0.10.6", "numpy>=1.17.3"]
+requires = [
+  "setuptools>41.1", "setuptools-rust==0.10.6",  // for building extensions
+  "numpy>=1.17.3", "sympy>=1.5.1",  // for generating C code before build
+]
