@@ -4,13 +4,16 @@ from tadataka.rigid_transform import transform_se3
 from tadataka.decorator import allow_1d
 from tadataka.projection import inv_pi, pi
 from tadataka.pose import Pose
-from tadataka import _warp
+from rust_bindings import warp as _warp
 
 
-def warp2d_(T_10, xs0, depths0):
+def warp2d_(T10, xs0, depths0):
     xs1 = np.empty(xs0.shape)
     depths1 = np.empty(depths0.shape)
-    _warp.warp2d(T_10, xs0, depths0, xs1, depths1)
+    xs1 = _warp.warp(T10, xs0, depths0)
+    # FIXME computation of depths1 is redundant
+    P1 = transform_se3(T10, inv_pi(xs0, depths0))
+    depths1 = P1[:, 2]
     return xs1, depths1
 
 
