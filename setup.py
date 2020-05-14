@@ -1,6 +1,8 @@
 import os
 from setuptools import setup, Extension
-from setuptools_rust import RustExtension, build_ext
+from setuptools import build_ext
+from setuptools_rust import RustExtension, Binding
+from setuptools_rust import build_ext as rust_build_ext
 
 
 def sympy_codegen():
@@ -10,6 +12,8 @@ def sympy_codegen():
 
 class CustomBuildExt(build_ext):
     def run(self):
+        rust_build_ext.run()
+
         import numpy as np
         self.include_dirs.append(np.get_include())
 
