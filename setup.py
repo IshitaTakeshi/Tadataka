@@ -2,6 +2,7 @@ import os
 from setuptools import setup, Extension
 from setuptools_rust import RustExtension, Binding
 from setuptools_rust import build_ext as rust_build_ext
+import numpy as np
 
 
 def sympy_codegen():
