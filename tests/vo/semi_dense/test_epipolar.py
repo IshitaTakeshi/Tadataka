@@ -40,10 +40,10 @@ def test_ref_coordinates():
 
 
 def test_key_coordinates_():
-    x_key = np.array([7.0, 8.0])
-    direction = np.array([9, 12])
-    step_size = 5.0
-    t_rk = np.array([-4, -8, 2])
+    x_key = np.array([7., 8.])
+    direction = np.array([9., 12.])
+    step_size = 5.
+    t_rk = np.array([-4., -8., 2.])
 
     expected = np.array([
         [7 - 2 * 3, 8 - 2 * 4],
@@ -51,7 +51,7 @@ def test_key_coordinates_():
         [7 - 0 * 3, 8 - 0 * 4],
         [7 + 1 * 3, 8 + 1 * 4],
         [7 + 2 * 3, 8 + 2 * 4]
-    ])
+    ], dtype=np.float64)
     # step should be [3, 4]
     assert_array_almost_equal(key_coordinates_(direction, x_key, step_size),
                               expected)
@@ -60,8 +60,8 @@ def test_key_coordinates_():
 
 
 def test_key_epipolar_direction():
-    t_rk = np.array([3, 0, 6])
-    x_key = np.array([0, 0.5])
+    t_rk = np.array([3., 0., 6.])
+    x_key = np.array([0., 0.5])
     assert_array_equal(key_epipolar_direction(t_rk, x_key), [-0.5, 0.5])
 
 
