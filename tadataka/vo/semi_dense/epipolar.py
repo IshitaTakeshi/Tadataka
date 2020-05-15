@@ -5,7 +5,7 @@ from tadataka.vector import normalize_length
 from tadataka.utils import is_in_image_range
 from tadataka.matrix import inv_motion_matrix, get_translation
 from tadataka.vo.semi_dense._epipolar import key_coordinates_, calc_coordinates
-from tadataka._warp import warp2d
+from tadataka.warp import warp2d_
 
 
 EPSILON = 1e-16
@@ -38,7 +38,7 @@ def ref_search_range(T_rk, x_key, depth_range):
     xs_ref = np.empty(xs_key.shape)
     depths_ref = np.empty(depths_key.shape)
 
-    warp2d(T_rk, xs_key, depths_key, xs_ref, depths_ref)
+    xs_ref, depths_ref = warp2d_(T_rk, xs_key, depths_key)
 
     x_min_ref, x_max_ref = xs_ref
     return x_min_ref, x_max_ref
