@@ -66,10 +66,10 @@ def test_key_epipolar_direction():
 
 
 def test_ref_search_range():
-    T_rk = motion_matrix(Rotation.from_rotvec([0, -np.pi/2, 0]).as_matrix(),
-                         np.array([2, 0, 2]))
-    x_key = np.array([0, 0])
-    search_range = 1, 3
+    T_rk = motion_matrix(Rotation.from_rotvec([0., -np.pi/2, 0.]).as_matrix(),
+                         np.array([2., 0., 2.]))
+    x_key = np.array([0., 0.])
+    search_range = 1.0, 3.0
     x_ref_min, x_ref_max = ref_search_range(T_rk, x_key, search_range)
     assert_array_almost_equal(x_ref_min, [0.5, 0.0])
     assert_array_almost_equal(x_ref_max, [-0.5, 0.0])
