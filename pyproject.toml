@@ -1,6 +1,6 @@
 [build-system]
 requires = [
   "setuptools>41.1", "setuptools-rust==0.10.6",
-  "numpy>=1.17.3", "sympy>=1.5.1", "cython>=0.29.17",  # for generating C code
+  "numpy>=1.17.3", "sympy>=1.5.1", "Cython>=0.29.17",  # for generating C code
   "pybind11>=2.5.0"  # for compiling C++ code
 ]
