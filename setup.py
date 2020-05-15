@@ -2,13 +2,16 @@ import os
 from setuptools import setup, Extension
 from setuptools_rust import RustExtension, Binding
 from setuptools_rust import build_ext as rust_build_ext
+
+from Cython.Build import cythonize
 import numpy as np
 
 from tadataka.camera import radtan_codegen
 
+
 radtan_codegen.generate()
 
-cython_ext_modules=[
+cython_ext_modules = [
     Extension(
         "tadataka.camera._radtan",
         sources=["tadataka/camera/_radtan.pyx",
@@ -103,7 +106,6 @@ setup(
     install_requires=[
         'autograd',
         'bidict',
-        'cython',
         'matplotlib',
         'numba',
         # TODO make independent from opencv
@@ -115,12 +117,11 @@ setup(
         'scikit-image==0.16.2',
         'scikit-learn',
         'scipy>=1.4.1',
-        'sympy',
         'sparseba',
         'tqdm',
     ],
     ext_modules=(
-        cython_ext_modules +
+        cythonize(cython_ext_modules) +
         make_pybind11_ext_modules(pybind11_module_sources)
     ),
     zip_safe=False
