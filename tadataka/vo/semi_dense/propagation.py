@@ -1,10 +1,11 @@
 import numpy as np
 
 from tadataka.coordinates import substitute, get
-from tadataka.vo.semi_dense.stat import are_statically_same
-from tadataka.vo.semi_dense.fusion import fusion
-from tadataka.vo.semi_dense.common import invert_depth
 from tadataka.vo.semi_dense.coordinates import warp_coordinates
+from tadataka.vo.semi_dense.fusion import fusion_
+from tadataka.vo.semi_dense.hypothesis import HypothesisMap
+from tadataka.vo.semi_dense.stat import are_statically_same
+from tadataka.numeric import safe_invert
 
 
 def propagate_variance(inv_depths0, inv_depths1, variances0, uncertaintity):
@@ -18,10 +19,10 @@ def propagate_variance(inv_depths0, inv_depths1, variances0, uncertaintity):
 def handle_collision_(inv_depth_a, inv_depth_b, variance_a, variance_b):
     if are_statically_same(inv_depth_a, inv_depth_b,
                            variance_a, variance_b, factor=2.0):
-        return fusion(inv_depth_a, inv_depth_b, variance_a, variance_b)
+        return fusion_(inv_depth_a, inv_depth_b, variance_a, variance_b)
 
     # b is hidden by a
-    if invert_depth(inv_depth_a) < invert_depth(inv_depth_b):
+    if safe_invert(inv_depth_a) < safe_invert(inv_depth_b):
         return (inv_depth_a, variance_a)
     else:
         return (inv_depth_b, variance_b)
@@ -51,17 +52,24 @@ def substitute(us, inv_depths, variances, shape,
                                               inv_depths, variances, shape)
     inv_depth_map[np.isnan(inv_depth_map)] = default_inv_depth
     variance_map[np.isnan(variance_map)] = default_variance
-    return inv_depth_map, variance_map
+    return HypothesisMap(inv_depth_map, variance_map)
 
 
-def propagation(inv_depth_map0, variance_map0,
-                default_inv_depth=1.0, default_variance=1.0,
-                uncertaintity_bias=1.0):
-    us0, us1, inv_depths0, inv_depths1 = warp_coordinates(
-        warp10, inv_depth_map0
-    )
-    variances1 = propagate_variance(inv_depths0, inv_depths1,
-                                    get(variance_map0, us0),
-                                    uncertaintity_bias)
-    return substitute(us1, inv_depths1, variances1, inv_depth_map0.shape,
-                      default_inv_depth, default_variance)
+class Propagation(object):
+    def __init__(self, default_inv_depth, default_variance,
+                 uncertaintity_bias=1.0):
+        self.default_inv_depth = default_inv_depth
+        self.default_variance = default_variance
+        self.uncertaintity_bias = uncertaintity_bias
+
+    def __call__(self, warp10, H0: HypothesisMap):
+        us0, us1, depths0, depths1 = warp_coordinates(warp10, H0.depth_map)
+        inv_depths0 = safe_invert(depths0)
+        inv_depths1 = safe_invert(depths1)
+        variances1 = propagate_variance(inv_depths0, inv_depths1,
+                                        get(H0.variance_map, us0),
+                                        self.uncertaintity_bias)
+        return substitute(
+            us1, inv_depths1, variances1, H0.shape,
+            self.default_inv_depth, self.default_variance
+        )

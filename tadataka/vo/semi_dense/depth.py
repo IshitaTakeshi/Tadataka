@@ -1,17 +1,16 @@
 import numpy as np
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.projection import inv_pi
 from tadataka.matrix import get_rotation_translation
 from tadataka.triangulation import calc_depth0_
 from tadataka.rigid_transform import transform_se3
+from tadataka.vo.semi_dense._depth import calc_ref_depth
 
 
 def calc_ref_inv_depth(T_rk, x_key, inv_depth_key):
-    depth_key = invert_depth(inv_depth_key)
-    p_key = inv_pi(x_key, depth_key)
-    p_ref = transform_se3(T_rk, p_key)
-    depth_ref = p_ref[2]
-    return invert_depth(depth_ref)
+    depth_key = safe_invert(inv_depth_key)
+    depth_ref = calc_ref_depth(T_rk, x_key, depth_key)
+    return safe_invert(depth_ref)
 
 
 def calc_key_depth(T_rk, x_key, x_ref):
@@ -49,6 +48,6 @@ class InvDepthSearchRange(object):
 
 
 def depth_search_range(min_inv_depth, max_inv_depth):
-    min_depth = invert_depth(max_inv_depth)
-    max_depth = invert_depth(min_inv_depth)
+    min_depth = safe_invert(max_inv_depth)
+    max_depth = safe_invert(min_inv_depth)
     return min_depth, max_depth

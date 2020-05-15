@@ -107,8 +107,6 @@ class _PoseChangeEstimator(object):
                 break
             prev_error = curr_error
 
-            print("norm(xi) = {:.6f}  error = {:.6f}".format(norm(xi), curr_error))
-
             pose10 = candidate
         return pose10
 
@@ -130,7 +128,6 @@ class PoseChangeEstimator(object):
         assert(np.ndim(D0) == 2)
         assert(np.ndim(I1) == 2)
 
-        print("\n")
         for level in list(reversed(range(self.n_coarse_to_fine))):
             pose10 = self._estimate_at(pose10, level, I0, D0, I1, weights)
 
@@ -151,27 +148,3 @@ class PoseChangeEstimator(object):
             W0 = rescale(W0, scale)
 
         return estimator(I0, D0, I1, prior, W0)
-
-
-class DVO(object):
-    def __init__(self):
-        self.pose = WorldPose.identity()
-        self.frames = []
-
-    def estimate(self, frame1):
-        if len(self.frames) == 0:
-            self.frames.append(frame1)
-            return self.pose
-
-        frame0 = self.frames[-1]
-
-        I0, D0 = rgb2gray(frame0.image), frame0.depth_map
-        I1 = rgb2gray(frame1.image)
-
-        estimator = PoseChangeEstimator(frame1.camera_model, I0, D0, I1)
-        dpose = estimator.estimate()
-
-        self.frames.append(frame1)
-
-        self.pose = dpose * self.pose
-        return self.pose

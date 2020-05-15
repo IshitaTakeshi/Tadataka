@@ -1,28 +1,28 @@
 import numpy as np
 
 from tadataka.matrix import to_homogeneous
+from rust_bindings import projection
 
 
 EPSILON = 1e-16
 
 
 def pi(P):
+    """
+    Project 3D points onto normalized image plane
+    """
     if P.ndim == 1:
-        return P[0:2] / (P[2] + EPSILON)
-
-    # copy since numba doesn't support reshape of non-contiguous array
-    z = np.copy(P[:, 2])
-    Z = z.reshape(z.shape[0], 1)
-
-    XY = P[:, 0:2]
-
-    return XY / (Z + EPSILON)
+        return projection.project_vec(P)
+    return projection.project_vecs(P)
 
 
 def inv_pi(xs, depths):
+    """
+    Inverse projection from normalized image plane to 3D
+    """
     if xs.ndim == 1:
-        return depths * to_homogeneous(xs)
-    return depths.reshape(-1, 1) * to_homogeneous(xs)
+        return projection.inv_project_vec(xs, depths)
+    return projection.inv_project_vecs(xs, depths)
 
 
 class PerspectiveProjection(object):

@@ -1,9 +1,22 @@
 import sympy
-from sympy import Matrix
-from sympy.utilities.autowrap import autowrap
+from sympy import BlockMatrix, Matrix, Symbol
+from tadataka.codegen import generate_c_code
 
 
-autowrap_backend = "cython"
+def MatrixSymbol(name, n, m):
+    matrix = sympy.MatrixSymbol(name, n, m)
+    for element in matrix:
+        element._assumptions.update({
+            'real': True,
+            'commutative': True,
+            'complex': True,
+            'extended_real': True,
+            'finite': True,
+            'hermitian': True,
+            'infinite': False,
+            'imaginary': False
+        })
+    return matrix
 
 
 so3_base0 = Matrix([
@@ -32,45 +45,50 @@ def tangent_so3(v):
 EPSILON = 1e-16
 
 
-def exp_so3_symbols(omega):
-    epsilons = EPSILON * sympy.ones(1, 3)
-    # add 'epsilons' to 'omega' directly
+def exp_so3_symbols(rotvec):
+    epsilons = EPSILON * sympy.ones(3, 1)
+    # add 'epsilons' to 'rotvec' directly
     # ZeroDivision occurs in grad calculation if we add EPSILON to 'theta'
-    theta = (omega + epsilons).norm()
-    K = tangent_so3(omega / theta)
+    # in the denominator
+    theta = Matrix(rotvec + epsilons).norm()
+    K = tangent_so3(rotvec / theta)
     I = sympy.eye(3)
     return I + sympy.sin(theta) * K + (1-sympy.cos(theta)) * K * K
 
 
-def transform_symbols(R, t, P):
-    return (R * P.T).T + t
+def transform_symbols(R, t, p):
+    return R * p + t
 
 
-def projection_symbols(pose, point):
-    omega, t = Matrix([pose[0:3]]), Matrix([pose[3:6]])
-    R = exp_so3_symbols(omega)
-    p = transform_symbols(R, t, point)
-    return Matrix(p[0:2]) / (p[2] + EPSILON)
+def transform_project_symbols(rotvec, t, point):
+    R = exp_so3_symbols(rotvec)
+    q = transform_symbols(R, t, point)
+    return Matrix(q[0:2]) / (q[2] + EPSILON)
 
 
-a, b, c, d, e, f = sympy.symbols('a:f', real=True)
-x, y, z = sympy.symbols('x:z', real=True)
+def generate():
+    rotvec = MatrixSymbol("rotvec", 3, 1)
+    t = MatrixSymbol("t", 3, 1)
+    pose = BlockMatrix([[rotvec], [t]])
+    point = MatrixSymbol("point", 3, 1)
 
-omega, t = Matrix([[a, b, c]]), Matrix([[d, e, f]])
-pose = Matrix([*omega, *t])
-point = Matrix([[x, y, z]])
+    x_symbols = transform_project_symbols(rotvec, t, point)
 
-x_symbols = projection_symbols(pose, point)
-projection_ = autowrap(x_symbols, backend=autowrap_backend)
+    generate_c_code("_transform_project", x_symbols,
+                    prefix="tadataka/_transform_project/_transform_project")
 
-pose_jacobian_ = autowrap(x_symbols.jacobian(pose), backend=autowrap_backend)
-point_jacobian_ = autowrap(x_symbols.jacobian(point), backend=autowrap_backend)
+    generate_c_code("_pose_jacobian", x_symbols.jacobian(pose),
+                    prefix="tadataka/_transform_project/_pose_jacobian")
 
-exp_so3_ = autowrap(exp_so3_symbols(omega), backend=autowrap_backend)
+    generate_c_code("_point_jacobian", x_symbols.jacobian(point),
+                    prefix="tadataka/_transform_project/_point_jacobian")
+
+    generate_c_code("_exp_so3", exp_so3_symbols(rotvec),
+                    prefix="tadataka/_transform_project/_exp_so3")
 
 
-def exp_so3(omega):
-    return exp_so3_(*omega)
+def exp_so3(rotvec):
+    return exp_so3_(*rotvec)
 
 
 def projection(pose, point):

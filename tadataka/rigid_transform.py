@@ -1,6 +1,7 @@
 import numpy as np
 from tadataka.decorator import allow_1d
 from tadataka.matrix import to_homogeneous, from_homogeneous
+from tadataka import _transform
 
 
 def transform_each(rotations, translations, points):
@@ -109,9 +110,8 @@ class Transform(object):
 
 # want to use multiple dispatch and rename to 'transform'...
 def transform_se3(T_10, P0):
-    Q0 = to_homogeneous(P0)
-    Q1 = np.dot(T_10, Q0.T).T
-    P1 = from_homogeneous(Q1)
+    P1 = np.empty(P0.shape)
+    _transform.transform(T_10, P0, P1)
     return P1
 
 

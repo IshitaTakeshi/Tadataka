@@ -5,14 +5,14 @@ import numpy as np
 from tqdm import tqdm
 
 from tadataka.coordinates import image_coordinates
-from tadataka.interpolation import interpolation_
+from tadataka.interpolation import interpolation
 from tadataka.gradient import grad_x, grad_y
 from tadataka.matrix import to_homogeneous, inv_motion_matrix, get_translation
 from tadataka.rigid_transform import inv_transform
 from tadataka.projection import inv_pi, pi
 from tadataka.utils import is_in_image_range
 from tadataka.vector import normalize_length
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.depth import (
     calc_ref_inv_depth, calc_key_depth,
     InvDepthSearchRange, depth_search_range
@@ -22,22 +22,19 @@ from tadataka.vo.semi_dense.epipolar import (
     ref_coordinates, ref_search_range
 )
 from tadataka.vo.semi_dense.flag import ResultFlag as FLAG
-from tadataka.vo.semi_dense.gradient import GradientImage, gradient1d
+from tadataka.vo.semi_dense.gradient import GradientImage
+from tadataka.vo.semi_dense._gradient import calc_gradient_norm
 from tadataka.vo.semi_dense.variance import (
     calc_alpha, calc_observation_variance,
     photometric_variance, geometric_variance
 )
-from tadataka.vo.semi_dense.hypothesis import Hypothesis
+from tadataka.vo.semi_dense.hypothesis import Hypothesis, HypothesisMap
 from tadataka.vo.semi_dense._intensities import search_intensities
 from tadataka.warp import warp2d, warp3d
 
 
 def all_points_in_image(us, image_shape):
     return is_in_image_range(us, image_shape).all()
-
-
-def calc_gradient(intensities):
-    return np.linalg.norm(gradient1d(intensities))
 
 
 class InvDepthEstimator(object):
@@ -76,28 +73,31 @@ class InvDepthEstimator(object):
         if not all_points_in_image(us_key, self.image_key.shape):
             return prior, FLAG.KEY_OUT_OF_RANGE
 
-        intensities_key = interpolation_(self.image_key, us_key)
-        gradient_key = calc_gradient(intensities_key)
+        intensities_key = interpolation(self.image_key, us_key)
+        gradient_key = calc_gradient_norm(intensities_key)
 
         if gradient_key < self.min_gradient:
             return prior, FLAG.INSUFFICIENT_GRADIENT
 
-        x_range_ref = ref_search_range(T_rk, x_key,
-                                       depth_search_range(*inv_depth_range))
-        xs_ref = ref_coordinates(x_range_ref, self.step_size_ref)
+        x_min_ref, x_max_ref = ref_search_range(
+            T_rk, x_key, depth_search_range(*inv_depth_range))
+        xs_ref = ref_coordinates((x_min_ref, x_max_ref), self.step_size_ref)
         if len(xs_ref) < len(xs_key):
             return prior, FLAG.REF_EPIPOLAR_TOO_SHORT
 
         us_ref = camera_model_ref.unnormalize(xs_ref)
 
-        if not all_points_in_image(us_ref, image_ref.shape):
-            return prior, FLAG.REF_OUT_OF_RANGE
+        if not is_in_image_range(us_ref[0], image_ref.shape):
+            return prior, FLAG.REF_CLOSE_OUT_OF_RANGE
 
-        intensities_ref = interpolation_(image_ref, us_ref)
+        # TODO when does this condition become true?
+        if not is_in_image_range(us_ref[-1], image_ref.shape):
+            return prior, FLAG.REF_FAR_OUT_OF_RANGE
+
+        intensities_ref = interpolation(image_ref, us_ref)
         argmin = search_intensities(intensities_key, intensities_ref)
         depth_key = calc_key_depth(T_rk, x_key, xs_ref[argmin])
 
-        x_max_ref, x_min_ref = x_range_ref
         direction = normalize_length(x_max_ref - x_min_ref)
         variance = calc_observation_variance(
             alpha=calc_alpha(T_rk, x_key, direction, prior.inv_depth),
@@ -107,28 +107,29 @@ class InvDepthEstimator(object):
             photo_variance=photometric_variance(gradient_key / step_size_key,
                                                 self.sigma_i)
         )
-        return Hypothesis(invert_depth(depth_key), variance), FLAG.SUCCESS
+        return Hypothesis(safe_invert(depth_key), variance), FLAG.SUCCESS
 
 
 class InvDepthMapEstimator(object):
-    def __init__(self, *args, **kwargs):
-        self._estimator = InvDepthEstimator(*args, **kwargs)
+    def __init__(self, estimator: InvDepthEstimator, reference_selector):
+        self._estimator = estimator
+        self.reference_selector = reference_selector
 
-    def __call__(self, reference_selector, inv_depth_map, variance_map):
-        image_shape = inv_depth_map.shape
-
-        flag_map = np.full(image_shape, FLAG.NOT_PROCESSED)
-        for u_key in tqdm(image_coordinates(image_shape)):
-            x, y = u_key
-            refframe = reference_selector(u_key)
-            if refframe is None:
+    def __call__(self, hypothesis: HypothesisMap):
+        flag_map = np.full(hypothesis.shape, FLAG.NOT_PROCESSED)
+        inv_depth_map = hypothesis.inv_depth_map
+        variance_map = hypothesis.variance_map
+        for u_key in tqdm(image_coordinates(hypothesis.shape)):
+            ref = self.reference_selector(u_key)
+            if ref is None:
                 continue
 
-            inv_depth, variance, flag = self._estimator(
-                refframe, u_key, inv_depth_map[y, x], variance_map[y, x]
-            )
+            x, y = u_key
+            prior = Hypothesis(inv_depth_map[y, x], variance_map[y, x])
+            result, flag = self._estimator(*ref, u_key, prior)
 
-            inv_depth_map[y, x] = inv_depth
-            variance_map[y, x] = variance
+            inv_depth_map[y, x] = result.inv_depth
+            variance_map[y, x] = result.variance
             flag_map[y, x] = flag
-        return inv_depth_map, variance_map, flag_map
+
+        return HypothesisMap(inv_depth_map, variance_map), flag_map

@@ -1,8 +1,5 @@
 import numpy as np
 
-import numba
-from numba import njit
-
 from tadataka.flow_estimation.regularizer import GemanMcClure
 from tadataka.utils import is_in_image_range
 
@@ -14,13 +11,11 @@ diff_to_neighbors_ = np.array([
 ])
 
 
-@njit
 def step(energy_map):
     return diff_to_neighbors_[np.argmax(energy_map)]
 
 
 # regularizer term 'w'
-@njit
 def compute_regularizer_map(regularizer, dp):
     D = np.empty((3, 3))
     for j, y in enumerate([-1, 0, 1]):
@@ -30,13 +25,11 @@ def compute_regularizer_map(regularizer, dp):
     return D
 
 
-@njit
 def get_patch(curvature, p):
     px, py = p
     return curvature[py-1:py+2, px-1:px+2]
 
 
-@njit
 def _maximize(p0, curvature, regularizer, lambda_, max_iter):
     p = np.copy(p0)
     for i in range(max_iter):
@@ -51,7 +44,6 @@ def _maximize(p0, curvature, regularizer, lambda_, max_iter):
     return p
 
 
-@njit
 def maximize(P, curvature, regularizer, lambda_, max_iter):
     for i in range(len(P)):
         P[i] = _maximize(P[i], curvature, regularizer, lambda_, max_iter)

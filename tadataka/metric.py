@@ -1,12 +1,13 @@
 import numpy as np
-from tadataka.interpolation import interpolation_
+from tadataka.interpolation import interpolation
 from tadataka.warp import LocalWarp2D
 from tadataka.coordinates import image_coordinates, get
 from tadataka.utils import is_in_image_range
 
 
 def calc_error_(v1, v2):
-    return np.mean(np.power(v1 - v2, 2))
+    d = v1 - v2
+    return np.mean(d * d)
 
 
 def photometric_error(warp, gray_image0, depth_map0, gray_image1):
@@ -21,7 +22,7 @@ def photometric_error(warp, gray_image0, depth_map0, gray_image1):
     mask = is_in_image_range(us1, depth_map0.shape)
 
     i0 = get(gray_image0, us0[mask])
-    i1 = interpolation_(gray_image1, us1[mask])
+    i1 = interpolation(gray_image1, us1[mask])
 
     return calc_error_(i0, i1)
 

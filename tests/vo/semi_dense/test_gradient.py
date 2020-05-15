@@ -1,18 +1,19 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_equal
 
-from tadataka.vo.semi_dense.gradient import GradientImage, gradient1d
+from tadataka.vo.semi_dense._gradient import calc_gradient_norm, gradient1d
+from tadataka.vo.semi_dense.gradient import GradientImage
 
 
 def test_gradient_image():
     width, height = 6, 4
-    grad_x = np.arange(0, 24).reshape(height, width)
-    grad_y = np.arange(24, 48).reshape(height, width)
-    gradient_image = GradientImage(grad_x.astype(np.float64),
-                                   grad_y.astype(np.float64))
+    grad_x = np.random.uniform(-10, 10, (height, width))
+    grad_y = np.random.uniform(-10, 10, (height, width))
+    gradient_image = GradientImage(grad_x, grad_y)
 
     u_key = np.array([4.3, 2.1])
     gx, gy = gradient_image(u_key)
+
 
     u, v = 4, 2
 
@@ -34,3 +35,9 @@ def test_gradient1d():
 
     assert_array_equal(gradient1d(intensities),
                        [1 - (-1), 0 - 1, 3 - 0, -2 - 3])
+
+
+def test_calc_gradient():
+    intensities = np.array([-1, 1, 0, 3, -2])
+    assert_almost_equal(calc_gradient_norm(intensities),
+                        np.linalg.norm([1 - (-1), 0 - 1, 3 - 0, -2 - 3]))

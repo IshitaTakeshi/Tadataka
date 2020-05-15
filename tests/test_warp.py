@@ -51,8 +51,8 @@ def test_warp2d():
     xs0 = np.array([
         [0, 0],
         [0, -1]
-    ])
-    depths0 = np.array([2, 4])
+    ], dtype=np.float64)
+    depths0 = np.array([2, 4], dtype=np.float64)
 
     xs1, depths1 = warp_depth(warp3d, xs0, depths0)
 
@@ -74,7 +74,7 @@ def test_warp2d():
     assert_array_almost_equal(us1, 3.0 * xs1)
 
 
-def test_local_warp2d():
+def test_warp2d_():
     rotation = Rotation.from_rotvec([0, np.pi/2, 0])
     t = np.array([0, 0, 4])
     pose10 = Pose(rotation, t)
@@ -82,8 +82,8 @@ def test_local_warp2d():
     xs0 = np.array([
         [0, 0],
         [2, -1]
-    ])
-    depths0 = np.array([2, 4])
+    ], dtype=np.float64)
+    depths0 = np.array([2, 4], dtype=np.float64)
     # [2, 0, 0] + [0, 0, 4] = [2, 0, 4]
     # [4, -4, -8] + [0, 0, 4] = [4, -4, -4]
 

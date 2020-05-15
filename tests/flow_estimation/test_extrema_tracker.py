@@ -1,4 +1,3 @@
-from numba import jitclass
 import numpy as np
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from skimage.color import rgb2gray
@@ -9,7 +8,6 @@ from tadataka.flow_estimation.extrema_tracker import (
 from tadataka.flow_estimation.image_curvature import compute_image_curvature
 
 
-@jitclass([])
 class SquaredNorm(object):
     def __init__(self):
         pass

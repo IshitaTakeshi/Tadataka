@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import convolve2d
 from tadataka.math import weighted_mean
-from tadataka.vo.semi_dense.common import invert_depth
+from tadataka.numeric import safe_invert
 from tadataka.vo.semi_dense.stat import is_statically_same
 
 
@@ -25,22 +25,21 @@ def regularize_(D, W, v):
     return weighted_mean(D, weights)
 
 
-def regularize(inv_depth_map, variance_map, conv_size=3):
-    assert(inv_depth_map.shape == variance_map.shape)
+def regularize(hypothesis, conv_size=3):
     assert(conv_size % 2 == 1)
 
-    height, width = inv_depth_map.shape
-    weight_map = invert_depth(variance_map)
+    height, width = hypothesis.shape
+    weight_map = safe_invert(hypothesis.variance_map)
     offset = conv_size // 2
 
-    regularized = np.copy(inv_depth_map)
+    regularized = np.copy(hypothesis.inv_depth_map)
     for y in range(offset, regularized.shape[0]-offset):
         for x in range(offset, regularized.shape[1]-offset):
             ystart, yend = y-offset, y+offset+1
             xstart, xend = x-offset, x+offset+1
             regularized[y, x] = regularize_(
-                inv_depth_map[ystart:yend, xstart:xend],
+                hypothesis.inv_depth_map[ystart:yend, xstart:xend],
                 weight_map[ystart:yend, xstart:xend],
-                variance_map[y, x]
+                hypothesis.variance_map[y, x]
             )
     return regularized

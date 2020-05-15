@@ -1,6 +1,7 @@
 from numpy.testing import assert_almost_equal, assert_array_equal
 import numpy as np
 
+from tadataka.vo.semi_dense.hypothesis import HypothesisMap
 from tadataka.vo.semi_dense.regularization import (
     regularize, is_statically_same, create_mask_
 )
@@ -42,7 +43,7 @@ def test_regularization():
     inv_depth_map = np.random.random((4, 4))
     variance_map = np.random.random((4, 4))
 
-    R = regularize(inv_depth_map, variance_map, conv_size=3)
+    R = regularize(HypothesisMap(inv_depth_map, variance_map), conv_size=3)
     assert(R.shape == (4, 4))
     mask = np.array([
         [1, 1, 1, 1],

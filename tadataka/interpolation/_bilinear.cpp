@@ -1,5 +1,5 @@
 #include <math.h>
-#include "_bilinear.h"
+#include "_bilinear.hpp"
 
 
 double __interpolation(const double *image, const int width,
@@ -36,9 +36,9 @@ double __interpolation(const double *image, const int width,
 
 
 void _interpolation(
-    const double *restrict image, const int image_width,
-    const double *restrict coordinates, const int n_coordinates,
-    double *restrict intensities) {
+    const double* image, const int image_width,
+    const double* coordinates, const int n_coordinates,
+    double* intensities) {
     for(int i = 0; i < n_coordinates; i++) {
         intensities[i] = __interpolation(
             image, image_width, coordinates[2*i], coordinates[2*i+1]);
