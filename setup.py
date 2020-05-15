@@ -5,6 +5,7 @@ from setuptools_rust import build_ext as rust_build_ext
 
 from Cython.Build import cythonize
 import numpy as np
+import pybind11
 
 from tadataka.camera import radtan_codegen
 
@@ -31,7 +32,6 @@ class get_pybind_include(object):
         self.user = user
 
     def __str__(self):
-        import pybind11
         return pybind11.get_include(self.user)
 
 
@@ -112,7 +112,6 @@ setup(
         'opencv-python==4.2.0.34',
         'opencv-contrib-python==4.2.0.34',
         'pandas',
-        'pybind11',
         'pyyaml>=5.3',
         'scikit-image==0.16.2',
         'scikit-learn',
