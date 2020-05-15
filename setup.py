@@ -3,9 +3,9 @@ from setuptools import setup, Extension
 from setuptools_rust import RustExtension, Binding
 from setuptools_rust import build_ext as rust_build_ext
 
+import pybind11
 from Cython.Build import cythonize
 import numpy as np
-import pybind11
 
 from tadataka.camera import radtan_codegen
 
@@ -102,7 +102,7 @@ setup(
         RustExtension("rust_bindings.projection", binding=Binding.PyO3, debug=False),
         RustExtension("rust_bindings.warp", binding=Binding.PyO3, debug=False),
     ],
-    setup_requires=["setuptools-rust"],
+    setup_requires=["setuptools-rust==0.10.6", "Cython>=0.29.17"],
     install_requires=[
         'autograd',
         'bidict',
