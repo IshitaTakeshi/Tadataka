@@ -112,7 +112,7 @@ setup(
         'pandas',
         'pybind11',
         'pyyaml>=5.3',
-        'scikit-image',
+        'scikit-image==0.16.2',
         'scikit-learn',
         'scipy>=1.4.1',
         'sympy',
