@@ -5,6 +5,8 @@ from tadataka.transform_project import (
     exp_so3, transform_project, pose_jacobian, point_jacobian
 )
 
+np.random.seed(3939)
+
 
 def test_transform_project():
     points = np.array([
@@ -69,3 +71,37 @@ def test_exp_so3():
 
     for v, R_true in zip(V, expected):
         assert_array_almost_equal(exp_so3(v), R_true)
+
+
+def sum_squared(v):
+    return (v * v).sum()
+
+
+def test_point_jacobian():
+    pose = np.random.random(6)
+
+    point = np.random.random(3)
+    dpoint = 0.01 * np.random.random(3)
+
+    f0 = transform_project(pose, point)
+    f1 = transform_project(pose, point + dpoint)
+    df = f1 - f0
+
+    J = point_jacobian(pose, point)
+
+    assert(sum_squared(df - J.dot(dpoint)) < 1e-3 * sum_squared(df))
+
+
+def test_point_jacobian():
+    pose = np.random.random(6)
+    dpose = 0.01 * np.random.random(6)
+
+    point = np.random.random(3)
+
+    f0 = transform_project(pose, point)
+    f1 = transform_project(pose + dpose, point)
+    df = f1 - f0
+
+    J = pose_jacobian(pose, point)
+
+    assert(sum_squared(df - J.dot(dpose)) < 1e-3 * sum_squared(df))
