@@ -8,9 +8,11 @@ from Cython.Build import cythonize
 import numpy as np
 
 from tadataka.camera import radtan_codegen
+from tadataka import so3_codegen
 
 
 radtan_codegen.generate()
+so3_codegen.generate()
 
 cython_ext_modules = [
     Extension(
@@ -18,6 +20,16 @@ cython_ext_modules = [
         sources=["tadataka/camera/_radtan.pyx",
                  "tadataka/camera/_radtan_distort.c",
                  "tadataka/camera/_radtan_distort_jacobian.c"],
+        include_dirs=[np.get_include()],
+        extra_compile_args=["-Wall", "-Ofast"]
+    ),
+    Extension(
+        "tadataka.transform_project",
+        sources=["tadataka/transform_project.pyx",
+                 "tadataka/_transform_project/_transform_project.c",
+                 "tadataka/_transform_project/_pose_jacobian.c",
+                 "tadataka/_transform_project/_point_jacobian.c",
+                 "tadataka/_transform_project/_exp_so3.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=["-Wall", "-Ofast"]
     )

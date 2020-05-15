@@ -7,7 +7,8 @@ from sparseba import SBA, can_run_ba
 
 from tadataka.rigid_transform import transform
 from tadataka.pose import Pose
-from tadataka.so3_codegen import projection, pose_jacobian, point_jacobian
+from tadataka.transform_project import (pose_jacobian, point_jacobian,
+                                        transform_project)
 
 
 class Projection(object):
@@ -24,7 +25,7 @@ class Projection(object):
 
         I = zip(self.viewpoint_indices, self.point_indices)
         for index, (j, i) in enumerate(I):
-            x_pred[index] = projection(poses[j], points[i])
+            x_pred[index] = transform_project(poses[j], points[i])
         return x_pred
 
     def jacobians(self, poses, points):
@@ -60,7 +61,7 @@ class LocalBundleAdjustment(object):
     def __init__(self, viewpoint_indices, point_indices, x_true):
         """
         Z = zip(viewpoint_indices, pointpoint_indices)
-        x_true = [projection(poses[j], points[i]) for j, i in Z]
+        x_true = [transform_project(poses[j], points[i]) for j, i in Z]
         """
         assert(len(viewpoint_indices) == x_true.shape[0])
         assert(len(point_indices) == x_true.shape[0])
