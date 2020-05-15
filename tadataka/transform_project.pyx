@@ -32,7 +32,7 @@ def pose_jacobian(cnp.ndarray[cnp.double_t, ndim=1] pose,
     cdef cnp.ndarray[cnp.float64_t, ndim=1] J;
     J = np.empty(12, dtype=np.float64)
     _pose_jacobian(&point[0], &pose[0], &pose[3], &J[0])
-    return J.reshape(6, 2)
+    return J.reshape(2, 6)
 
 
 def point_jacobian(cnp.ndarray[cnp.double_t, ndim=1] pose,
@@ -40,7 +40,7 @@ def point_jacobian(cnp.ndarray[cnp.double_t, ndim=1] pose,
     cdef cnp.ndarray[cnp.float64_t, ndim=1] J;
     J = np.empty(6, dtype=np.float64)
     _point_jacobian(&point[0], &pose[0], &pose[3], &J[0])
-    return J.reshape(3, 2)
+    return J.reshape(2, 3)
 
 
 def exp_so3(cnp.ndarray[cnp.double_t, ndim=1] rotvec):
