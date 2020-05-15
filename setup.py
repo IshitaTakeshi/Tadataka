@@ -120,6 +120,7 @@ setup(
         'bidict',
         'matplotlib',
         'numba',
+        'numpy>=1.18.4',
         # TODO make independent from opencv
         'opencv-python==4.2.0.34',
         'opencv-contrib-python==4.2.0.34',
