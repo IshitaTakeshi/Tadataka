@@ -1,10 +1,7 @@
 import numpy as np
 import sympy
 from sympy import Matrix, MatrixSymbol
-from sympy.utilities.codegen import codegen
-
-
-autowrap_backend = "cython"
+from tadataka.codegen import generate_c_code
 
 
 def distort_(dist_coeffs, keypoint):
@@ -26,10 +23,6 @@ def distort_(dist_coeffs, keypoint):
     ])
 
 
-def codegen_(name_expr, prefix):
-    codegen(name_expr, prefix=prefix, language="C", to_files=True)
-
-
 def generate():
     dist_coeffs_ = MatrixSymbol('dist_coeffs', 5, 1)
     keypoint_ = MatrixSymbol('keypoint', 2, 1)
@@ -38,8 +31,8 @@ def generate():
     distort_symbols_ = distort_(dist_coeffs_, keypoint_)
     jacobian_symbols_ = distort_symbols_.jacobian(keypoint_)
 
-    codegen_(("distort", distort_symbols_),
-             prefix="tadataka/camera/_radtan_distort")
+    generate_c_code("distort", distort_symbols_,
+                    prefix="tadataka/camera/_radtan_distort")
 
-    codegen_(("distort_jacobian", jacobian_symbols_),
-             prefix="tadataka/camera/_radtan_distort_jacobian")
+    generate_c_code("distort_jacobian", jacobian_symbols_,
+                    prefix="tadataka/camera/_radtan_distort_jacobian")
