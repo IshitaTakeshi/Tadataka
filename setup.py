@@ -4,20 +4,9 @@ from setuptools_rust import RustExtension, Binding
 from setuptools_rust import build_ext as rust_build_ext
 import numpy as np
 
+from tadataka.camera import radtan_codegen
 
-def sympy_codegen():
-    from tadataka.camera import radtan_codegen
-    radtan_codegen.generate()
-
-
-class CustomBuildExt(rust_build_ext):
-    def run(self):
-        self.include_dirs.append(np.get_include())
-
-        sympy_codegen()
-
-        super().run()
-
+radtan_codegen.generate()
 
 cython_ext_modules=[
     Extension(
@@ -25,10 +14,10 @@ cython_ext_modules=[
         sources=["tadataka/camera/_radtan.pyx",
                  "tadataka/camera/_radtan_distort.c",
                  "tadataka/camera/_radtan_distort_jacobian.c"],
+        include_dirs=[np.get_include()],
         extra_compile_args=["-Wall", "-Ofast"]
     )
 ]
-
 
 for module in cython_ext_modules:
     module.cython_directives = {"language_level": 3}
@@ -134,6 +123,5 @@ setup(
         cython_ext_modules +
         make_pybind11_ext_modules(pybind11_module_sources)
     ),
-    cmdclass={'build_ext': CustomBuildExt},
-    zip_safe=False,
+    zip_safe=False
 )
