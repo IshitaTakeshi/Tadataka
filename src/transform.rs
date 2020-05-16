@@ -1,6 +1,7 @@
-use crate::homogeneous::{to_homogeneous_vecs, from_homogeneous_vecs};
+extern crate test;
 
-use ndarray::{Array2, ArrayView2};
+use crate::homogeneous::{to_homogeneous_vecs, from_homogeneous_vecs};
+use ndarray::{arr2, Array2, ArrayView2};
 
 pub fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
     -> Array2<f64> {
@@ -15,28 +16,26 @@ pub fn transform(transform10: ArrayView2<'_, f64>, points0: ArrayView2<'_, f64>)
 mod tests {
     use super::*;
     use test::Bencher;
+
     #[test]
     fn test_transform() {
-        let P0 = Array::from_shape_vec(
-            (2, 3),
-            vec![1.,  2., 5.,
-                 4., -2., 3.]
-        ).unwrap();
+        let points0 = arr2(
+            &[[1.,  2., 5.],
+              [4., -2., 3.]]
+        );
 
-        let T10 = Array::from_shape_vec(
-            (4, 4),
-            vec![1., 0.,  0., 1.,
-                 0., 0., -1., 2.,
-                 0., 1.,  0., 3.,
-                 0., 0.,  0., 1.]
-        ).unwrap();
+        let transform10 = arr2(
+            &[[1., 0.,  0., 1.],
+              [0., 0., -1., 2.],
+              [0., 1.,  0., 3.],
+              [0., 0.,  0., 1.]]
+        );
 
-        let P1 = Array::from_shape_vec(
-            (2, 3),
-            vec![2., -3., 5.,
-                 5., -1., 1.]
-        ).unwrap();
+        let points1 = arr2(
+            &[[2., -3., 5.],
+              [5., -1., 1.]]
+        );
 
-        assert_eq!(transform(T10.view(), P0.view()), P1)
+        assert_eq!(transform(transform10.view(), points0.view()), points1)
     }
 }

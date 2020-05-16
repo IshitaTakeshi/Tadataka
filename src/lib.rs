@@ -13,3 +13,4 @@ pub mod interpolation_py;
 pub mod projection_py;
 pub mod transform_py;
 pub mod warp_py;
+pub mod vo;
