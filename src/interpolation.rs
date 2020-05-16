@@ -1,6 +1,8 @@
-use ndarray::ArrayView2;
+use ndarray::{arr1, arr2, ArrayView1, ArrayView2};
 
-pub fn interpolation(image: ArrayView2<'_, f64>, cx: f64, cy: f64) -> f64 {
+pub fn interpolation(image: ArrayView2<'_, f64>, coordinate: ArrayView1<'_, f64>) -> f64 {
+    let cx = coordinate[0];
+    let cy = coordinate[1];
     let lx = cx.floor();
     let ly = cy.floor();
     let lxi = lx as usize;

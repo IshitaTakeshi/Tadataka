@@ -11,7 +11,7 @@ fn interpolation(py: Python<'_>, image: &PyArray2<f64>,
     let n = coordinates.shape()[0];
     let mut intensities = Array1::zeros(n);
     for i in 0..n {
-        intensities[i] = crate::interpolation::interpolation(image, coordinates[[i, 0]], coordinates[[i, 1]]);
+        intensities[i] = crate::interpolation::interpolation(image, coordinates.row(i));
     }
     intensities.into_pyarray(py).to_owned()
 }
