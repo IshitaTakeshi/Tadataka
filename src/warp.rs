@@ -1,6 +1,8 @@
+extern crate test;
+
 use crate::projection::{inv_project_vecs, project_vecs};
 use crate::transform::transform;
-use ndarray::{Array2, ArrayView1, ArrayView2};
+use ndarray::{arr1, arr2, Array2, ArrayView1, ArrayView2};
 
 pub fn warp(
     transform10: ArrayView2<'_, f64>,
@@ -16,52 +18,43 @@ pub fn warp(
 mod tests {
     use super::*;  // import names from outer scope
     use test::Bencher;
+
     #[test]
     fn test_warp() {
-        let T10 = Array::from_shape_vec(
-            (4, 4),
-            vec![ 0., 0., 1., 0.,
-                  0., 1., 0., 0.,
-                 -1., 0., 0., 4.,
-                  0., 0., 0., 1.]
-        ).unwrap();
-        let xs0 = Array::from_shape_vec(
-            (2, 2),
-            vec![0.,  0.,
-                 2., -1.]
-        ).unwrap();
-        let depths0 = Array::from_shape_vec(2, vec![2., 4.]).unwrap();
-        let xs1 = Array::from_shape_vec(
-            (2, 2),
-            vec![0.5, 0.0,
-                 -1.0, 1.0]
-        ).unwrap();
-        assert_eq!(warp_(T10.view(), xs0.view(), depths0.view()), xs1);
+        let transform10 = arr2(
+            &[[ 0., 0., 1., 0.],
+              [ 0., 1., 0., 0.],
+              [-1., 0., 0., 4.],
+              [ 0., 0., 0., 1.]]
+        );
+        let xs0 = arr2(
+            &[[0.,  0.],
+              [2., -1.]]
+        );
+        let depths0 = arr1(&[2., 4.]);
+        let xs1 = arr2(
+            &[[ 0.5, 0.0],
+              [-1.0, 1.0]]
+        );
+        assert_eq!(warp(transform10.view(), xs0.view(), depths0.view()), xs1);
     }
 
     #[bench]
     fn bench_warp(b: &mut Bencher) {
-        let T10 = Array::from_shape_vec(
-            (4, 4),
-            vec![ 0., 0., 1., 0.,
-                  0., 1., 0., 0.,
-                 -1., 0., 0., 4.,
-                  0., 0., 0., 1.]
-        ).unwrap();
-        let xs0 = Array::from_shape_vec(
-            (2, 2),
-            vec![0.,  0.,
-                 2., -1.]
-        ).unwrap();
-        let depths0 = Array::from_shape_vec(2, vec![2., 4.]).unwrap();
-        let xs1 = Array::from_shape_vec(
-            (2, 2),
-            vec![0.5, 0.0,
-                 -1.0, 1.0]
-        ).unwrap();
-        let T10_view = T10.view();
+        let transform10 = arr2(
+            &[[ 0., 0., 1., 0.],
+              [ 0., 1., 0., 0.],
+              [-1., 0., 0., 4.],
+              [ 0., 0., 0., 1.]]
+        );
+        let xs0 = arr2(
+            &[[0.,  0.],
+              [2., -1.]]
+        );
+        let depths0 = arr1(&[2., 4.]);
+        let transform10_view = transform10.view();
         let xs0_view = xs0.view();
         let depths0_view = depths0.view();
-        b.iter(|| warp_(T10_view, xs0_view, depths0_view))
+        b.iter(|| warp(transform10_view, xs0_view, depths0_view))
     }
 }
