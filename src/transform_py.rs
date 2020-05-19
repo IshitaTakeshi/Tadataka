@@ -3,10 +3,14 @@ use pyo3::prelude::{pyfunction, pymodule, Py, PyModule, PyResult, Python};
 use pyo3::wrap_pyfunction;
 
 #[pyfunction]
-fn transform(py: Python<'_>, transform10: &PyArray2<f64>,
-             points0: &PyArray2<f64>) -> Py<PyArray2<f64>> {
+fn transform(
+    py: Python<'_>,
+    transform10: &PyArray2<f64>,
+    points0: &PyArray2<f64>,
+) -> Py<PyArray2<f64>> {
     crate::transform::transform(transform10.as_array(), points0.as_array())
-        .into_pyarray(py).to_owned()
+        .into_pyarray(py)
+        .to_owned()
 }
 
 #[pymodule(transform)]

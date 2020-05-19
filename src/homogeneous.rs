@@ -1,5 +1,4 @@
-use ndarray::{stack, arr1, arr2, Array, Array1, Array2, ArrayView1, ArrayView2, Axis};
-
+use ndarray::{arr1, arr2, stack, Array, Array1, Array2, ArrayView1, ArrayView2, Axis};
 
 pub fn to_homogeneous_vec(x: ArrayView1<'_, f64>) -> Array1<f64> {
     stack![Axis(0), x, Array::ones(1)]
@@ -17,24 +16,17 @@ pub fn from_homogeneous_vec<'a>(x: &'a ArrayView1<'a, f64>) -> ArrayView1<'a, f6
 
 pub fn from_homogeneous_vecs<'a>(xs: &'a ArrayView2<'a, f64>) -> ArrayView2<'a, f64> {
     let n_cols = xs.shape()[1];
-    xs.slice(s![.., 0..n_cols-1])
+    xs.slice(s![.., 0..n_cols - 1])
 }
-
 
 #[cfg(test)]
 mod tests {
-    use super::*;  // import names from outer scope
+    use super::*; // import names from outer scope
 
     #[test]
     fn test_to_homogeneous_vecs() {
-        let points = arr2(
-            &[[2., 3.],
-              [4., 5.]]
-        );
-        let expected = arr2(
-            &[[2., 3., 1.],
-              [4., 5., 1.]]
-        );
+        let points = arr2(&[[2., 3.], [4., 5.]]);
+        let expected = arr2(&[[2., 3., 1.], [4., 5., 1.]]);
         assert_eq!(to_homogeneous_vecs(points.view()), expected);
     }
 
@@ -47,14 +39,8 @@ mod tests {
 
     #[test]
     fn test_from_homogeneous_vecs() {
-        let points = arr2(
-            &[[2., 3., 1.],
-              [4., 5., 1.]]
-        );
-        let expected = arr2(
-            &[[2., 3.],
-              [4., 5.]]
-        );
+        let points = arr2(&[[2., 3., 1.], [4., 5., 1.]]);
+        let expected = arr2(&[[2., 3.], [4., 5.]]);
         assert_eq!(from_homogeneous_vecs(&points.view()), expected);
     }
 }

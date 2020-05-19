@@ -22,8 +22,7 @@ pub fn inv_project_vec(x: ArrayView1<'_, f64>, depth: f64) -> Array1<f64> {
     to_homogeneous_vec(x) * depth
 }
 
-pub fn inv_project_vecs(xs: ArrayView2<'_, f64>, depths: ArrayView1<'_, f64>)
-    -> Array2<f64> {
+pub fn inv_project_vecs(xs: ArrayView2<'_, f64>, depths: ArrayView1<'_, f64>) -> Array2<f64> {
     let n = xs.shape()[0];
     let mut ps = Array::zeros((n, 3));
     for i in 0..n {

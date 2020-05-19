@@ -37,7 +37,7 @@ fn key_coordinates(
 fn ref_coordinates(
     x_min: ArrayView1<'_, f64>,
     x_max: ArrayView1<f64>,
-    step_size: f64
+    step_size: f64,
 ) -> Array2<f64> {
     let direction = x_max.to_owned() - x_min;
     let norm = direction.norm();
@@ -125,10 +125,12 @@ mod tests {
             [7. - 1. * 3., 8. - 1. * 4.],
             [7. - 0. * 3., 8. - 0. * 4.],
             [7. + 1. * 3., 8. + 1. * 4.],
-            [7. + 2. * 3., 8. + 2. * 4.]
+            [7. + 2. * 3., 8. + 2. * 4.],
         ]);
-        assert_eq!(key_coordinates(direction.view(), x_key.view(), step_size),
-                   expected);
+        assert_eq!(
+            key_coordinates(direction.view(), x_key.view(), step_size),
+            expected
+        );
     }
 
     #[test]
@@ -141,14 +143,14 @@ mod tests {
         let xs_true = arr2(&[
             [-15., -20.],
             [-12., -16.],
-            [ -9., -12.],
-            [ -6.,  -8.],
-            [ -3.,  -4.],
-            [  0.,   0.],
-            [  3.,   4.],
-            [  6.,   8.],
-            [  9.,  12.],
-            [ 12.,  16.]
+            [-9., -12.],
+            [-6., -8.],
+            [-3., -4.],
+            [0., 0.],
+            [3., 4.],
+            [6., 8.],
+            [9., 12.],
+            [12., 16.],
         ]);
         assert_eq!(xs, xs_true)
     }

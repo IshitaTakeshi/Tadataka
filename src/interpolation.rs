@@ -33,24 +33,18 @@ pub fn interpolation(image: ArrayView2<'_, f64>, coordinate: ArrayView1<'_, f64>
         + image[[uyi, uxi]] * (cx - lx) * (cy - ly)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_interpolation() {
-        let image = arr2(
-            &[[0., 1., 5.],
-              [0., 0., 2.],
-              [4., 3., 2.],
-              [5., 6., 1.]]
-        );
+        let image = arr2(&[[0., 1., 5.], [0., 0., 2.], [4., 3., 2.], [5., 6., 1.]]);
 
-        let expected = image[[2, 1]] * (2.0 - 1.3) * (3.0 - 2.6) +
-                       image[[2, 2]] * (1.3 - 1.0) * (3.0 - 2.6) +
-                       image[[3, 1]] * (2.0 - 1.3) * (2.6 - 2.0) +
-                       image[[3, 2]] * (1.3 - 1.0) * (2.6 - 2.0);
+        let expected = image[[2, 1]] * (2.0 - 1.3) * (3.0 - 2.6)
+            + image[[2, 2]] * (1.3 - 1.0) * (3.0 - 2.6)
+            + image[[3, 1]] * (2.0 - 1.3) * (2.6 - 2.0)
+            + image[[3, 2]] * (1.3 - 1.0) * (2.6 - 2.0);
 
         let c = arr1(&[1.3, 2.6]);
         assert_eq!(interpolation(image.view(), c.view()), expected);
@@ -61,26 +55,26 @@ mod tests {
 
         // minimum x
         let c = arr1(&[0.0, 0.1]);
-        let expected = image[[0, 0]] * (1.0 - 0.0) * (1.0 - 0.1) +
-                       image[[1, 0]] * (1.0 - 0.0) * (0.1 - 0.0);
+        let expected =
+            image[[0, 0]] * (1.0 - 0.0) * (1.0 - 0.1) + image[[1, 0]] * (1.0 - 0.0) * (0.1 - 0.0);
         assert_eq!(interpolation(image.view(), c.view()), expected);
 
         // minimum y
         let c = arr1(&[0.1, 0.0]);
-        let expected = image[[0, 0]] * (1.0 - 0.1) * (1.0 - 0.0) +
-                       image[[0, 1]] * (0.1 - 0.0) * (1.0 - 0.0);
+        let expected =
+            image[[0, 0]] * (1.0 - 0.1) * (1.0 - 0.0) + image[[0, 1]] * (0.1 - 0.0) * (1.0 - 0.0);
         assert_eq!(interpolation(image.view(), c.view()), expected);
 
         // maximum x
         let c = arr1(&[2.0, 2.9]);
-        let expected = image[[2, 2]] * (3.0 - 2.0) * (3.0 - 2.9) +
-                       image[[3, 2]] * (3.0 - 2.0) * (2.9 - 2.0);
+        let expected =
+            image[[2, 2]] * (3.0 - 2.0) * (3.0 - 2.9) + image[[3, 2]] * (3.0 - 2.0) * (2.9 - 2.0);
         assert_eq!(interpolation(image.view(), c.view()), expected);
 
         // maximum y
         let c = arr1(&[1.9, 3.0]);
-        let expected = image[[3, 1]] * (2.0 - 1.9) * (4.0 - 3.0) +
-                       image[[3, 2]] * (1.9 - 1.0) * (4.0 - 3.0);
+        let expected =
+            image[[3, 1]] * (2.0 - 1.9) * (4.0 - 3.0) + image[[3, 2]] * (1.9 - 1.0) * (4.0 - 3.0);
         assert_eq!(interpolation(image.view(), c.view()), expected);
 
         // maximum c

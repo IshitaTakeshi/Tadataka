@@ -4,8 +4,11 @@ use pyo3::prelude::{pyfunction, pymodule, Py, PyModule, PyResult, Python};
 use pyo3::wrap_pyfunction;
 
 #[pyfunction]
-fn interpolation(py: Python<'_>, image: &PyArray2<f64>,
-                 coordinates: &PyArray2<f64>) -> Py<PyArray1<f64>> {
+fn interpolation(
+    py: Python<'_>,
+    image: &PyArray2<f64>,
+    coordinates: &PyArray2<f64>,
+) -> Py<PyArray1<f64>> {
     let image = image.as_array();
     let coordinates = coordinates.as_array();
     let n = coordinates.shape()[0];

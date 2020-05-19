@@ -16,41 +16,32 @@ pub fn warp(
 
 #[cfg(test)]
 mod tests {
-    use super::*;  // import names from outer scope
+    use super::*; // import names from outer scope
     use test::Bencher;
 
     #[test]
     fn test_warp() {
-        let transform10 = arr2(
-            &[[ 0., 0., 1., 0.],
-              [ 0., 1., 0., 0.],
-              [-1., 0., 0., 4.],
-              [ 0., 0., 0., 1.]]
-        );
-        let xs0 = arr2(
-            &[[0.,  0.],
-              [2., -1.]]
-        );
+        let transform10 = arr2(&[
+            [0., 0., 1., 0.],
+            [0., 1., 0., 0.],
+            [-1., 0., 0., 4.],
+            [0., 0., 0., 1.],
+        ]);
+        let xs0 = arr2(&[[0., 0.], [2., -1.]]);
         let depths0 = arr1(&[2., 4.]);
-        let xs1 = arr2(
-            &[[ 0.5, 0.0],
-              [-1.0, 1.0]]
-        );
+        let xs1 = arr2(&[[0.5, 0.0], [-1.0, 1.0]]);
         assert_eq!(warp(transform10.view(), xs0.view(), depths0.view()), xs1);
     }
 
     #[bench]
     fn bench_warp(b: &mut Bencher) {
-        let transform10 = arr2(
-            &[[ 0., 0., 1., 0.],
-              [ 0., 1., 0., 0.],
-              [-1., 0., 0., 4.],
-              [ 0., 0., 0., 1.]]
-        );
-        let xs0 = arr2(
-            &[[0.,  0.],
-              [2., -1.]]
-        );
+        let transform10 = arr2(&[
+            [0., 0., 1., 0.],
+            [0., 1., 0., 0.],
+            [-1., 0., 0., 4.],
+            [0., 0., 0., 1.],
+        ]);
+        let xs0 = arr2(&[[0., 0.], [2., -1.]]);
         let depths0 = arr1(&[2., 4.]);
         let transform10_view = transform10.view();
         let xs0_view = xs0.view();
