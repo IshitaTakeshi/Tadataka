@@ -15,7 +15,7 @@ pub fn calc_ref_depth(
     let p_key = inv_project_vec(x_key, depth_key);
     let r_rk_z: ArrayView1<'_, f64> = transform_rk.slice(s![2, 0..3]);
     let t_rk_z: f64 = transform_rk[[2, 3]];
-    return r_rk_z.dot(&p_key) + t_rk_z;
+    r_rk_z.dot(&p_key) + t_rk_z
 }
 
 fn key_coordinates(
@@ -50,7 +50,7 @@ fn ref_coordinates(
         let x = x_min.to_owned() + (i as f64) * step_size * direction.to_owned();
         xs.row_mut(i).assign(&x);
     }
-    return xs;
+    xs
 }
 
 fn gradient(intensities: ArrayView1<'_, f64>) -> Array1<f64> {
@@ -75,7 +75,6 @@ fn search(sequence: ArrayView1<'_, f64>, kernel: ArrayView1<'_, f64>) -> usize {
     let mut argmin = 0;
     for i in 0..n - k + 1 {
         let e = calc_error(sequence.slice(s![i..i + k]), kernel);
-        println!("error = {}", e);
         if e < min_error {
             min_error = e;
             argmin = i;
@@ -87,10 +86,9 @@ fn search(sequence: ArrayView1<'_, f64>, kernel: ArrayView1<'_, f64>) -> usize {
 
 fn search_intensities(sequence: ArrayView1<'_, f64>, kernel: ArrayView1<'_, f64>) -> usize {
     let argmin = search(sequence, kernel);
-    println!("argmin = {}", argmin);
     let k = kernel.shape()[0];
     let offset = (k / 2) as usize;
-    return argmin + offset;
+    argmin + offset
 }
 
 #[cfg(test)]
