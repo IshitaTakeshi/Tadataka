@@ -10,10 +10,6 @@ pub mod projection;
 pub mod transform;
 pub mod vector;
 pub mod warp;
+pub mod semi_dense;
 
-pub mod homogeneous_py;
-pub mod interpolation_py;
-pub mod projection_py;
-pub mod transform_py;
-pub mod vo;
-pub mod warp_py;
+pub mod py;
