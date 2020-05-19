@@ -1,6 +1,7 @@
 #![feature(test)]
 #[macro_use(s)]
 extern crate ndarray;
+extern crate blas;
 extern crate openblas_src;
 
 pub mod homogeneous;

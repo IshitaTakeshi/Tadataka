@@ -13,7 +13,8 @@ crate-type = ["cdylib"]
 numpy = "0.8.0"
 ndarray = ">=0.13"
 ndarray-linalg = ">=0.12.0"
-openblas-src = "0.7"
+blas = "0.20"
+openblas-src = "0.9"
 
 [dependencies.pyo3]
 version = "0.9.0"
