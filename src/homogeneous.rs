@@ -2,7 +2,6 @@ use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
               ArrayView, ArrayView1, ArrayView2, Axis,
               Ix1, Ix2};
 
-
 pub trait ToHomogeneous {
     type D;
     fn to_homogeneous(&self) -> Array<f64, Self::D>;
@@ -10,7 +9,7 @@ pub trait ToHomogeneous {
 
 pub trait FromHomogeneous {
     type D;
-    fn from_homogeneous(&self) -> Array<f64, Self::D>;
+    fn from_homogeneous(&self) -> ArrayView<'_, f64, Self::D>;
 }
 
 impl ToHomogeneous for Array<f64, Ix1> {
@@ -33,18 +32,18 @@ impl ToHomogeneous for Array<f64, Ix2> {
 impl FromHomogeneous for Array<f64, Ix1> {
     type D = Ix1;
 
-    fn from_homogeneous(&self) -> Array<f64, Ix1> {
+    fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix1> {
         let n = self.shape()[0];
-        self.slice(s![0..n - 1]).to_owned()
+        self.slice(s![0..n - 1])
     }
 }
 
 impl FromHomogeneous for Array<f64, Ix2> {
     type D = Ix2;
 
-    fn from_homogeneous(&self) -> Array<f64, Ix2> {
+    fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix2> {
         let n_cols = self.shape()[1];
-        self.slice(s![.., 0..n_cols - 1]).to_owned()
+        self.slice(s![.., 0..n_cols - 1])
     }
 }
 
