@@ -1,7 +1,6 @@
 use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
-              ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
-              LinalgScalar,
-              Ix1, Ix2};
+              ArrayView, ArrayView1, ArrayView2, Axis,
+              LinalgScalar, Ix1, Ix2};
 
 pub trait Homogeneous<A, D> {
     fn to_homogeneous(&self) -> Array<A, D>;
