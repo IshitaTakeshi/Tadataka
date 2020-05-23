@@ -1,13 +1,16 @@
 use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
-              ArrayView, ArrayView1, ArrayView2, Axis,
-              LinalgScalar, Ix1, Ix2};
+              ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
+              LinalgScalar, Ix1, Ix2, Data};
 
 pub trait Homogeneous<A, D> {
     fn to_homogeneous(&self) -> Array<A, D>;
     fn from_homogeneous(&self) -> ArrayView<'_, A, D>;
 }
 
-impl<A> Homogeneous<A, Ix1> for Array<A, Ix1> where A: LinalgScalar {
+impl<A, S> Homogeneous<A, Ix1> for ArrayBase<S, Ix1>
+where
+    S: Data<Elem = A>,
+    A: LinalgScalar {
     fn to_homogeneous(&self) -> Array<A, Ix1> {
         stack![Axis(0), self.view(), Array::ones(1)]
     }
@@ -18,7 +21,11 @@ impl<A> Homogeneous<A, Ix1> for Array<A, Ix1> where A: LinalgScalar {
     }
 }
 
-impl<A> Homogeneous<A, Ix2> for Array<A, Ix2> where A: LinalgScalar {
+impl<A, S> Homogeneous<A, Ix2> for ArrayBase<S, Ix2>
+where
+    S: Data<Elem = A>,
+    A: LinalgScalar,
+{
     fn to_homogeneous(&self) -> Array<A, Ix2> {
         let n = self.shape()[0];
         stack![Axis(1), self.view(), Array::ones((n, 1))]
