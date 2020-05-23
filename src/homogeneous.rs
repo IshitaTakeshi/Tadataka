@@ -1,35 +1,31 @@
 use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
-              ArrayView, ArrayView1, ArrayView2, Axis,
+              ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
+              LinalgScalar,
               Ix1, Ix2};
 
-pub trait Homogeneous {
-    type D;
-    fn to_homogeneous(&self) -> Array<f64, Self::D>;
-    fn from_homogeneous(&self) -> ArrayView<'_, f64, Self::D>;
+pub trait Homogeneous<A, D> {
+    fn to_homogeneous(&self) -> Array<A, D>;
+    fn from_homogeneous(&self) -> ArrayView<'_, A, D>;
 }
 
-impl Homogeneous for Array<f64, Ix1> {
-    type D = Ix1;
-
-    fn to_homogeneous(&self) -> Array<f64, Ix1> {
+impl<A> Homogeneous<A, Ix1> for Array<A, Ix1> where A: LinalgScalar {
+    fn to_homogeneous(&self) -> Array<A, Ix1> {
         stack![Axis(0), self.view(), Array::ones(1)]
     }
 
-    fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix1> {
+    fn from_homogeneous(&self) -> ArrayView<'_, A, Ix1> {
         let n = self.shape()[0];
         self.slice(s![0..n - 1])
     }
 }
 
-impl Homogeneous for Array<f64, Ix2> {
-    type D = Ix2;
-
-    fn to_homogeneous(&self) -> Array<f64, Ix2> {
+impl<A> Homogeneous<A, Ix2> for Array<A, Ix2> where A: LinalgScalar {
+    fn to_homogeneous(&self) -> Array<A, Ix2> {
         let n = self.shape()[0];
         stack![Axis(1), self.view(), Array::ones((n, 1))]
     }
 
-    fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix2> {
+    fn from_homogeneous(&self) -> ArrayView<'_, A, Ix2> {
         let n_cols = self.shape()[1];
         self.slice(s![.., 0..n_cols - 1])
     }
