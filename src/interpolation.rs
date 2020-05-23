@@ -1,30 +1,33 @@
 use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView, ArrayView1, ArrayView2,
-              LinalgScalar, Ix1, Ix2};
+              Ix1, Ix2};
+use num::NumCast;
+use num_traits::float::Float;
+
 
 pub trait Interploation<A, D> {
     type Output;
     fn interpolate(&self, c: ArrayView<'_, A, D>) -> Self::Output;
 }
 
-fn interpolate(
-    image: ArrayView2<'_, f64>,
-    coordinate: ArrayView1<'_, f64>
-) -> f64 {
+fn interpolate<A: Float>(
+    image: ArrayView2<'_, A>,
+    coordinate: ArrayView1<'_, A>
+) -> A {
     let cx = coordinate[0];
     let cy = coordinate[1];
     let lx = cx.floor();
     let ly = cy.floor();
-    let lxi = lx as usize;
-    let lyi = ly as usize;
+    let lxi: usize= NumCast::from(lx).unwrap();
+    let lyi: usize= NumCast::from(ly).unwrap();
 
     if lx == cx && ly == cy {
         return image[[lyi, lxi]];
     }
 
-    let ux = lx + 1.0;
-    let uy = ly + 1.0;
-    let uxi = ux as usize;
-    let uyi = uy as usize;
+    let ux = lx + NumCast::from(1.).unwrap();
+    let uy = ly + NumCast::from(1.).unwrap();
+    let uxi: usize = NumCast::from(ux).unwrap();
+    let uyi: usize = NumCast::from(uy).unwrap();
 
     if lx == cx {
         return image[[lyi, lxi]] * (ux - cx) * (uy - cy)
@@ -42,17 +45,17 @@ fn interpolate(
     image[[uyi, uxi]] * (cx - lx) * (cy - ly)
 }
 
-impl Interploation<f64, Ix1> for Array2<f64> {
-    type Output = f64;
-    fn interpolate(&self, coordinate: ArrayView<'_, f64, Ix1>) -> f64 {
+impl<A> Interploation<A, Ix1> for Array2<A> where A: Float {
+    type Output = A;
+    fn interpolate(&self, coordinate: ArrayView<'_, A, Ix1>) -> A {
         assert!(coordinate.shape()[0] == 2);
         interpolate(self.view(), coordinate)
     }
 }
 
-impl Interploation<f64, Ix2> for Array2<f64> {
-    type Output = Array1<f64>;
-    fn interpolate(&self, coordinates: ArrayView<'_, f64, Ix2>) -> Array1<f64> {
+impl<A> Interploation<A, Ix2> for Array2<A> where A: Float {
+    type Output = Array1<A>;
+    fn interpolate(&self, coordinates: ArrayView<'_, A, Ix2>) -> Array1<A> {
         assert!(coordinates.shape()[1] == 2);
 
         let n = coordinates.shape()[0];
