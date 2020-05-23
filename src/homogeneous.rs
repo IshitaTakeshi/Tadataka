@@ -2,35 +2,18 @@ use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
               ArrayView, ArrayView1, ArrayView2, Axis,
               Ix1, Ix2};
 
-pub trait ToHomogeneous {
+pub trait Homogeneous {
     type D;
     fn to_homogeneous(&self) -> Array<f64, Self::D>;
-}
-
-pub trait FromHomogeneous {
-    type D;
     fn from_homogeneous(&self) -> ArrayView<'_, f64, Self::D>;
 }
 
-impl ToHomogeneous for Array<f64, Ix1> {
+impl Homogeneous for Array<f64, Ix1> {
     type D = Ix1;
 
     fn to_homogeneous(&self) -> Array<f64, Ix1> {
         stack![Axis(0), self.view(), Array::ones(1)]
     }
-}
-
-impl ToHomogeneous for Array<f64, Ix2> {
-    type D = Ix2;
-
-    fn to_homogeneous(&self) -> Array<f64, Ix2> {
-        let n = self.shape()[0];
-        stack![Axis(1), self.view(), Array::ones((n, 1))]
-    }
-}
-
-impl FromHomogeneous for Array<f64, Ix1> {
-    type D = Ix1;
 
     fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix1> {
         let n = self.shape()[0];
@@ -38,8 +21,13 @@ impl FromHomogeneous for Array<f64, Ix1> {
     }
 }
 
-impl FromHomogeneous for Array<f64, Ix2> {
+impl Homogeneous for Array<f64, Ix2> {
     type D = Ix2;
+
+    fn to_homogeneous(&self) -> Array<f64, Ix2> {
+        let n = self.shape()[0];
+        stack![Axis(1), self.view(), Array::ones((n, 1))]
+    }
 
     fn from_homogeneous(&self) -> ArrayView<'_, f64, Ix2> {
         let n_cols = self.shape()[1];
