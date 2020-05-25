@@ -3,7 +3,7 @@ use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView, ArrayView1, ArrayVie
 use num::NumCast;
 use num_traits::float::Float;
 
-pub trait Interploation<A, D, OutputType> {
+pub trait Interpolation<A, D, OutputType> {
     fn interpolate(&self, c: ArrayView<'_, A, D>) -> OutputType;
 }
 
@@ -43,14 +43,14 @@ fn interpolate<A: Float>(
     image[[uyi, uxi]] * (cx - lx) * (cy - ly)
 }
 
-impl<A> Interploation<A, Ix1, A> for Array2<A> where A: Float {
+impl<A> Interpolation<A, Ix1, A> for Array2<A> where A: Float {
     fn interpolate(&self, coordinate: ArrayView<'_, A, Ix1>) -> A {
         assert!(coordinate.shape()[0] == 2);
         interpolate(self.view(), coordinate)
     }
 }
 
-impl<A> Interploation<A, Ix2, Array1<A>> for Array2<A> where A: Float {
+impl<A> Interpolation<A, Ix2, Array1<A>> for Array2<A> where A: Float {
     fn interpolate(&self, coordinates: ArrayView<'_, A, Ix2>) -> Array1<A> {
         assert!(coordinates.shape()[1] == 2);
 
