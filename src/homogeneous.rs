@@ -1,6 +1,8 @@
-use ndarray::{arr1, arr2, stack, Array, Array1, Array2,
-              ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
-              LinalgScalar, Ix1, Ix2, Data};
+use ndarray::{
+    arr1, arr2, stack, Array, Array1, Array2,
+    ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
+    Data, Ix1, Ix2, LinalgScalar,
+};
 
 pub trait Homogeneous<A, D> {
     fn to_homogeneous(&self) -> Array<A, D>;
@@ -10,7 +12,8 @@ pub trait Homogeneous<A, D> {
 impl<A, S> Homogeneous<A, Ix1> for ArrayBase<S, Ix1>
 where
     S: Data<Elem = A>,
-    A: LinalgScalar {
+    A: LinalgScalar,
+{
     fn to_homogeneous(&self) -> Array<A, Ix1> {
         stack![Axis(0), self.view(), Array::ones(1)]
     }
@@ -35,25 +38,6 @@ where
         let n_cols = self.shape()[1];
         self.slice(s![.., 0..n_cols - 1])
     }
-}
-
-pub fn to_homogeneous_vec(x: ArrayView1<'_, f64>) -> Array1<f64> {
-    stack![Axis(0), x, Array::ones(1)]
-}
-
-pub fn to_homogeneous_vecs(xs: ArrayView2<'_, f64>) -> Array2<f64> {
-    let n = xs.shape()[0];
-    stack![Axis(1), xs, Array::ones((n, 1))]
-}
-
-pub fn from_homogeneous_vec<'a>(x: &'a ArrayView1<'a, f64>) -> ArrayView1<'a, f64> {
-    let n = x.shape()[0];
-    x.slice(s![0..n - 1])
-}
-
-pub fn from_homogeneous_vecs<'a>(xs: &'a ArrayView2<'a, f64>) -> ArrayView2<'a, f64> {
-    let n_cols = xs.shape()[1];
-    xs.slice(s![.., 0..n_cols - 1])
 }
 
 #[cfg(test)]
