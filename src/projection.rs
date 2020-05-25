@@ -1,12 +1,12 @@
 use crate::homogeneous::Homogeneous;
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView1, ArrayView2, Ix1, Ix2};
+use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayBase,
+              ArrayView1, ArrayView2, Data, Ix1, Ix2, LinalgScalar};
 
 static EPSILON: f64 = 1e-16;
 
-pub trait Projection<DepthType> {
-    type D;
-    fn project(&self) -> Array<f64, Self::D>;
-    fn inv_project(&self, depth: DepthType) -> Array<f64, Self::D>;
+pub trait Projection<D, DepthType> {
+    fn project(&self) -> Array<f64, D>;
+    fn inv_project(&self, depth: DepthType) -> Array<f64, D>;
 }
 
 fn project_impl(x: ArrayView1<'_, f64>) -> Array1<f64> {
@@ -18,9 +18,10 @@ fn inv_project_impl(x: ArrayView1<'_, f64>, depth: f64) -> Array1<f64> {
     x.to_homogeneous() * depth
 }
 
-impl Projection<f64> for Array<f64, Ix1> {
-    type D = Ix1;
-
+impl<S> Projection<Ix1, f64> for ArrayBase<S, Ix1>
+where
+    S: Data<Elem = f64>,
+{
     fn project(&self) -> Array<f64, Ix1> {
         project_impl(self.view())
     }
@@ -30,9 +31,10 @@ impl Projection<f64> for Array<f64, Ix1> {
     }
 }
 
-impl Projection<ArrayView1<'_, f64>> for Array<f64, Ix2> {
-    type D = Ix2;
-
+impl<S> Projection<Ix2, ArrayView1<'_, f64>> for ArrayBase<S, Ix2>
+where
+    S: Data<Elem = f64>
+{
     fn project(&self) -> Array<f64, Ix2> {
         let n = self.shape()[0];
         let mut us = Array::zeros((n, 2));
