@@ -7,35 +7,25 @@ pub trait Warp<XType, DepthType, D> {
     fn warp(&self, x0: XType, depth0: DepthType) -> Array<f64, D>;
 }
 
-impl<S> Warp<ArrayView2<'_, f64>, ArrayView1<'_, f64>, Ix2> for ArrayBase<S, Ix2>
-where
-    S: Data<Elem = f64>
-{
-    fn warp(
-        &self,
-        xs0: ArrayView2<'_, f64>,
-        depths0: ArrayView1<'_, f64>
-    ) -> Array<f64, Ix2> {
-        let points0 = Projection::inv_project(&xs0, depths0);
-        let points1 = self.transform(&points0);
-        Projection::project(&points1.view())
+macro_rules! impl_warp {
+    (for $(<$xtype:ty, $depthtype:ty, $dim:ty>),+) => {
+        $(impl<S> Warp<$xtype, $depthtype, $dim> for ArrayBase<S, Ix2>
+        where
+            S: Data<Elem = f64>
+        {
+            fn warp(&self, x0: $xtype, depth0: $depthtype) -> Array<f64, $dim> {
+                let point0 = Projection::inv_project(&x0, depth0);
+                let point1 = self.transform(&point0);
+                Projection::project(&point1.view())
+            }
+        })*
     }
 }
 
-impl<S> Warp<ArrayView1<'_, f64>, f64, Ix1> for ArrayBase<S, Ix2>
-where
-    S: Data<Elem = f64>
-{
-    fn warp(
-        &self,
-        x0: ArrayView1<'_, f64>,
-        depth0: f64,
-    ) -> Array<f64, Ix1> {
-        let point0 = Projection::inv_project(&x0, depth0);
-        let point1 = self.transform(&point0);
-        Projection::project(&point1.view())
-    }
-}
+impl_warp!(
+    for <ArrayView2<'_, f64>, ArrayView1<'_, f64>, Ix2>,
+        <ArrayView1<'_, f64>, f64, Ix1>
+);
 
 #[cfg(test)]
 mod tests {
