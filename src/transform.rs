@@ -27,15 +27,23 @@ macro_rules! impl_transform {
 
 impl_transform!(for Ix1, Ix2);
 
-pub fn get_rotation<'a, A: LinalgScalar>(
-    transform: &'a ArrayView2<'a, A>
-) -> ArrayView2<'a, A> {
+pub fn get_rotation<'a, A, S>(
+    transform: &'a ArrayBase<S, Ix2>
+) -> ArrayView2<'a, A>
+where
+    S: Data<Elem = A>,
+    A: LinalgScalar,
+{
     transform.slice(s![0..3, 0..3])
 }
 
-pub fn get_translation<'a, A: LinalgScalar>(
-    transform: &'a ArrayView2<'a, A>
-) -> ArrayView1<'a, A> {
+pub fn get_translation<'a, A, S>(
+    transform: &'a ArrayBase<S, Ix2>
+) -> ArrayView1<'a, A>
+where
+    S: Data<Elem = A>,
+    A: LinalgScalar,
+{
     transform.slice(s![0..3, 3])
 }
 
