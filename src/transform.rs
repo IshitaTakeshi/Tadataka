@@ -65,68 +65,68 @@ mod tests {
 
     #[test]
     fn test_transform_points() {
-        let points0 = arr2(&[[1., 2., 5.], [4., -2., 3.]]);
+        let points0 = arr2(&[[1, 2, 5], [4, -2, 3]]);
 
         let transform10 = arr2(&[
-            [1., 0., 0., 1.],
-            [0., 0., -1., 2.],
-            [0., 1., 0., 3.],
-            [0., 0., 0., 1.],
+            [1, 0, 0, 1],
+            [0, 0, -1, 2],
+            [0, 1, 0, 3],
+            [0, 0, 0, 1],
         ]);
 
-        let points1 = arr2(&[[2., -3., 5.], [5., -1., 1.]]);
+        let points1 = arr2(&[[2, -3, 5], [5, -1, 1]]);
 
         assert_eq!(transform10.transform(&points0), points1);
     }
 
     #[test]
     fn test_transform_point() {
-        let point0 = arr1(&[1., 2., 5.]);
+        let point0 = arr1(&[1, 2, 5]);
 
         let transform10 = arr2(&[
-            [1., 0., 0., 1.],
-            [0., 0., -1., 2.],
-            [0., 1., 0., 3.],
-            [0., 0., 0., 1.],
+            [1, 0, 0, 1],
+            [0, 0, -1, 2],
+            [0, 1, 0, 3],
+            [0, 0, 0, 1],
         ]);
 
-        let point1 = arr1(&[2., -3., 5.]);
+        let point1 = arr1(&[2, -3, 5]);
 
         assert_eq!(transform10.transform(&point0), point1);
     }
 
     #[test]
     fn test_get_rotation() {
-        let transform = arr2(&[[1., 2., 3., -1.],
-                               [4., 5., 6., -2.],
-                               [7., 8., 9., -3.],
-                               [0., 0., 0., 1.]]);
-        let expected = arr2(&[[1., 2., 3.],
-                              [4., 5., 6.],
-                              [7., 8., 9.]]);
+        let transform = arr2(&[[1, 2, 3, -1],
+                               [4, 5, 6, -2],
+                               [7, 8, 9, -3],
+                               [0, 0, 0, 1]]);
+        let expected = arr2(&[[1, 2, 3],
+                              [4, 5, 6],
+                              [7, 8, 9]]);
         assert_eq!(get_rotation(&transform.view()), expected.view());
     }
 
     #[test]
     fn test_get_translation() {
-        let transform = arr2(&[[1., 2., 3., -1.],
-                               [4., 5., 6., -2.],
-                               [7., 8., 9., -3.],
-                               [0., 0., 0., 1.]]);
-        let expected = arr1(&[-1., -2., -3.]);
+        let transform = arr2(&[[1, 2, 3, -1],
+                               [4, 5, 6, -2],
+                               [7, 8, 9, -3],
+                               [0, 0, 0, 1]]);
+        let expected = arr1(&[-1, -2, -3]);
         assert_eq!(get_translation(&transform.view()), expected.view());
     }
 
     #[test]
     fn test_make_matrix() {
-        let rotation = arr2(&[[1., 2., 3.],
-                              [4., 5., 6.],
-                              [7., 8., 9.]]);
-        let translation = arr1(&[-1., -2., -3.]);
-        let expected = arr2(&[[1., 2., 3., -1.],
-                              [4., 5., 6., -2.],
-                              [7., 8., 9., -3.],
-                              [0., 0., 0., 1.]]);
+        let rotation = arr2(&[[1, 2, 3],
+                              [4, 5, 6],
+                              [7, 8, 9]]);
+        let translation = arr1(&[-1, -2, -3]);
+        let expected = arr2(&[[1, 2, 3, -1],
+                              [4, 5, 6, -2],
+                              [7, 8, 9, -3],
+                              [0, 0, 0, 1]]);
         assert_eq!(make_matrix(&rotation, &translation), expected);
     }
 }
