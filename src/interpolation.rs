@@ -1,15 +1,15 @@
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView, ArrayView1, ArrayView2,
-              Ix1, Ix2};
+use ndarray::{arr1, arr2, Array, Array1, ArrayBase,
+              ArrayView1, ArrayView2, Data, Ix1, Ix2};
 use num::NumCast;
 use num_traits::float::Float;
 
-pub trait Interpolation<A, D, OutputType> {
-    fn interpolate(&self, c: ArrayView<'_, A, D>) -> OutputType;
+pub trait Interpolation<CoordinateType, OutputType> {
+    fn interpolate(&self, c: &CoordinateType) -> OutputType;
 }
 
 fn interpolate<A: Float>(
-    image: ArrayView2<'_, A>,
-    coordinate: ArrayView1<'_, A>
+    image: &ArrayView2<'_, A>,
+    coordinate: &ArrayView1<'_, A>
 ) -> A {
     let cx = coordinate[0];
     let cy = coordinate[1];
@@ -43,21 +43,31 @@ fn interpolate<A: Float>(
     image[[uyi, uxi]] * (cx - lx) * (cy - ly)
 }
 
-impl<A> Interpolation<A, Ix1, A> for Array2<A> where A: Float {
-    fn interpolate(&self, coordinate: ArrayView<'_, A, Ix1>) -> A {
+impl<A, S1, S2> Interpolation<ArrayBase<S1, Ix1>, A> for ArrayBase<S2, Ix2>
+where
+    S1: Data<Elem = A>,
+    S2: Data<Elem = A>,
+    A: Float,
+{
+    fn interpolate(&self, coordinate: &ArrayBase<S1, Ix1>) -> A {
         assert!(coordinate.shape()[0] == 2);
-        interpolate(self.view(), coordinate)
+        interpolate(&self.view(), &coordinate.view())
     }
 }
 
-impl<A> Interpolation<A, Ix2, Array1<A>> for Array2<A> where A: Float {
-    fn interpolate(&self, coordinates: ArrayView<'_, A, Ix2>) -> Array1<A> {
+impl<A, S1, S2> Interpolation<ArrayBase<S1, Ix2>, Array1<A>> for ArrayBase<S2, Ix2>
+where
+    S1: Data<Elem = A>,
+    S2: Data<Elem = A>,
+    A: Float,
+{
+    fn interpolate(&self, coordinates: &ArrayBase<S1, Ix2>) -> Array1<A> {
         assert!(coordinates.shape()[1] == 2);
 
         let n = coordinates.shape()[0];
         let mut intensities = Array::zeros(n);
         for i in 0..n {
-            intensities[i] = interpolate(self.view(), coordinates.row(i));
+            intensities[i] = interpolate(&self.view(), &coordinates.row(i));
         }
         intensities
     }
@@ -80,39 +90,39 @@ mod tests {
                      + image[[3, 2]] * (1.3 - 1.0) * (2.6 - 2.0);
 
         let c = arr1(&[1.3, 2.6]);
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
 
         // minimum coordinate
         let c = arr1(&[0.0, 0.0]);
-        assert_eq!(image.interpolate(c.view()), image[[0, 0]]);
+        assert_eq!(image.interpolate(&c), image[[0, 0]]);
 
         // minimum x
         let c = arr1(&[0.0, 0.1]);
         let expected = image[[0, 0]] * (1.0 - 0.0) * (1.0 - 0.1)
                      + image[[1, 0]] * (1.0 - 0.0) * (0.1 - 0.0);
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
 
         // minimum y
         let c = arr1(&[0.1, 0.0]);
         let expected = image[[0, 0]] * (1.0 - 0.1) * (1.0 - 0.0)
                      + image[[0, 1]] * (0.1 - 0.0) * (1.0 - 0.0);
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
 
         // maximum x
         let c = arr1(&[2.0, 2.9]);
         let expected = image[[2, 2]] * (3.0 - 2.0) * (3.0 - 2.9)
                      + image[[3, 2]] * (3.0 - 2.0) * (2.9 - 2.0);
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
 
         // maximum y
         let c = arr1(&[1.9, 3.0]);
         let expected = image[[3, 1]] * (2.0 - 1.9) * (4.0 - 3.0)
                      + image[[3, 2]] * (1.9 - 1.0) * (4.0 - 3.0);
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
 
         // maximum c
         let c = arr1(&[2.0, 3.0]);
-        assert_eq!(image.interpolate(c.view()), image[[3, 2]]);
+        assert_eq!(image.interpolate(&c), image[[3, 2]]);
 
         // TODO How about invalid input?
         // let c = arr(&[[3.0, 2.01]]);
@@ -136,6 +146,6 @@ mod tests {
               image[[0, 0]] * (1.0 - 0.1) * (1.0 - 0.0) +
               image[[0, 1]] * (0.1 - 0.0) * (1.0 - 0.0)]
         );
-        assert_eq!(image.interpolate(c.view()), expected);
+        assert_eq!(image.interpolate(&c), expected);
     }
 }
