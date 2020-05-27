@@ -1,6 +1,6 @@
-use ndarray::{arr1, arr2, Array1, Array2, ArrayView2};
+use ndarray::{arr1, arr2, Array, Array1, ArrayBase, Data, Ix1, Ix2};
 
-struct CameraParameters {
+pub struct CameraParameters {
      focal_length: Array1<f64>,
      offset: Array1<f64>
 }
@@ -13,24 +13,40 @@ impl CameraParameters {
     }
 }
 
-trait Normalizer {
-    fn normalize(&self, keypoints: ArrayView2<'_, f64>) -> Array2<f64>;
-    fn unnormalize(&self, keypoints: ArrayView2<'_, f64>) -> Array2<f64>;
+pub trait Normalizer<A, D, K> {
+    fn normalize(&self, keypoints: &K) -> Array<A, D>;
+    fn unnormalize(&self, keypoints: &K) -> Array<A, D>;
 }
 
-impl Normalizer for CameraParameters {
-    fn normalize(&self, keypoints: ArrayView2<'_, f64>) -> Array2<f64> {
+impl<S> Normalizer<f64, Ix2, ArrayBase<S, Ix2>> for CameraParameters
+where
+    S: Data<Elem = f64>,
+{
+    fn normalize(&self, keypoints: &ArrayBase<S, Ix2>) -> Array<f64, Ix2> {
         let n = keypoints.shape()[0];
         let focal_length = self.focal_length.broadcast((n, 2)).unwrap();
         let offset = self.offset.broadcast((n, 2)).unwrap();
-        return (keypoints.to_owned() - offset) / focal_length;
+        (keypoints.to_owned() - offset) / focal_length
     }
 
-    fn unnormalize(&self, keypoints: ArrayView2<'_, f64>) -> Array2<f64> {
+    fn unnormalize(&self, keypoints: &ArrayBase<S, Ix2>) -> Array<f64, Ix2> {
         let n = keypoints.shape()[0];
         let focal_length = self.focal_length.broadcast((n, 2)).unwrap();
         let offset = self.offset.broadcast((n, 2)).unwrap();
-        return keypoints.to_owned() * focal_length + offset;
+        keypoints.to_owned() * focal_length + offset
+    }
+}
+
+impl<S> Normalizer<f64, Ix1, ArrayBase<S, Ix1>> for CameraParameters
+where
+    S: Data<Elem = f64>,
+{
+    fn normalize(&self, keypoints: &ArrayBase<S, Ix1>) -> Array<f64, Ix1> {
+        (keypoints - &self.offset) / &self.focal_length
+    }
+
+    fn unnormalize(&self, keypoints: &ArrayBase<S, Ix1>) -> Array<f64, Ix1> {
+        keypoints * &self.focal_length + &self.offset
     }
 }
 
@@ -54,7 +70,19 @@ mod tests {
             [8., 10.]
         ]);
 
-        assert_eq!(camera_params.normalize(unnormalized.view()), normalized);
-        assert_eq!(camera_params.unnormalize(normalized.view()), unnormalized);
+        assert_eq!(camera_params.normalize(&unnormalized), normalized);
+        assert_eq!(camera_params.unnormalize(&normalized), unnormalized);
+
+        let normalized = arr1(&[1.0, 1.0]);
+        let unnormalized = arr1(&[12., 24.]);
+
+        assert_eq!(camera_params.normalize(&unnormalized), normalized);
+        assert_eq!(camera_params.unnormalize(&normalized), unnormalized);
+
+        let normalized = arr1(&[-0.2, -0.2]);
+        let unnormalized = arr1(&[0., 0.]);
+
+        assert_eq!(camera_params.normalize(&unnormalized), normalized);
+        assert_eq!(camera_params.unnormalize(&normalized), unnormalized);
     }
 }
