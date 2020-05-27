@@ -1,8 +1,4 @@
-use ndarray::{
-    arr1, arr2, stack, Array, Array1, Array2,
-    ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
-    Data, Ix1, Ix2, LinalgScalar,
-};
+use ndarray::{arr1, arr2, ArrayBase, ArrayView2, Data, Ix1, Ix2};
 use num::NumCast;
 use num_traits::float::Float;
 use std::vec::Vec;
@@ -46,8 +42,8 @@ where
     }
 }
 
-fn all_are_in_image_range(
-    keypoints: ArrayView2<'_, f64>,
+pub fn all_in_range<S: Data<Elem = A>, A: Float>(
+    keypoints: &ArrayBase<S, Ix2>,
     image_shape: (i64, i64)  // NOTE the order (h, w)
 ) -> bool {
     let n = keypoints.shape()[0];
@@ -108,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_are_in_image_range() {
+    fn test_all_in_range() {
         let (width, height) = (20, 30);
         let image_shape = (height, width);
 
@@ -119,7 +115,7 @@ mod tests {
               [-1., 29.]] // this is out of image range
         );
 
-        assert!(!all_are_in_image_range(keypoints.view(), image_shape));
+        assert!(!all_in_range(&keypoints, image_shape));
 
         let keypoints = arr2(
             &[[19., 29.],
@@ -127,6 +123,6 @@ mod tests {
               [0., 29.]]
         );
 
-        assert!(all_are_in_image_range(keypoints.view(), image_shape));
+        assert!(all_in_range(&keypoints, image_shape));
     }
 }
