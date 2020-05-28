@@ -1,4 +1,29 @@
-use ndarray::{arr1, arr2, Array, Array2, ArrayBase, Data, Ix1, Ix2, LinalgScalar};
+use ndarray::{arr2, Array, Array2, Array4, ArrayBase, Data, Ix2, LinalgScalar};
+
+fn calc_out_size(map_size: usize, kernel_size: usize) -> usize {
+    map_size - kernel_size + 1
+}
+
+fn im2col<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
+    map: &ArrayBase<S1, Ix2>,
+    kernel: &ArrayBase<S2, Ix2>,
+) -> Array4<A> {
+    let h = map.shape()[0];
+    let w = map.shape()[1];
+    let kh = kernel.shape()[0];
+    let kw = kernel.shape()[1];
+    let oh = calc_out_size(h, kh);
+    let ow = calc_out_size(w, kw);
+
+    let mut col = Array::zeros((kh, kw, oh, ow));
+    for y in 0..kh {
+        for x in 0..kw {
+            col.slice_mut(s![y, x, .., ..]).assign(&map.slice(s![y..y + oh, x..x + ow]));
+        }
+    }
+
+    col
+}
 
 fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
     map: &ArrayBase<S1, Ix2>,
@@ -8,18 +33,19 @@ fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
     let w = map.shape()[1];
     let kh = kernel.shape()[0];
     let kw = kernel.shape()[1];
-    let oh = h-kh+1;
-    let ow = w-kw+1;
+    let oh = calc_out_size(h, kh);
+    let ow = calc_out_size(w, kw);
 
+    let col = im2col(map, kernel);
     let mut out = Array::zeros((oh, ow));
     for y in 0..oh {
         for x in 0..ow {
-            out[[y, x]] = (kernel * &map.slice(s![y..y+kh, x..x+kw])).sum();
+            out[[y, x]] = (kernel * &col.slice(s![.., .., y, x])).sum();
         }
     }
+
     out
 }
-
 
 #[cfg(test)]
 mod tests {
