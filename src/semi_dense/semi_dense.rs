@@ -41,14 +41,14 @@ fn semi_dense(
     min_gradient: f64,
     sigma_i: f64,
     sigma_l: f64
-) -> (Hypothesis, Flag) {
+) -> Result<Hypothesis, Flag> {
     if prior.inv_depth <= 0. {
-        return (prior, Flag::NegativePriorDepth);
+        return Err(Flag::NegativePriorDepth);
     }
 
     let (min_depth, max_depth) = match inv_depth_range(&prior, valid_depth_range) {
         Some(range) => depth_search_range(range),
-        None => return (prior, Flag::HypothesisOutOfSerchRange),
+        None => return Err(Flag::HypothesisOutOfSerchRange),
     };
 
     let x_key = key_camera_params.normalize(&u_key);
@@ -58,7 +58,7 @@ fn semi_dense(
     // step size / inv depth = approximately const
     let ref_inv_depth = calc_ref_inv_depth(&transform_rk, &x_key, prior.inv_depth);
     if ref_inv_depth <= 0. {
-        return (prior, Flag::NegativeRefDepth);
+        return Err(Flag::NegativeRefDepth);
     }
     let step_size_key = (prior.inv_depth / ref_inv_depth) * step_size_ref;
 
@@ -66,30 +66,30 @@ fn semi_dense(
     let xs_key = key_coordinates(&t_rk, &x_key, step_size_key);
     let us_key = key_camera_params.unnormalize(&xs_key);
     if !all_in_range(&us_key, key_image.shape()) {
-        return (prior, Flag::KeyOutOfRange);
+        return Err(Flag::KeyOutOfRange);
     }
 
     let key_intensities = key_image.interpolate(&us_key);
     let key_gradient = intensities::gradient(&key_intensities).norm();
 
     if key_gradient < min_gradient {
-        return (prior, Flag::InsufficientGradient);
+        return Err(Flag::InsufficientGradient);
     }
 
     let xs_ref = ref_coordinates(&x_min_ref, &x_max_ref, step_size_ref);
     if xs_ref.nrows() < xs_key.nrows() {
-        return (prior, Flag::RefEpipolarTooShort);
+        return Err(Flag::RefEpipolarTooShort);
     }
 
     let us_ref = ref_camera_params.unnormalize(&xs_ref);
 
     if !us_ref.row(0).is_in_range(ref_image.shape()) {
-        return (prior, Flag::RefCloseOutOfRange);
+        return Err(Flag::RefCloseOutOfRange);
     }
 
     // TODO when does this condition become true?
     if !us_ref.row(us_ref.nrows()-1).is_in_range(ref_image.shape()) {
-        return (prior, Flag::RefFarOutOfRange);
+        return Err(Flag::RefFarOutOfRange);
     }
 
     let ref_intensities = ref_image.interpolate(&us_ref);
@@ -105,5 +105,5 @@ fn semi_dense(
     let photo_var = photo_var(key_gradient / step_size_key, sigma_i);
     let variance = alpha * alpha * (geo_var + photo_var);
 
-    (Hypothesis::new(safe_invert(depth_key), variance), Flag::Success)
+    Ok(Hypothesis::new(safe_invert(depth_key), variance))
 }
