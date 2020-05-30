@@ -27,9 +27,10 @@ fn im2col<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
     col
 }
 
-fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
+pub fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
     map: &ArrayBase<S1, Ix2>,
-    kernel: &ArrayBase<S2, Ix2>
+    kernel: &ArrayBase<S2, Ix2>,
+    pad_shape: (usize, usize)
 ) -> Array2<A> {
     let h = map.shape()[0];
     let w = map.shape()[1];
@@ -37,17 +38,12 @@ fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
     let kw = kernel.shape()[1];
     let out_h = calc_out_size(h, kh);
     let out_w = calc_out_size(w, kw);
-
-    assert!(kh % 2 == 1);
-    assert!(kw % 2 == 1);
-
-    let pad_h = ((kh - 1) / 2) as usize;
-    let pad_w = ((kw - 1) / 2) as usize;
+    let (pad_h, pad_w) = pad_shape;
     let col = im2col(map, kernel);
 
     let mut out = Array::zeros((h, w));
     for y in 0..out_h {
-        for x in 0..out_w{
+        for x in 0..out_w {
             out[[y+pad_h, x+pad_w]] = (kernel * &col.slice(s![.., .., y, x])).sum();
         }
     }
@@ -82,11 +78,11 @@ mod tests {
               [2, 3, 1]]
         );
 
-        let mut expected = Array::zeros((map.shape()[0], map.shape()[1]));
+        let mut expected = Array::zeros((2 + 2 * 2, 2 + 1 * 2));
         expected[[2, 1]] = conv(&map.slice(s![0..5, 0..3]), &kernel);
         expected[[2, 2]] = conv(&map.slice(s![0..5, 1..4]), &kernel);
         expected[[3, 1]] = conv(&map.slice(s![1..6, 0..3]), &kernel);
         expected[[3, 2]] = conv(&map.slice(s![1..6, 1..4]), &kernel);
-        assert_eq!(convolve2d(&map, &kernel), expected);
+        assert_eq!(convolve2d(&map, &kernel, (2, 1)), expected);
     }
 }
