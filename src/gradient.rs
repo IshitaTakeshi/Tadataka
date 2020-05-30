@@ -1,7 +1,7 @@
 use ndarray::{arr2, Array2, ArrayBase, Data, Ix2};
 use crate::convolution::convolve2d;
 
-fn sobel_x<S: Data<Elem = f64>>(
+pub fn sobel_x<S: Data<Elem = f64>>(
     map: &ArrayBase<S, Ix2>,
 ) -> Array2<f64> {
     let kernel = arr2(
@@ -13,7 +13,7 @@ fn sobel_x<S: Data<Elem = f64>>(
     convolve2d(map, &kernel, pad_shape)
 }
 
-fn sobel_y<S: Data<Elem = f64>>(
+pub fn sobel_y<S: Data<Elem = f64>>(
     map: &ArrayBase<S, Ix2>,
 ) -> Array2<f64> {
     let kernel = arr2(
