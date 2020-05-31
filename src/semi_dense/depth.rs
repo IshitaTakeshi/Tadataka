@@ -22,6 +22,13 @@ pub fn calc_key_depth(
     calc_depth0(transform_rk, x_key, x_ref)
 }
 
+pub fn depth_search_range(inv_depth_range: (f64, f64)) -> (f64, f64) {
+    let (min_inv_depth, max_inv_depth) = inv_depth_range;
+    let min_depth = safe_invert(max_inv_depth);
+    let max_depth = safe_invert(min_inv_depth);
+    (min_depth, max_depth)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,4 +48,12 @@ mod tests {
             -2.0 + 4.0
         );
     }
+
+    #[test]
+    fn test_depth_search_range() {
+        let (dmin, dmax) = depth_search_range((0.01, 0.1));
+        assert_eq!(dmin, safe_invert(0.1));
+        assert_eq!(dmax, safe_invert(0.01));
+    }
+
 }
