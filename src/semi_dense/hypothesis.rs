@@ -1,6 +1,6 @@
 use crate::cmp::clamp;
 use super::flag::Flag;
-use super::numeric::{Inv, Inverse};
+use super::numeric::Inv;
 
 static VARINACE_FACTOR: f64 = 2.0;
 
@@ -8,15 +8,15 @@ static VARINACE_FACTOR: f64 = 2.0;
 pub struct Hypothesis {
     pub inv_depth: Inv,
     pub variance: f64,
-    valid_min: f64,
-    valid_max: f64,
+    valid_min: Inv,
+    valid_max: Inv,
 }
 
 impl Hypothesis {
     pub fn new(
         inv_depth: Inv,
         variance: f64,
-        valid_range: (f64, f64)
+        valid_range: (Inv, Inv)
     ) -> Result<Hypothesis, Flag> {
         if f64::from(inv_depth) <= 0. {
             return Err(Flag::NegativePriorDepth);
@@ -32,7 +32,7 @@ impl Hypothesis {
         };
 
         let (min, max) = h._range();
-        if max <= valid_min || valid_max <= min {
+        if max <= f64::from(valid_min) || f64::from(valid_max) <= min {
             return Err(Flag::HypothesisOutOfSerchRange);
         }
 
@@ -47,8 +47,10 @@ impl Hypothesis {
 
     pub fn range(&self) -> (Inv, Inv) {
         let (min, max) = self._range();
-        let min = Inv::from(clamp(min, self.valid_min, self.valid_max));
-        let max = Inv::from(clamp(max, self.valid_min, self.valid_max));
+        let valid_min = f64::from(self.valid_min);
+        let valid_max = f64::from(self.valid_max);
+        let min = Inv::from(clamp(min, valid_min, valid_max));
+        let max = Inv::from(clamp(max, valid_min, valid_max));
         (min, max)
     }
 }
@@ -59,7 +61,7 @@ mod tests {
     #[test]
     fn test_new() {
         // predicted range fits in [min, max]
-        let range = (0.4, 1.0);
+        let range = (Inv::from(0.4), Inv::from(1.0));
         let (min, max) = Hypothesis::new(Inv::from(0.7), 0.1, range).unwrap().range();
         approx::assert_abs_diff_eq!(f64::from(min), 0.5);
         approx::assert_abs_diff_eq!(f64::from(max), 0.9);
