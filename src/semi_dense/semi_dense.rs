@@ -156,6 +156,14 @@ mod tests {
             (1. / key_depth) / (1. / ref_depth),
             epsilon = 1e-10
         );
+
+        let key_depth = 4.0;
+        let x_key = arr1(&[2.0, 2.0]);
+        // ref_depth = -(4.0 * 2.0) + 7.0 = -1.0
+        assert_eq!(
+            step_ratio(&transform_rk, &x_key, key_depth.inv()).unwrap_err(),
+            Flag::NegativeRefDepth
+        );
     }
 
     #[test]
