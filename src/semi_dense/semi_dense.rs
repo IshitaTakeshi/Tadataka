@@ -2,7 +2,6 @@ use ndarray::{arr1, arr2, Array1, Array2, ArrayView1, ArrayView2};
 use crate::camera::{CameraParameters, Normalizer};
 use crate::interpolation::Interpolation;
 use crate::image_range::{ImageRange, all_in_range};
-use crate::numeric::safe_invert;
 use crate::transform::get_translation;
 use crate::warp::Warp;
 use super::depth::{calc_key_depth, calc_ref_depth, depth_search_range};
@@ -11,22 +10,23 @@ use super::flag::Flag;
 use super::gradient::ImageGradient;
 use super::hypothesis::Hypothesis;
 use super::intensities;
+use super::numeric::{Inv, Inverse};
 use super::variance::{calc_alpha, calc_variance, geo_var, photo_var};
 use super::variance::VarianceCoefficients;
 
 fn step_ratio(
     transform_rk: &Array2<f64>,
     x_key: &Array1<f64>,
-    key_inv_depth: f64,
+    key_inv_depth: Inv,
 ) -> Result<f64, Flag> {
-    let key_depth = safe_invert(key_inv_depth);
+    let key_depth: f64 = key_inv_depth.inv();
     let ref_depth = calc_ref_depth(transform_rk, x_key, key_depth);
     if ref_depth <= 0. {
         return Err(Flag::NegativeRefDepth);
     }
-    let ref_inv_depth = safe_invert(ref_depth);
+    let ref_inv_depth = ref_depth.inv();
     let ratio = key_inv_depth / ref_inv_depth;
-    Ok(ratio)
+    Ok(f64::from(ratio))
 }
 
 fn xs_key(
@@ -85,7 +85,7 @@ fn semi_dense(
     min_gradient: f64,
     var_coeffs: &VarianceCoefficients
 ) -> Result<Hypothesis, Flag> {
-    let depth_range = depth_search_range(prior.range());
+    let depth_range = depth_search_range(&prior.range());
     let x_key = key_camera_params.normalize(&u_key);
 
     // calculate step size along the epipolar line on the keyframe
@@ -124,15 +124,14 @@ fn semi_dense(
     // search along epipolar line and calculate depth
     let argmin = intensities::search(&ref_intensities, &key_intensities);
     let key_depth = calc_key_depth(&transform_rk, &x_key, &xs_ref.row(argmin));
-
     // calculate variance
-    let alpha = calc_alpha(&transform_rk, &x_key, depth_range, safe_invert(prior.inv_depth));
+    let alpha = calc_alpha(&transform_rk, &x_key, depth_range, key_depth);
     let t_rk = get_translation(&transform_rk);
     let geo_var = geo_var(&x_key, &t_rk, &image_grad.get(&u_key));
     let photo_var = photo_var(key_gradient);
     let variance = calc_variance(alpha, geo_var, photo_var, var_coeffs);
 
-    Hypothesis::new(safe_invert(key_depth), variance, inv_depth_range)
+    Hypothesis::new(key_depth.inv(), variance, inv_depth_range)
 }
 
 #[cfg(test)]
@@ -147,14 +146,14 @@ mod tests {
               [-1., 0., 0., 7.],
               [0., 0., 0., 1.]]
         );
-        let key_inv_depth = 1. / 2.0;
+        let key_depth = 2.0;
         let x_key = arr1(&[2.0, 2.0]);
         // ref_depth = -(2.0 * 2.0) + 7.0 = 3.0
-        let ref_inv_depth = 1.0 / 3.0;
+        let ref_depth = 3.0;
 
         approx::assert_abs_diff_eq!(
-            step_ratio(&transform_rk, &x_key, key_inv_depth).unwrap(),
-            key_inv_depth / ref_inv_depth,
+            step_ratio(&transform_rk, &x_key, key_depth.inv()).unwrap(),
+            (1. / key_depth) / (1. / ref_depth),
             epsilon = 1e-10
         );
     }
