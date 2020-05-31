@@ -16,6 +16,8 @@ ndarray = ">=0.13"
 ndarray-linalg = ">=0.12.0"
 numpy = "0.8.0"
 num-traits = "0.2"
+num-derive = "0.3"
+derive_more = "0.99"
 num = "0.2"
 openblas-src = "0.9"
 
