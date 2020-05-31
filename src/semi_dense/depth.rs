@@ -1,16 +1,25 @@
-extern crate test;
-use crate::projection::inv_project_vec;
-use ndarray::{arr1, arr2, ArrayView1, ArrayView2};
+use crate::projection::Projection;
+use ndarray::{arr1, arr2, Array1, Array2, ArrayView1};
+use crate::numeric::safe_invert;
+use crate::triangulation::calc_depth0;
 
 pub fn calc_ref_depth(
-    transform_rk: ArrayView2<'_, f64>,
-    x_key: ArrayView1<'_, f64>,
+    transform_rk: &Array2<f64>,
+    x_key: &Array1<f64>,
     depth_key: f64,
 ) -> f64 {
-    let p_key = inv_project_vec(x_key, depth_key);
+    let p_key = Projection::inv_project(x_key, depth_key);
     let r_rk_z: ArrayView1<'_, f64> = transform_rk.slice(s![2, 0..3]);
     let t_rk_z: f64 = transform_rk[[2, 3]];
     r_rk_z.dot(&p_key) + t_rk_z
+}
+
+pub fn calc_key_depth(
+    transform_rk: &Array2<f64>,
+    x_key: &Array1<f64>,
+    x_ref: &ArrayView1<'_, f64>,
+) -> f64 {
+    calc_depth0(transform_rk, x_key, x_ref)
 }
 
 #[cfg(test)]
@@ -28,7 +37,7 @@ mod tests {
             [0., 0., 0., 1.],
         ]);
         assert_eq!(
-            calc_ref_depth(transform_rk.view(), x_key.view(), depth_key),
+            calc_ref_depth(&transform_rk, &x_key, depth_key),
             -2.0 + 4.0
         );
     }
