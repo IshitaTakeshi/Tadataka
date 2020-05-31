@@ -1,4 +1,4 @@
-use ndarray::{arr1, Array, Array1, ArrayView1};
+use ndarray::{arr1, Array1, ArrayView1};
 use ndarray_linalg::Norm;
 use crate::gradient::gradient1d;
 
@@ -29,6 +29,10 @@ pub fn search(sequence: &Array1<f64>, kernel: &Array1<f64>) -> usize {
     let k = kernel.shape()[0];
     let offset = (k / 2) as usize;
     argmin + offset
+}
+
+pub fn gradient(intensities: &Array1<f64>, step_size: f64) -> f64 {
+    gradient1d(&intensities).norm() / step_size
 }
 
 #[cfg(test)]
