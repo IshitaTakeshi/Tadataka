@@ -1,6 +1,6 @@
 use crate::projection::Projection;
 use ndarray::{arr1, arr2, Array1, Array2, ArrayView1};
-use crate::numeric::safe_invert;
+use super::numeric::{Inv, Inverse};
 use crate::triangulation::calc_depth0;
 
 pub fn calc_ref_depth(
@@ -22,10 +22,10 @@ pub fn calc_key_depth(
     calc_depth0(transform_rk, x_key, x_ref)
 }
 
-pub fn depth_search_range(inv_depth_range: (f64, f64)) -> (f64, f64) {
+pub fn depth_search_range(inv_depth_range: &(Inv, Inv)) -> (f64, f64) {
     let (min_inv_depth, max_inv_depth) = inv_depth_range;
-    let min_depth = safe_invert(max_inv_depth);
-    let max_depth = safe_invert(min_inv_depth);
+    let min_depth = max_inv_depth.inv();
+    let max_depth = min_inv_depth.inv();
     (min_depth, max_depth)
 }
 
@@ -51,9 +51,11 @@ mod tests {
 
     #[test]
     fn test_depth_search_range() {
-        let (dmin, dmax) = depth_search_range((0.01, 0.1));
-        assert_eq!(dmin, safe_invert(0.1));
-        assert_eq!(dmax, safe_invert(0.01));
+        let min_inv_depth = Inv::from(0.01);
+        let max_inv_depth = Inv::from(0.10);
+        let (dmin, dmax) = depth_search_range(&(min_inv_depth, max_inv_depth));
+        assert_eq!(dmin, max_inv_depth.inv());
+        assert_eq!(dmax, min_inv_depth.inv());
     }
 
 }
