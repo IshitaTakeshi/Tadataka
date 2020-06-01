@@ -15,7 +15,7 @@ fn key_coordinates_(
     let n = sampling_steps.shape()[0];
     let mut coordinates = Array::zeros((n, 2));
     for (i, step) in sampling_steps.iter().enumerate() {
-        let c = x_key.to_owned() + step_size * step * direction.to_owned();
+        let c = x_key + &(step_size * step * &direction);
         coordinates.row_mut(i).assign(&c);
     }
     coordinates
@@ -26,7 +26,7 @@ pub fn key_coordinates(
     x_key: &Array1<f64>,
     step_size: f64
 ) -> Array2<f64> {
-    let d = x_key.to_owned() - Projection::project(t_rk);
+    let d = x_key - &Projection::project(t_rk);
     key_coordinates_(&d, x_key, step_size)
 }
 
@@ -35,7 +35,7 @@ pub fn ref_coordinates(
     x_max: &Array1<f64>,
     step_size: f64,
 ) -> Array2<f64> {
-    let direction = x_max.to_owned() - x_min;
+    let direction = x_max - x_min;
     let norm = direction.norm();
     let direction = direction / (norm + EPSILON);
 
@@ -43,7 +43,7 @@ pub fn ref_coordinates(
 
     let mut xs = Array::zeros((n, 2));
     for i in 0..n {
-        let x = x_min.to_owned() + (i as f64) * step_size * direction.to_owned();
+        let x = x_min + &((i as f64) * step_size * &direction);
         xs.row_mut(i).assign(&x);
     }
     xs
