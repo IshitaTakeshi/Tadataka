@@ -1,25 +1,30 @@
-use crate::projection;
+use crate::projection::Projection;
 use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::{pyfunction, pymodule, Py, PyModule, PyResult, Python};
 use pyo3::wrap_pyfunction;
+use ndarray::{Ix1, Ix2, Array};
 
 #[pyfunction]
 fn project_vec(py: Python<'_>, x: &PyArray1<f64>) -> Py<PyArray1<f64>> {
-    projection::project_vec(x.as_array())
+    Projection::<Ix1, f64>::project(&x.as_array())
         .into_pyarray(py)
         .to_owned()
 }
 
 #[pyfunction]
 fn project_vecs(py: Python<'_>, xs: &PyArray2<f64>) -> Py<PyArray2<f64>> {
-    projection::project_vecs(xs.as_array())
+    Projection::<Ix2, &Array<f64, Ix1>>::project(&xs.as_array())
         .into_pyarray(py)
         .to_owned()
 }
 
 #[pyfunction]
-fn inv_project_vec(py: Python<'_>, x: &PyArray1<f64>, depth: f64) -> Py<PyArray1<f64>> {
-    projection::inv_project_vec(x.as_array(), depth)
+fn inv_project_vec(
+    py: Python<'_>,
+    x: &PyArray1<f64>,
+    depth: f64
+) -> Py<PyArray1<f64>> {
+    Projection::inv_project(&x.as_array(), depth)
         .into_pyarray(py)
         .to_owned()
 }
@@ -30,7 +35,7 @@ fn inv_project_vecs(
     xs: &PyArray2<f64>,
     depths: &PyArray1<f64>,
 ) -> Py<PyArray2<f64>> {
-    projection::inv_project_vecs(xs.as_array(), depths.as_array())
+    Projection::inv_project(&xs.as_array(), &depths.as_array())
         .into_pyarray(py)
         .to_owned()
 }
