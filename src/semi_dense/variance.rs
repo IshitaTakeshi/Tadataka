@@ -1,12 +1,9 @@
 use crate::homogeneous::Homogeneous;
 use crate::projection::Projection;
-use crate::transform;
 use crate::transform::{get_rotation, get_translation};
 use crate::vector;
 use crate::warp::Warp;
-use approx::assert_abs_diff_eq;
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView1};
-use ndarray_linalg::Norm;
+use ndarray::{Array1, Array2, ArrayView1};
 
 static EPSILON: f64 = 1e-16;
 
@@ -110,6 +107,10 @@ pub fn calc_alpha(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_abs_diff_eq;
+    use ndarray::{arr1, arr2, Array};
+    use ndarray_linalg::Norm;
+    use crate::transform;
 
     #[test]
     fn test_geo_var() {

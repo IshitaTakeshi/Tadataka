@@ -1,5 +1,5 @@
 use crate::projection::Projection;
-use ndarray::{arr1, arr2, Array1, Array2, ArrayView1};
+use ndarray::{Array1, Array2, ArrayView1};
 use super::numeric::{Inv, Inverse};
 use crate::triangulation::calc_depth0;
 
@@ -32,6 +32,7 @@ pub fn depth_search_range(inv_depth_range: &(Inv, Inv)) -> (f64, f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_calc_inv_depth() {

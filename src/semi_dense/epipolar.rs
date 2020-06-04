@@ -1,6 +1,6 @@
 use crate::projection::Projection;
 use crate::vector::normalize;
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView1};
+use ndarray::{arr1, Array, Array1, Array2, ArrayView1};
 use ndarray_linalg::Norm;
 
 static EPSILON: f64 = 1e-16;
@@ -52,6 +52,7 @@ pub fn ref_coordinates(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr2;
 
     #[test]
     fn test_key_coordinates_() {

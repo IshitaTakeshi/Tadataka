@@ -1,5 +1,5 @@
 use crate::homogeneous::Homogeneous;
-use ndarray::{arr1, arr2, Array, Array2, ArrayBase, ArrayView1, ArrayView2, Axis,
+use ndarray::{Array, Array2, ArrayBase, ArrayView1, ArrayView2, Axis,
               Data, LinalgScalar, Ix1, Ix2, stack};
 
 pub trait Transform<A, D, Rhs> {
@@ -70,6 +70,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_transform_points() {

@@ -1,5 +1,4 @@
-use ndarray::{arr1, arr2, Array, Array1, ArrayBase,
-              ArrayView1, ArrayView2, Data, Ix1, Ix2};
+use ndarray::{Array, Array1, ArrayBase, ArrayView1, ArrayView2, Data, Ix1, Ix2};
 use num::NumCast;
 use num_traits::float::Float;
 
@@ -76,6 +75,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_interpolate_1d_input() {

@@ -1,4 +1,4 @@
-use ndarray::{arr1, Array1, ArrayView1};
+use ndarray::{Array1, ArrayView1};
 use ndarray_linalg::Norm;
 use crate::gradient::gradient1d;
 
@@ -38,6 +38,7 @@ pub fn gradient(intensities: &Array1<f64>, step_size: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr1;
 
     #[test]
     fn test_intensity_search() {

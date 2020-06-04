@@ -1,5 +1,4 @@
-use ndarray::{arr2, Array, Array2, Array4, ArrayBase, ArrayView2,
-              Data, Ix2, LinalgScalar};
+use ndarray::{Array, Array2, Array4, ArrayBase, Data, Ix2, LinalgScalar};
 
 fn calc_out_size(map_size: usize, kernel_size: usize) -> usize {
     map_size - kernel_size + 1
@@ -54,6 +53,7 @@ pub fn convolve2d<S1: Data<Elem = A>, S2: Data<Elem = A>, A: LinalgScalar>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr2, ArrayView2};
 
     #[test]
     fn test_convolve2d() {

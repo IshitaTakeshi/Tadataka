@@ -1,4 +1,4 @@
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
+use ndarray::{arr2, Array, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
 use crate::convolution::convolve2d;
 
 pub fn sobel_x<S: Data<Elem = f64>>(
@@ -37,6 +37,7 @@ pub fn gradient1d<S: Data<Elem = f64>>(x: &ArrayBase<S, Ix1>) -> Array1<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr1;
 
     #[test]
     fn test_sobel_x() {

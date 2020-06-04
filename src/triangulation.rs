@@ -1,9 +1,6 @@
-use ndarray::{arr1, arr2, Array1, Array2, ArrayBase,
-              ArrayView1, Data, Ix1, Ix2};
-use ndarray_linalg::solve::Inverse;
+use ndarray::{ArrayBase, ArrayView1, Data, Ix1, Ix2};
 use crate::homogeneous::Homogeneous;
-use crate::projection::Projection;
-use crate::transform::{get_rotation, get_translation, make_matrix, Transform};
+use crate::transform::{get_rotation, get_translation};
 
 static EPSILON: f64 = 1e-16;
 
@@ -41,6 +38,10 @@ pub fn calc_depth0<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr1, arr2, Array1, Array2};
+    use ndarray_linalg::solve::Inverse;
+    use crate::projection::Projection;
+    use crate::transform::{make_matrix, Transform};
 
     #[test]
     fn test_calc_depth0() {

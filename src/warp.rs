@@ -1,6 +1,6 @@
 use crate::transform::Transform;
 use crate::projection::Projection;
-use ndarray::{arr1, arr2, Array, ArrayBase, ArrayView1, ArrayView2, Data, Ix1, Ix2};
+use ndarray::{Array, ArrayBase, Data, Ix1, Ix2};
 
 pub trait Warp<XType, DepthType, D> {
     fn warp(&self, x0: XType, depth0: DepthType) -> Array<f64, D>;
@@ -44,6 +44,7 @@ where
 mod tests {
     use super::*; // import names from outer scope
     use test::Bencher;
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_warp_2d() {

@@ -1,4 +1,4 @@
-use ndarray::{arr1, Array1, ArrayBase, Data, Ix1};
+use ndarray::{Array1, ArrayBase, Data, Ix1};
 use ndarray_linalg::Norm;
 
 pub fn normalize<S: Data<Elem = f64>>(v: &ArrayBase<S, Ix1>) -> Array1<f64> {
@@ -13,6 +13,7 @@ pub fn normalize<S: Data<Elem = f64>>(v: &ArrayBase<S, Ix1>) -> Array1<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr1;
 
     #[test]
     fn test_normalize() {

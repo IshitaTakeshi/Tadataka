@@ -1,4 +1,4 @@
-use ndarray::{arr1, arr2, ArrayBase, Data, Ix1, Ix2};
+use ndarray::{ArrayBase, Data, Ix1, Ix2};
 use num::NumCast;
 use num_traits::float::Float;
 use std::vec::Vec;
@@ -59,6 +59,7 @@ pub fn all_in_range<S: Data<Elem = A>, A: Float>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_is_in_range() {

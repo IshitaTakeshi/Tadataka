@@ -1,4 +1,4 @@
-use ndarray::{arr1, arr2, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
+use ndarray::{arr1, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
 use crate::gradient::{sobel_x, sobel_y};
 use crate::interpolation::Interpolation;
 
@@ -27,6 +27,7 @@ impl ImageGradient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr2;
 
     fn run(grad: &ImageGradient, c: &Array1<f64>) {
         let expected = arr1(&[grad.gx.interpolate(c), grad.gy.interpolate(c)]);

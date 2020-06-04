@@ -1,6 +1,5 @@
 use crate::homogeneous::Homogeneous;
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayBase,
-              ArrayView1, Data, Ix1, Ix2};
+use ndarray::{Array, Array1, ArrayBase, ArrayView1, Data, Ix1, Ix2};
 
 static EPSILON: f64 = 1e-16;
 
@@ -60,6 +59,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*; // import names from outer scope
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_projection() {

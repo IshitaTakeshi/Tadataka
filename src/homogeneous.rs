@@ -1,8 +1,5 @@
-use ndarray::{
-    arr1, arr2, stack, Array, Array1, Array2,
-    ArrayBase, ArrayView, ArrayView1, ArrayView2, Axis,
-    Data, Ix1, Ix2, LinalgScalar,
-};
+use ndarray::{Array, ArrayBase, ArrayView, Axis,
+              Data, Ix1, Ix2, LinalgScalar, stack};
 
 pub trait Homogeneous<A, D> {
     fn to_homogeneous(&self) -> Array<A, D>;
@@ -43,6 +40,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*; // import names from outer scope
+    use ndarray::{arr1, arr2};
 
     #[test]
     fn test_to_homogeneous_1d() {
