@@ -1,4 +1,6 @@
-use ndarray::{arr1, arr2, Array1, Array2, ArrayView1, ArrayView2};
+use ndarray::{arr1, Array, Array1, Array2};
+use ndarray_linalg::solve::Inverse;
+use pyo3::prelude::{pyclass, PyObject};
 use crate::camera::{CameraParameters, Normalizer};
 use crate::interpolation::Interpolation;
 use crate::image_range::{ImageRange, all_in_range};
@@ -8,9 +10,11 @@ use super::depth::{calc_key_depth, calc_ref_depth, depth_search_range};
 use super::epipolar::{key_coordinates, ref_coordinates};
 use super::flag::Flag;
 use super::gradient::ImageGradient;
+use super::hypothesis;
 use super::hypothesis::Hypothesis;
 use super::intensities;
-use super::numeric::{Inv, Inverse};
+use super::numeric::Inv;
+use super::numeric::Inverse as InverseDepth;
 use super::variance::{calc_alpha, calc_variance, geo_var, photo_var};
 use super::variance::VarianceCoefficients;
 
@@ -71,55 +75,66 @@ fn check_us_ref(
     Ok(())
 }
 
-fn semi_dense(
-    image_grad: ImageGradient,
-    inv_depth_range: (f64, f64),
-    key_camera_params: CameraParameters,
-    ref_camera_params: CameraParameters,
-    key_image: ArrayView2<'_, f64>,
-    ref_image: ArrayView2<'_, f64>,
-    transform_rk: Array2<f64>,
-    u_key: ArrayView1<'_, f64>,
-    prior: Hypothesis,
-    ref_step_size: f64,
-    min_gradient: f64,
-    var_coeffs: &VarianceCoefficients
+#[pyclass]
+#[derive(Clone)]
+pub struct Frame {
+    pub camera_params: CameraParameters,
+    pub image: Array2<f64>,
+    pub transform: Array2<f64>,
+}
+
+#[pyclass]
+pub struct Params {
+    pub inv_depth_range: (Inv, Inv),
+    pub var_coeffs: VarianceCoefficients,
+    pub ref_step_size: f64,
+    pub min_gradient: f64,
+}
+
+pub fn estimate(
+    u_key: &Array1<f64>,
+    prior: &Hypothesis,
+    keyframe: &Frame,
+    refframe: &Frame,
+    image_grad: &ImageGradient,
+    params: &Params,
 ) -> Result<Hypothesis, Flag> {
+    let transform_rk = transform_rk(&keyframe.transform, &refframe.transform);
+
     let depth_range = depth_search_range(&prior.range());
-    let x_key = key_camera_params.normalize(&u_key);
+    let x_key = keyframe.camera_params.normalize(u_key);
 
     // calculate step size along the epipolar line on the keyframe
     // step size / inv depth = approximately const
-    let key_step_size = match step_ratio(&transform_rk, &x_key, prior.inv_depth) {
+    let result = step_ratio(&transform_rk, &x_key, prior.inv_depth);
+    let key_step_size = match result {
         Err(e) => return Err(e),
-        Ok(ratio) => ratio * ref_step_size,
+        Ok(ratio) => ratio * params.ref_step_size,
     };
 
     // calculate coordinates on the keyframe image
     let xs_key = xs_key(&transform_rk, &x_key, key_step_size);
-    let us_key = key_camera_params.unnormalize(&xs_key);
-    if !all_in_range(&us_key, key_image.shape()) {
+    let us_key = keyframe.camera_params.unnormalize(&xs_key);
+    if !all_in_range(&us_key, keyframe.image.shape()) {
         return Err(Flag::KeyOutOfRange);
     }
 
     // extract intensities from the key coordinates
-    let key_intensities = key_image.interpolate(&us_key);
+    let key_intensities = keyframe.image.interpolate(&us_key);
     let key_gradient = intensities::gradient(&key_intensities, key_step_size);
     // most of coordinates has insufficient gradient
     // return early to reduce computation
-    if key_gradient < min_gradient {
+    if key_gradient < params.min_gradient {
         return Err(Flag::InsufficientGradient);
     }
 
     // calculate coordinates on the reference frame image
-    let xs_ref = xs_ref(&transform_rk, &x_key, depth_range, ref_step_size);
-    let us_ref = ref_camera_params.unnormalize(&xs_ref);
-    if let Err(e) = check_us_ref(&us_ref, us_key.nrows(), ref_image.shape()) {
-        return Err(e);
-    }
+    let xs_ref = xs_ref(&transform_rk, &x_key, depth_range, params.ref_step_size);
+    let us_ref = refframe.camera_params.unnormalize(&xs_ref);
+    check_us_ref(&us_ref, us_key.nrows(), refframe.image.shape())?;
 
     // extract intensities from the ref coordinates
-    let ref_intensities = ref_image.interpolate(&us_ref);
+    let ref_intensities = refframe.image.interpolate(&us_ref);
 
     // search along epipolar line and calculate depth
     let argmin = intensities::search(&ref_intensities, &key_intensities);
@@ -129,14 +144,72 @@ fn semi_dense(
     let t_rk = get_translation(&transform_rk);
     let geo_var = geo_var(&x_key, &t_rk, &image_grad.get(&u_key));
     let photo_var = photo_var(key_gradient);
-    let variance = calc_variance(alpha, geo_var, photo_var, var_coeffs);
+    let variance = calc_variance(alpha, geo_var, photo_var, &params.var_coeffs);
 
-    Hypothesis::new(key_depth.inv(), variance, inv_depth_range)
+    hypothesis::check_args(key_depth.inv(), variance, params.inv_depth_range)?;
+    Ok(Hypothesis::new(key_depth.inv(), variance, params.inv_depth_range))
+}
+
+fn transform_rk(
+    transform_kw: &Array2<f64>,
+    transform_rw: &Array2<f64>,
+) -> Array2<f64> {
+    let transform_wk = transform_kw.inv().unwrap();
+    transform_wk.dot(transform_rw)
+}
+
+pub fn update_depth(
+    keyframe: &Frame,
+    refframes: &Vec<Frame>,
+    age_map: &Array2<usize>,
+    prior_depth: &Array2<f64>,
+    prior_variance: &Array2<f64>,
+    params: &Params,
+) -> (Array2<i64>, Array2<f64>, Array2<f64>) {
+    let image_grad = ImageGradient::new(&keyframe.image);
+    let height = keyframe.image.shape()[0];
+    let width = keyframe.image.shape()[1];
+    let mut flag_map = Array::zeros((height, width));
+    let mut result_depth = Array::zeros((height, width));
+    let mut result_variance = Array::zeros((height, width));
+    let inv_depth_range = params.inv_depth_range;
+
+    for y in 0..height {
+        for x in 0..width {
+            let age = age_map[[y, x]];
+            let refframe = &refframes[refframes.len()-age];
+
+            let u_key = arr1(&[y as f64, x as f64]);
+            let d = prior_depth[[y, x]];
+            let v = prior_variance[[y, x]];
+
+            if let Err(f) = hypothesis::check_args(d.inv(), v, inv_depth_range) {
+                result_depth[[y, x]] = d;
+                result_variance[[y, x]] = v;
+                flag_map[[y, x]] = f as i64;
+                continue;
+            }
+
+            let prior = Hypothesis::new(d.inv(), v, inv_depth_range);
+            let result = estimate(&u_key, &prior, &keyframe, refframe,
+                                  &image_grad, &params);
+            let (h, flag) = match result {
+                Err(flag) => (prior, flag),
+                Ok(h) => (h, Flag::Success),
+            };
+
+            result_depth[[y, x]] = h.inv_depth.inv();
+            result_variance[[y, x]] = h.variance;
+            flag_map[[y, x]] = flag as i64;
+        }
+    }
+    (flag_map, result_depth, result_variance)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr2;
 
     #[test]
     fn test_step_ratio() {
