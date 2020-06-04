@@ -18,6 +18,18 @@ impl CameraParameters {
     }
 }
 
+impl CameraParameters {
+    fn matrix(&self) -> Array2<f64> {
+        let fx = self.focal_length[0];
+        let fy = self.focal_length[1];
+        let ox = self.offset[0];
+        let oy = self.offset[1];
+        arr2(&[[fx, 0., ox],
+               [0., fy, oy],
+               [0., 0., 1.]])
+    }
+}
+
 pub trait Normalizer<A, D, K> {
     fn normalize(&self, keypoints: &K) -> Array<A, D>;
     fn unnormalize(&self, keypoints: &K) -> Array<A, D>;
@@ -31,14 +43,14 @@ where
         let n = keypoints.shape()[0];
         let focal_length = self.focal_length.broadcast((n, 2)).unwrap();
         let offset = self.offset.broadcast((n, 2)).unwrap();
-        (keypoints.to_owned() - offset) / focal_length
+        (keypoints - &offset) / focal_length
     }
 
     fn unnormalize(&self, keypoints: &ArrayBase<S, Ix2>) -> Array<f64, Ix2> {
         let n = keypoints.shape()[0];
         let focal_length = self.focal_length.broadcast((n, 2)).unwrap();
         let offset = self.offset.broadcast((n, 2)).unwrap();
-        keypoints.to_owned() * focal_length + offset
+        keypoints * &focal_length + &offset
     }
 }
 
@@ -89,5 +101,17 @@ mod tests {
 
         assert_eq!(camera_params.normalize(&unnormalized), normalized);
         assert_eq!(camera_params.unnormalize(&normalized), unnormalized);
+    }
+
+    #[test]
+    fn test_camera() {
+        let c = CameraParameters::new((1.0, 1.2), (0.8, 0.2));
+        let expected = arr2(
+            &[[1.0, 0.0, 0.8],
+              [0.0, 1.2, 0.2],
+              [0.0, 0.0, 1.0]]
+        );
+
+        assert_eq!(c.matrix(), expected);
     }
 }
