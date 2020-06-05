@@ -1,24 +1,18 @@
 use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
-use pyo3::prelude::{pyclass, pymethods, PyObject};
 
-#[pyclass]
 #[derive(Clone)]
 pub struct CameraParameters {
-     focal_length: Array1<f64>,
-     offset: Array1<f64>
+     pub focal_length: Array1<f64>,
+     pub offset: Array1<f64>
 }
 
-#[pymethods]
 impl CameraParameters {
-    #[new]
-    fn new(focal_length: (f64, f64), offset: (f64, f64)) -> Self {
+    pub fn new(focal_length: (f64, f64), offset: (f64, f64)) -> Self {
         let (fx, fy) = focal_length;
         let (ox, oy) = offset;
-        CameraParameters{ focal_length: arr1(&[fx, fy]), offset: arr1(&[ox, oy]) }
+        CameraParameters { focal_length: arr1(&[fx, fy]), offset: arr1(&[ox, oy]) }
     }
-}
 
-impl CameraParameters {
     fn matrix(&self) -> Array2<f64> {
         let fx = self.focal_length[0];
         let fy = self.focal_length[1];
