@@ -99,6 +99,8 @@ pybind11_module_sources = [
 ]
 
 
+debug_rust = True
+
 setup(
     name='tadataka',
     description='Tadataka',
@@ -108,13 +110,14 @@ setup(
     license='Apache 2.0',
     packages=['tadataka'],
     rust_extensions=[
-        RustExtension("rust_bindings.homogeneous", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.interpolation", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.transform", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.projection", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.warp", binding=Binding.PyO3, debug=False),
+        RustExtension("rust_bindings.camera", debug=debug_rust),
+        RustExtension("rust_bindings.homogeneous", debug=debug_rust),
+        RustExtension("rust_bindings.interpolation", debug=debug_rust),
+        RustExtension("rust_bindings.transform", debug=debug_rust),
+        RustExtension("rust_bindings.projection", debug=debug_rust),
+        RustExtension("rust_bindings.semi_dense", debug=debug_rust),
+        RustExtension("rust_bindings.warp", debug=debug_rust),
     ],
-    setup_requires=["setuptools-rust==0.10.6", "Cython>=0.29.17"],
     install_requires=[
         'autograd',
         'bidict',
