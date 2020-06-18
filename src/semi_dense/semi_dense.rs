@@ -1,7 +1,12 @@
+use std::convert::TryInto;
+
+use indicatif::ProgressBar;
 use ndarray::{arr1, Array, Array1, Array2};
 use ndarray_linalg::solve::Inverse;
-use pyo3::prelude::{pyclass, PyObject};
-use crate::camera::{CameraParameters, Normalizer};
+use ndarray_linalg::Norm;
+
+use crate::camera::Normalizer;
+use crate::gradient::gradient1d;
 use crate::interpolation::Interpolation;
 use crate::image_range::{ImageRange, all_in_range};
 use crate::transform::get_translation;
@@ -9,14 +14,15 @@ use crate::warp::Warp;
 use super::depth::{calc_key_depth, calc_ref_depth, depth_search_range};
 use super::epipolar::{key_coordinates, ref_coordinates};
 use super::flag::Flag;
+use super::frame::Frame;
 use super::gradient::ImageGradient;
 use super::hypothesis;
 use super::hypothesis::Hypothesis;
 use super::intensities;
 use super::numeric::Inv;
 use super::numeric::Inverse as InverseDepth;
+use super::params::Params;
 use super::variance::{calc_alpha, calc_variance, geo_var, photo_var};
-use super::variance::VarianceCoefficients;
 
 fn step_ratio(
     transform_rk: &Array2<f64>,
@@ -75,6 +81,12 @@ fn check_us_ref(
     Ok(())
 }
 
+fn transform_rk(
+    transform_wk: &Array2<f64>,
+    transform_wr: &Array2<f64>,
+) -> Array2<f64> {
+    let transform_rw = transform_wr.inv().unwrap();
+    transform_rw.dot(transform_wk)
 }
 
 pub fn estimate(
@@ -129,19 +141,11 @@ pub fn estimate(
     let alpha = calc_alpha(&transform_rk, &x_key, depth_range, key_depth);
     let t_rk = get_translation(&transform_rk);
     let geo_var = geo_var(&x_key, &t_rk, &image_grad.get(&u_key));
-    let photo_var = photo_var(key_gradient);
+    let photo_var = photo_var(key_gradient / key_step_size);
     let variance = calc_variance(alpha, geo_var, photo_var, &params.var_coeffs);
 
     hypothesis::check_args(key_depth.inv(), variance, params.inv_depth_range)?;
     Ok(Hypothesis::new(key_depth.inv(), variance, params.inv_depth_range))
-}
-
-fn transform_rk(
-    transform_kw: &Array2<f64>,
-    transform_rw: &Array2<f64>,
-) -> Array2<f64> {
-    let transform_wk = transform_kw.inv().unwrap();
-    transform_wk.dot(transform_rw)
 }
 
 pub fn update_depth(
