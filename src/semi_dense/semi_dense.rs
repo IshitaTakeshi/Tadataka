@@ -76,14 +76,6 @@ fn check_us_ref(
 }
 
 #[pyclass]
-#[derive(Clone)]
-pub struct Frame {
-    pub camera_params: CameraParameters,
-    pub image: Array2<f64>,
-    pub transform: Array2<f64>,
-}
-
-#[pyclass]
 pub struct Params {
     pub inv_depth_range: (Inv, Inv),
     pub var_coeffs: VarianceCoefficients,
