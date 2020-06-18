@@ -119,7 +119,7 @@ pub fn estimate(
 
     // extract intensities from the key coordinates
     let key_intensities = keyframe.image.interpolate(&us_key);
-    let key_gradient = intensities::gradient(&key_intensities, key_step_size);
+    let key_gradient = gradient1d(&key_intensities).norm();
     // most of coordinates has insufficient gradient
     // return early to reduce computation
     if key_gradient < params.min_gradient {
