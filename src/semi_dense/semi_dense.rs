@@ -75,12 +75,6 @@ fn check_us_ref(
     Ok(())
 }
 
-#[pyclass]
-pub struct Params {
-    pub inv_depth_range: (Inv, Inv),
-    pub var_coeffs: VarianceCoefficients,
-    pub ref_step_size: f64,
-    pub min_gradient: f64,
 }
 
 pub fn estimate(
