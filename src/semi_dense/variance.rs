@@ -8,8 +8,8 @@ use ndarray::{Array1, Array2, ArrayView1};
 static EPSILON: f64 = 1e-16;
 
 pub struct VarianceCoefficients {
-    photo: f64,
-    geo: f64,
+    pub photo: f64,
+    pub geo: f64,
 }
 
 pub fn calc_variance(
