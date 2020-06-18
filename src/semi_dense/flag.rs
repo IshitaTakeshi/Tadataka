@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Flag {
