@@ -1,4 +1,4 @@
-use numpy::{IntoPyArray, PyArray1, PyArray2};
+use numpy::{IntoPyArray, PyArray1};
 use pyo3::prelude::{pyclass, pymethods, pymodule, Py, Python, PyObject, PyModule, PyResult};
 use pyo3::type_object::PyTypeObject;
 use crate::camera::CameraParameters;
@@ -35,7 +35,7 @@ impl PyCameraParameters {
 
 #[pymodule(camera)]
 fn mymodule(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add("CameraParameters", <PyCameraParameters as PyTypeObject>::type_object());
+    m.add("CameraParameters", <PyCameraParameters as PyTypeObject>::type_object())?;
 
     Ok(())
 }
