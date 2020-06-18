@@ -156,9 +156,17 @@ pub fn update_depth(
     prior_variance: &Array2<f64>,
     params: &Params,
 ) -> (Array2<i64>, Array2<f64>, Array2<f64>) {
+    assert!(age_map.shape() == prior_depth.shape());
+    assert!(age_map.shape() == prior_variance.shape());
+    assert!(age_map.shape() == keyframe.image.shape());
+    for i in 0..refframes.len() {
+        assert!(age_map.shape() == refframes[i].image.shape());
+    }
+
     let image_grad = ImageGradient::new(&keyframe.image);
     let height = keyframe.image.shape()[0];
     let width = keyframe.image.shape()[1];
+
     let mut flag_map = Array::zeros((height, width));
     let mut result_depth = Array::zeros((height, width));
     let mut result_variance = Array::zeros((height, width));
@@ -167,9 +175,13 @@ pub fn update_depth(
     for y in 0..height {
         for x in 0..width {
             let age = age_map[[y, x]];
+            if refframes.len() < age {
+                eprintln!("Age exceeds the refframe size");
+                std::process::exit(1);
+            }
+
             let refframe = &refframes[refframes.len()-age];
 
-            let u_key = arr1(&[y as f64, x as f64]);
             let d = prior_depth[[y, x]];
             let v = prior_variance[[y, x]];
 
@@ -180,6 +192,7 @@ pub fn update_depth(
                 continue;
             }
 
+            let u_key = arr1(&[y as f64, x as f64]);
             let prior = Hypothesis::new(d.inv(), v, inv_depth_range);
             let result = estimate(&u_key, &prior, &keyframe, refframe,
                                   &image_grad, &params);
