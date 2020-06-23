@@ -74,8 +74,8 @@ fn ref_epipolar_direction(
     depth_range: (f64, f64),
 ) -> Array1<f64> {
     let (min_depth, max_depth) = depth_range;
-    let x_min_ref = transform_rk.warp(x_key, min_depth);
-    let x_max_ref = transform_rk.warp(x_key, max_depth);
+    let (x_min_ref, _) = transform_rk.warp(x_key, min_depth);
+    let (x_max_ref, _) = transform_rk.warp(x_key, max_depth);
     vector::normalize(&(x_max_ref - x_min_ref))
 }
 
@@ -87,7 +87,7 @@ fn calc_alpha_(
 ) -> f64 {
     let rot_rk = get_rotation(&transform_rk);
     let t_rk = get_translation(&transform_rk);
-    let x_ref = transform_rk.warp(x_key, prior_depth);
+    let (x_ref, _) = transform_rk.warp(x_key, prior_depth);
 
     let i = if f64::abs(direction[0]) > f64::abs(direction[1]) { 0 } else { 1 };
     alpha_(&x_key, x_ref[i], direction[i],
@@ -187,7 +187,7 @@ mod tests {
         let x_key = arr1(&[0.3, 0.9]);
         let prior_depth = 10.0;
 
-        let x_ref = transform_rk.warp(&x_key, prior_depth);
+        let (x_ref, _) = transform_rk.warp(&x_key, prior_depth);
 
         let direction = arr1(&[0.1, 0.3]);
         assert_eq!(
@@ -223,7 +223,9 @@ mod tests {
         let x_key = arr1(&[0.4, 1.2]);
         let (min, max) = (0.5, 1.4);
         let d1 = ref_epipolar_direction(&transform_rk, &x_key, (min, max));
-        let d2 = transform_rk.warp(&x_key, max) - transform_rk.warp(&x_key, min);
+        let (x_ref_min, _) = transform_rk.warp(&x_key, min);
+        let (x_ref_max, _) = transform_rk.warp(&x_key, max);
+        let d2 = x_ref_max - x_ref_min;
 
         assert_eq!(d1.norm(), 1.);
         // d1 and d2 should be the same direction

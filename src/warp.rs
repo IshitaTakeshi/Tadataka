@@ -1,10 +1,11 @@
 use crate::transform::Transform;
 use crate::projection::Projection;
 use crate::camera::{CameraParameters, Normalizer};
-use ndarray::{Array, ArrayBase, Data, Ix1, Ix2};
+use ndarray::{Array, Array1, Array2, ArrayBase, Data, Ix1, Ix2};
 
 pub trait Warp<XType, DepthType, D> {
-    fn warp(&self, x0: XType, depth0: DepthType) -> Array<f64, D>;
+    type Output;
+    fn warp(&self, x0: XType, depth0: DepthType) -> Self::Output;
 }
 
 impl<S1, S2> Warp<&ArrayBase<S1, Ix1>, f64, Ix1>
@@ -13,10 +14,17 @@ where
     S1: Data<Elem = f64>,
     S2: Data<Elem = f64>,
 {
-    fn warp(&self, x0: &ArrayBase<S1, Ix1>, depth0: f64) -> Array<f64, Ix1> {
+    type Output = (Array1<f64>, f64);
+    fn warp(
+        &self,
+        x0: &ArrayBase<S1, Ix1>,
+        depth0: f64
+    ) -> Self::Output {
         let point0 = Projection::inv_project(x0, depth0);
         let point1 = self.transform(&point0);
-        Projection::project(&point1)
+        let x1 = Projection::project(&point1);
+        let depth1 = point1[2];
+        (x1, depth1)
     }
 }
 
@@ -27,14 +35,17 @@ where
     S2: Data<Elem = f64>,
     S3: Data<Elem = f64>,
 {
+    type Output = (Array2<f64>, Array1<f64>);
     fn warp(
         &self,
         xs0: &ArrayBase<S2, Ix2>,
         depths0: &ArrayBase<S3, Ix1>
-    ) -> Array<f64, Ix2> {
+    ) -> Self::Output {
         let points0 = Projection::inv_project(xs0, depths0);
         let points1 = self.transform(&points0);
-        Projection::<Ix2, &Array<f64, Ix1>>::project(&points1)
+        let xs1 = Projection::<Ix2, &Array1<f64>>::project(&points1);
+        let depths1 = points1.slice(s![.., 2]).to_owned();
+        (xs1, depths1)
     }
 }
 
@@ -64,11 +75,12 @@ where
     S1: Data<Elem = f64>,
     S2: Data<Elem = f64>,
 {
-    fn warp(&self, u0: &ArrayBase<S1, Ix1>, depth0: f64) -> Array<f64, Ix1> {
+    type Output = (Array<f64, Ix1>, f64);
+    fn warp(&self, u0: &ArrayBase<S1, Ix1>, depth0: f64) -> Self::Output {
         let x0 = self.camera_params0.normalize(u0);
-        let x1 = Warp::warp(self.transform10, &x0, depth0);
+        let (x1, depth1) = Warp::warp(self.transform10, &x0, depth0);
         let u1 = self.camera_params1.unnormalize(&x1);
-        u1
+        (u1, depth1)
     }
 }
 
@@ -79,15 +91,16 @@ where
     S2: Data<Elem = f64>,
     S3: Data<Elem = f64>,
 {
+    type Output = (Array2<f64>, Array1<f64>);
     fn warp(
         &self,
         us0: &ArrayBase<S1, Ix2>,
         depths0: &ArrayBase<S2, Ix1>
-    ) -> Array<f64, Ix2> {
+    ) -> Self::Output {
         let xs0 = self.camera_params0.normalize(us0);
-        let xs1 = Warp::warp(self.transform10, &xs0, depths0);
+        let (xs1, depths1) = Warp::warp(self.transform10, &xs0, depths0);
         let us1 = self.camera_params1.unnormalize(&xs1);
-        us1
+        (us1, depths1)
     }
 }
 
@@ -105,10 +118,16 @@ mod tests {
             [-1., 0., 0., 4.],
             [0., 0., 0., 1.],
         ]);
+
+        // ps0 = inv_project(xs0, depths0) = [[0., 0., 2.], [8., -4., 4.]]
+        // ps1 = transform10 * ps0 = [[2., 0., 4.], [4., -4., -4.]]
         let xs0 = arr2(&[[0., 0.], [2., -1.]]);
         let depths0 = arr1(&[2., 4.]);
         let xs1 = arr2(&[[0.5, 0.0], [-1.0, 1.0]]);
-        assert_eq!(Warp::warp(&transform10, &xs0, &depths0), xs1);
+        let depths1 = arr1(&[4., -4.]);
+        let (xs1_, depths1_) = Warp::warp(&transform10, &xs0, &depths0);
+        assert_eq!(xs1_, xs1);
+        assert_eq!(depths1_, depths1);
     }
 
     #[test]
@@ -119,10 +138,15 @@ mod tests {
             [-1., 0., 0., 4.],
             [0., 0., 0., 1.],
         ]);
-        let xs0 = arr1(&[0., 0.]);
+        // p0 = [0., 0., 2.]
+        // p1 = [2., 0., 4.]
+        let x0 = arr1(&[0., 0.]);
         let depth0 = 2.;
-        let xs1 = arr1(&[0.5, 0.0]);
-        assert_eq!(Warp::warp(&transform10, &xs0, depth0), xs1);
+        let x1 = arr1(&[0.5, 0.0]);
+        let depth1 = 4.;
+        let (x1_, depth1_) = Warp::warp(&transform10, &x0, depth0);
+        assert_eq!(x1_, x1);
+        assert_eq!(depth1_, depth1);
     }
 
     #[bench]
@@ -153,8 +177,8 @@ mod tests {
 
         // x0          = [(25. - 20.) / 5., (40. - 30.) / 5.]
         //             = [1., 2.]
-        // inv_project(x0, depth0) = [10., 20., 10.]
-        // transform10 * (depth0 * x0) = [10., 20., 20.]
+        // ps0 = inv_project(x0, depth0) = [10., 20., 10.]
+        // ps1 = transform10 * ps1 = [10., 20., 20.]
         // depth1      = 20.
         // x1          = [0.5, 1.]
         // u1          = [20. * 0.5 + 30., 50. * 1. + 20.]
@@ -167,7 +191,10 @@ mod tests {
         );
 
         let u1 = arr1(&[40., 70.]);
-        assert_eq!(warp10.warp(&u0, depth0), u1);
+        let depth1 = 20.;
+        let (u1_, depth1_) = warp10.warp(&u0, depth0);
+        assert_eq!(u1_, u1);
+        assert_eq!(depth1_, depth1);
     }
 
     #[test]
@@ -189,9 +216,9 @@ mod tests {
         // xs0          = [[(25. - 20.) / 5., (40. - 30.) / 5.]
         //                 [( 0. - 20.) / 5., (10. - 30.) / 5.],
         //              = [[1., 2.], [-4. -4.]]
-        // inv_project(xs0, depths0) = [[10., 20., 10.], [-20. -20., 5.]]
-        // transform10 * (depths0 * xs0) = [[10., 20., 20.], [5., -20., 50.]]
-        // depths1      = [20. 40.]
+        // ps0 = inv_project(xs0, depths0) = [[10., 20., 10.], [-20. -20., 5.]]
+        // ps1 = transform10 * ps0 = [[10., 20., 20.], [5., -20., 50.]]
+        // depths1      = [20. 50.]
         // x1           = [[0.5, 1.], [0.1, -0.4]]
         // u1          = [[20. * 0.5 + 30., 50. * 1. + 20.],
         //                [20. * (-0.1) + 30., 50 * (-0.4) + 20.]]
@@ -204,6 +231,9 @@ mod tests {
         );
 
         let us1 = arr2(&[[40., 70.], [32., 0.]]);
-        assert_eq!(warp10.warp(&us0, &depths0), us1);
+        let depths1 = arr1(&[20., 50.]);
+        let (us1_, depths1_) = warp10.warp(&us0, &depths0);
+        assert_eq!(us1_, us1);
+        assert_eq!(depths1_, depths1);
     }
 }

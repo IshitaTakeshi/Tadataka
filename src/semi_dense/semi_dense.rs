@@ -55,8 +55,8 @@ fn xs_ref(
     ref_step_size: f64
 ) -> Array2<f64> {
     let (min_depth, max_depth) = depth_range;
-    let x_min_ref = transform_rk.warp(x_key, min_depth);
-    let x_max_ref = transform_rk.warp(x_key, max_depth);
+    let (x_min_ref, _) = transform_rk.warp(x_key, min_depth);
+    let (x_max_ref, _) = transform_rk.warp(x_key, max_depth);
     ref_coordinates(&x_min_ref, &x_max_ref, ref_step_size)
 }
 
