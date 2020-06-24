@@ -29,12 +29,12 @@ fn handle_collision(
         depth_a.inv(), depth_b.inv(), variance_a, variance_b
     ) {
         let (inv_depth, variance) = fusion(
-            f64::from(depth_a.inv()),
-            f64::from(depth_b.inv()),
+            depth_a.inv(),
+            depth_b.inv(),
             variance_a,
             variance_b
         );
-        return (f64::from(inv_depth.inv()), variance);
+        return (inv_depth.inv(), variance);
     }
 
     if depth_a < depth_b {
