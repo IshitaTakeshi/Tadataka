@@ -12,7 +12,7 @@ pub struct PyCameraParameters {
 #[pymethods]
 impl PyCameraParameters {
     #[new]
-    fn new(
+    pub fn new(
         _py: Python<'_>,
         focal_length: (f64, f64),
         offset: (f64, f64)
