@@ -22,6 +22,7 @@ where
     S: Data<Elem = f64>,
 {
     fn project(&self) -> Array<f64, Ix1> {
+        assert_eq!(self.shape()[0], 3, "Input array length must be 3");
         project_impl(&self.view())
     }
 
@@ -36,6 +37,8 @@ where
     S2: Data<Elem = f64>
 {
     fn project(&self) -> Array<f64, Ix2> {
+        assert_eq!(self.shape()[1], 3, "Input array shape must be (N, 3)");
+
         let n = self.shape()[0];
         let mut us = Array::zeros((n, 2));
         for i in 0..n {
