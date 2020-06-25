@@ -49,22 +49,22 @@ where
     }
 }
 
-struct PerspectiveWarp<'a, T> where T: Data<Elem = f64> {
+pub struct PerspectiveWarp<'a, T> where T: Data<Elem = f64> {
+    transform10: &'a ArrayBase<T, Ix2>,
     camera_params0: &'a CameraParameters,
     camera_params1: &'a CameraParameters,
-    transform10: &'a ArrayBase<T, Ix2>,
 }
 
 impl<'a, T> PerspectiveWarp<'a, T> where T: Data<Elem = f64> {
-    fn new(
+    pub fn new(
+        transform10: &'a ArrayBase<T, Ix2>,
         camera_params0: &'a CameraParameters,
         camera_params1: &'a CameraParameters,
-        transform10: &'a ArrayBase<T, Ix2>,
     ) -> Self {
         PerspectiveWarp {
+            transform10: transform10,
             camera_params0: camera_params0,
             camera_params1: camera_params1,
-            transform10: transform10,
         }
     }
 }
@@ -185,9 +185,9 @@ mod tests {
         //             = [40., 70.]
 
         let warp10 = PerspectiveWarp::new(
+            &transform10,
             &camera_params0,
-            &camera_params1,
-            &transform10
+            &camera_params1
         );
 
         let u1 = arr1(&[40., 70.]);
@@ -225,9 +225,9 @@ mod tests {
         //             = [[40., 70.], [32., 0.]]
 
         let warp10 = PerspectiveWarp::new(
+            &transform10,
             &camera_params0,
-            &camera_params1,
-            &transform10
+            &camera_params1
         );
 
         let us1 = arr2(&[[40., 70.], [32., 0.]]);

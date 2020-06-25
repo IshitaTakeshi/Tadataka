@@ -3,7 +3,6 @@ use crate::semi_dense::fusion::fusion;
 use crate::semi_dense::numeric::Inverse;
 use crate::semi_dense::stat;
 use crate::warp::{PerspectiveWarp, Warp};
-use approx::assert_abs_diff_eq;
 use ndarray::{arr1, Array, Array2, Data};
 use std::collections::HashMap;
 
@@ -95,6 +94,8 @@ fn propagate<T: Data<Elem = f64>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use approx::assert_abs_diff_eq;
     use ndarray::arr2;
     use crate::camera::CameraParameters;
 
@@ -134,7 +135,7 @@ mod tests {
               [0., 0., 0., 1.]]
         );
 
-        let warp10 = PerspectiveWarp::new(&camera_params, &camera_params, &transform10);
+        let warp10 = PerspectiveWarp::new(&transform10, &camera_params, &camera_params);
         let depth0 = 100.;
         let variance0 = 20.;
         // -1.0 + 4, -1.0 + 4,
