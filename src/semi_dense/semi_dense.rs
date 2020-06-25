@@ -197,9 +197,6 @@ pub fn update_depth(
 
             let refframe = &refframes[refframes.len()-age];
 
-            let d = prior_depth[[y, x]];
-            let v = prior_variance[[y, x]];
-
             if let Err(f) = hypothesis::check_args(d.inv(), v, inv_depth_range) {
                 result_depth[[y, x]] = d;
                 result_variance[[y, x]] = v;
@@ -207,7 +204,7 @@ pub fn update_depth(
                 continue;
             }
 
-            let u_key = arr1(&[y as f64, x as f64]);
+            let u_key = arr1(&[x as f64, y as f64]);
             let prior = Hypothesis::new(d.inv(), v, inv_depth_range);
             let result = estimate(&u_key, &prior, &keyframe, refframe,
                                   &image_grad, &params);
