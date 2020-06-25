@@ -172,9 +172,24 @@ pub fn update_depth(
     let mut result_variance = Array::zeros((height, width));
     let inv_depth_range = params.inv_depth_range;
 
+    let bar = ProgressBar::new((height * width).try_into().unwrap());
+
     for y in 0..height {
         for x in 0..width {
+            bar.inc(1);
+
             let age = age_map[[y, x]];
+            let d = prior_depth[[y, x]];
+            let v = prior_variance[[y, x]];
+
+            if age == 0 {
+                // refframe cannot be observed from this pixel
+                result_depth[[y, x]] = d;
+                result_variance[[y, x]] = v;
+                flag_map[[y, x]] = Flag::NotProcessed as i64;
+                continue;
+            }
+
             if refframes.len() < age {
                 eprintln!("Age exceeds the refframe size");
                 std::process::exit(1);
@@ -206,6 +221,9 @@ pub fn update_depth(
             flag_map[[y, x]] = flag as i64;
         }
     }
+
+    bar.finish();
+
     (flag_map, result_depth, result_variance)
 }
 
