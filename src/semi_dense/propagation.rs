@@ -45,7 +45,7 @@ fn handle_collision(
     }
 }
 
-fn propagate<T: Data<Elem = f64>>(
+pub fn propagate<T: Data<Elem = f64>>(
     warp10: &PerspectiveWarp<T>,
     depth_map0: &Array2<f64>,
     variance_map0: &Array2<f64>,

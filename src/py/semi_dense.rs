@@ -1,15 +1,53 @@
 use crate::camera::CameraParameters;
+use crate::semi_dense::age;
 use crate::semi_dense::{Flag, Frame, Hypothesis, Params, VarianceCoefficients};
 use crate::semi_dense::gradient::ImageGradient;
 use crate::semi_dense::hypothesis;
 use crate::semi_dense::numeric::Inverse;
+use crate::semi_dense::propagation;
 use crate::semi_dense::semi_dense;
+use crate::warp::PerspectiveWarp;
+use super::camera::PyCameraParameters;
 use ndarray::arr1;
 use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::types::{PyAny, PyList, PyTuple};
 use pyo3::prelude::{pyfunction, pymodule, PyModule, PyResult,
                     Py, Python, pymethods, ToPyObject, PyObject, FromPyObject};
 use pyo3::wrap_pyfunction;
+
+fn camera_params_from_py(camera_params: &PyAny) -> PyResult<CameraParameters> {
+    let focal_length = camera_params.getattr("focal_length")?;
+    let offset = camera_params.getattr("offset")?;
+
+    let focal_length: &PyArray1<f64> = FromPyObject::extract(focal_length)?;
+    let offset: &PyArray1<f64> = FromPyObject::extract(offset)?;
+
+    let focal_length = focal_length.as_array();
+    let offset = offset.as_array();
+
+    Ok(CameraParameters::new(
+        (focal_length[0], focal_length[1]),
+        (offset[0], offset[1])
+    ))
+}
+
+#[pyfunction]
+fn increment_age(
+    py: Python<'_>,
+    age_map0: &PyArray2<usize>,
+    camera_params0: &PyAny,
+    camera_params1: &PyAny,
+    transform10: &PyArray2<f64>,
+    depth_map0: &PyArray2<f64>,
+) -> PyResult<Py<PyArray2<usize>>> {
+    let age = age::increment_age(
+        &age_map0.as_array(),
+        &camera_params_from_py(camera_params0)?,
+        &camera_params_from_py(camera_params1)?,
+        &transform10.as_array(), &depth_map0.as_array()
+    );
+    Ok(age.into_pyarray(py).to_owned())
+}
 
 #[pymethods]
 impl Frame {
@@ -20,24 +58,32 @@ impl Frame {
         image: &PyArray2<f64>,
         transform: &PyArray2<f64>,
     ) -> PyResult<Self> {
-        let focal_length = camera_params.getattr("focal_length")?;
-        let offset = camera_params.getattr("offset")?;
-
-        let focal_length: &PyArray1<f64> = FromPyObject::extract(focal_length)?;
-        let offset: &PyArray1<f64> = FromPyObject::extract(offset)?;
-
-        let focal_length = focal_length.as_array();
-        let offset = offset.as_array();
-
-        let c = CameraParameters::new(
-            (focal_length[0], focal_length[1]),
-            (offset[0], offset[1])
-        );
         Ok(Frame {
-            camera_params: c,
+            camera_params: camera_params_from_py(camera_params)?,
             image: image.as_array().to_owned(),
             transform: transform.as_array().to_owned()
         })
+    }
+
+    #[getter]
+    fn camera_params(&self, py: Python<'_>) -> PyCameraParameters {
+        let focal_length = &self.camera_params.focal_length;
+        let offset = &self.camera_params.offset;
+        let (fx, fy) = (focal_length[0], focal_length[1]);
+        let (ox, oy) = (offset[0], offset[1]);
+        PyCameraParameters::new(py, (fx, fy), (ox, oy))
+    }
+
+    #[getter]
+    fn image(&self, py: Python<'_>) -> Py<PyArray2<f64>> {
+        let image = self.image.to_owned();
+        image.into_pyarray(py).to_owned()
+    }
+
+    #[getter]
+    fn transform(&self, py: Python<'_>) -> Py<PyArray2<f64>> {
+        let transform = self.transform.to_owned();
+        transform.into_pyarray(py).to_owned()
     }
 }
 
@@ -107,7 +153,6 @@ fn estimate_debug_<'a>(
     };
 }
 
-
 #[pyfunction]
 fn update_depth<'a>(
     py: Python<'a>,
@@ -134,9 +179,40 @@ fn update_depth<'a>(
     );
 
     let mut ret = Vec::new();
-    ret.push(Ret::I64(flag_map.into_pyarray(py).to_owned()));
     ret.push(Ret::F64(depth_map.into_pyarray(py).to_owned()));
     ret.push(Ret::F64(variance_map.into_pyarray(py).to_owned()));
+    ret.push(Ret::I64(flag_map.into_pyarray(py).to_owned()));
+    Ok(PyTuple::new(py, ret))
+}
+
+#[pyfunction]
+fn propagate<'a>(
+    py: Python<'a>,
+    transform10: &PyArray2<f64>,
+    camera_params0: &PyAny,
+    camera_params1: &PyAny,
+    depth_map0: &PyArray2<f64>,
+    variance_map0: &PyArray2<f64>,
+    default_depth: f64,
+    default_variance: f64,
+    uncertaintity_bias: f64,
+) -> PyResult<&'a PyTuple> {
+    let transform10 = transform10.as_array();
+    let camera_params0 = camera_params_from_py(camera_params0)?;
+    let camera_params1 = camera_params_from_py(camera_params1)?;
+    let warp10 = PerspectiveWarp::new(&transform10, &camera_params0, &camera_params1);
+    let (depth_map1, variance_map1) = propagation::propagate(
+        &warp10,
+        &depth_map0.as_array().to_owned(),
+        &variance_map0.as_array().to_owned(),
+        default_depth,
+        default_variance,
+        uncertaintity_bias
+    );
+
+    let mut ret = Vec::new();
+    ret.push(depth_map1.into_pyarray(py).to_owned());
+    ret.push(variance_map1.into_pyarray(py).to_owned());
     Ok(PyTuple::new(py, ret))
 }
 
@@ -145,7 +221,9 @@ fn semi_dense_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<Frame>()?;
     m.add_class::<Params>()?;
     m.add_wrapped(wrap_pyfunction!(estimate_debug_))?;
+    m.add_wrapped(wrap_pyfunction!(increment_age))?;
     m.add_wrapped(wrap_pyfunction!(update_depth))?;
+    m.add_wrapped(wrap_pyfunction!(propagate))?;
 
     Ok(())
 }
