@@ -1,11 +1,10 @@
-use crate::projection::Projection;
 use crate::vector::normalize;
-use ndarray::{arr1, Array, Array1, Array2, ArrayView1};
+use ndarray::{arr1, Array, Array1, Array2};
 use ndarray_linalg::Norm;
 
 static EPSILON: f64 = 1e-16;
 
-fn key_coordinates_(
+pub fn key_coordinates(
     epipolar_direction: &Array1<f64>,
     x_key: &Array1<f64>,
     step_size: f64,
@@ -19,15 +18,6 @@ fn key_coordinates_(
         coordinates.row_mut(i).assign(&c);
     }
     coordinates
-}
-
-pub fn key_coordinates(
-    t_rk: &ArrayView1<f64>,
-    x_key: &Array1<f64>,
-    step_size: f64
-) -> Array2<f64> {
-    let d = x_key - &Projection::project(t_rk);
-    key_coordinates_(&d, x_key, step_size)
 }
 
 pub fn ref_coordinates(
@@ -55,7 +45,7 @@ mod tests {
     use ndarray::arr2;
 
     #[test]
-    fn test_key_coordinates_() {
+    fn test_key_coordinates() {
         let x_key = arr1(&[7., 8.]);
         let direction = arr1(&[9., 12.]);
         let step_size = 5.;
@@ -68,7 +58,7 @@ mod tests {
             [7. + 2. * 3., 8. + 2. * 4.],
         ]);
         assert_eq!(
-            key_coordinates_(&direction, &x_key, step_size),
+            key_coordinates(&direction, &x_key, step_size),
             expected
         );
     }
