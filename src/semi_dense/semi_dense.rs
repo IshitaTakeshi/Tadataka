@@ -9,7 +9,8 @@ use crate::camera::Normalizer;
 use crate::gradient::gradient1d;
 use crate::interpolation::Interpolation;
 use crate::image_range::{ImageRange, all_in_range};
-use crate::transform::get_translation;
+use crate::projection::Projection;
+use crate::transform::{get_translation, inv_transform};
 use crate::warp::Warp;
 use super::depth::{calc_key_depth, calc_ref_depth, depth_search_range};
 use super::epipolar::{key_coordinates, ref_coordinates};
@@ -44,8 +45,17 @@ fn xs_key(
     x_key: &Array1<f64>,
     key_step_size: f64
 ) -> Array2<f64> {
-    let t_rk = get_translation(transform_rk);
-    key_coordinates(&t_rk, x_key, key_step_size)
+    // p_key = R_kr * p_ref + t_kr
+    // We want the key epipole e_key (projection of p_ref = 0
+    // on the normalized key image plane).
+    // Therefore, we set p_ref = 0 and obtain:
+    // p_key = t_kr
+    // e_key = projection(p_key) = projection(t_kr)
+    let transform_kr = inv_transform(transform_rk);
+    let t_kr = get_translation(&transform_kr);
+    let e_key = Projection::project(&t_kr);
+    let d = x_key - &e_key;
+    key_coordinates(&d, x_key, key_step_size)
 }
 
 fn xs_ref(
@@ -105,6 +115,7 @@ pub fn estimate(
     // calculate step size along the epipolar line on the keyframe
     // step size / inv depth = approximately const
     let result = step_ratio(&transform_rk, &x_key, prior.inv_depth);
+    // note that key_step_size is always > 0
     let key_step_size = match result {
         Err(e) => return Err(e),
         Ok(ratio) => ratio * params.ref_step_size,
@@ -120,6 +131,7 @@ pub fn estimate(
     // extract intensities from the key coordinates
     let key_intensities = keyframe.image.interpolate(&us_key);
     let key_gradient = gradient1d(&key_intensities).norm();
+
     // most of coordinates has insufficient gradient
     // return early to reduce computation
     if key_gradient < params.min_gradient {
