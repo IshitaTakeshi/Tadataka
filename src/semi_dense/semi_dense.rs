@@ -9,11 +9,10 @@ use crate::camera::Normalizer;
 use crate::gradient::gradient1d;
 use crate::interpolation::Interpolation;
 use crate::image_range::{ImageRange, all_in_range};
-use crate::projection::Projection;
-use crate::transform::{get_translation, inv_transform};
+use crate::transform::get_translation;
 use crate::warp::Warp;
 use super::depth::{calc_key_depth, calc_ref_depth, depth_search_range};
-use super::epipolar::{key_coordinates, ref_coordinates};
+use super::epipolar::{key_coordinates, ref_coordinates, calc_key_epipole};
 use super::flag::Flag;
 use super::frame::Frame;
 use super::gradient::ImageGradient;
@@ -41,21 +40,22 @@ fn step_ratio(
 }
 
 fn xs_key(
-    transform_rk: &Array2<f64>,
+    e_key: &Array1<f64>,
     x_key: &Array1<f64>,
     key_step_size: f64
 ) -> Array2<f64> {
-    // p_key = R_kr * p_ref + t_kr
-    // We want the key epipole e_key (projection of p_ref = 0
-    // on the normalized key image plane).
-    // Therefore, we set p_ref = 0 and obtain:
-    // p_key = t_kr
-    // e_key = projection(p_key) = projection(t_kr)
-    let transform_kr = inv_transform(transform_rk);
-    let t_kr = get_translation(&transform_kr);
-    let e_key = Projection::project(&t_kr);
-    let d = x_key - &e_key;
-    key_coordinates(&d, x_key, key_step_size)
+    key_coordinates(&(e_key - x_key), x_key, key_step_size)
+}
+
+fn calc_ref_ends(
+    transform_rk: &Array2<f64>,
+    x_key: &Array1<f64>,
+    depth_range: (f64, f64),
+) -> (Array1<f64>, Array1<f64>) {
+    let (min_depth, max_depth) = depth_range;
+    let (x_min_ref, _) = transform_rk.warp(x_key, min_depth);
+    let (x_max_ref, _) = transform_rk.warp(x_key, max_depth);
+    (x_min_ref, x_max_ref)
 }
 
 fn xs_ref(
@@ -64,9 +64,7 @@ fn xs_ref(
     depth_range: (f64, f64),
     ref_step_size: f64
 ) -> Array2<f64> {
-    let (min_depth, max_depth) = depth_range;
-    let (x_min_ref, _) = transform_rk.warp(x_key, min_depth);
-    let (x_max_ref, _) = transform_rk.warp(x_key, max_depth);
+    let (x_min_ref, x_max_ref) = calc_ref_ends(transform_rk, x_key, depth_range);
     ref_coordinates(&x_min_ref, &x_max_ref, ref_step_size)
 }
 
@@ -107,7 +105,9 @@ pub fn estimate(
     image_grad: &ImageGradient,
     params: &Params,
 ) -> Result<Hypothesis, Flag> {
-    let transform_rk = transform_rk(&keyframe.transform, &refframe.transform);
+    let transform_wk = &keyframe.transform;
+    let transform_wr = &refframe.transform;
+    let transform_rk = transform_rk(&transform_wk, &transform_wr);
 
     let depth_range = depth_search_range(&prior.range());
     let x_key = keyframe.camera_params.normalize(u_key);
@@ -122,7 +122,8 @@ pub fn estimate(
     };
 
     // calculate coordinates on the keyframe image
-    let xs_key = xs_key(&transform_rk, &x_key, key_step_size);
+    let e_key = calc_key_epipole(&transform_wk, &transform_wr);
+    let xs_key = xs_key(&e_key, &x_key, key_step_size);
     let us_key = keyframe.camera_params.unnormalize(&xs_key);
     if !all_in_range(&us_key, keyframe.image.shape()) {
         return Err(Flag::KeyOutOfRange);
@@ -240,6 +241,37 @@ pub fn update_depth(
 mod tests {
     use super::*;
     use ndarray::arr2;
+
+    #[test]
+    fn test_calc_ref_ends() {
+        let transform_wk = arr2(
+            &[[1., 0., 0., -2.],
+              [0., 1., 0., 0.],
+              [0., 0., 1., 7.],
+              [0., 0., 0., 1.]]
+        );
+
+        let transform_wr = arr2(
+            &[[1., 0., 0., 6.],
+              [0., 1., 0., 0.],
+              [0., 0., 1., 7.],
+              [0., 0., 0., 1.]]
+        );
+
+        let transform_rk = transform_rk(&transform_wk, &transform_wr);
+        assert_eq!(
+            transform_rk,
+            arr2(&[[1., 0., 0., -8.],
+                   [0., 1., 0., 0.],
+                   [0., 0., 1., 0.],
+                   [0., 0., 0., 1.]])
+        );
+
+        let x_key = arr1(&[2., 0.]);
+        let (x_min_ref, x_max_ref) = calc_ref_ends(&transform_rk, &x_key, (2., 3.));
+        assert_eq!(x_min_ref, arr1(&[-2., 0.]));
+        assert_eq!(x_max_ref, arr1(&[-2./3., 0.]));
+    }
 
     #[test]
     fn test_step_ratio() {

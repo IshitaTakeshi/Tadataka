@@ -1,7 +1,6 @@
 use crate::vector::normalize;
 use crate::projection::Projection;
-use crate::homogeneous::Homogeneous;
-use crate::transform::{get_rotation, get_translation, inv_transform, Transform};
+use crate::transform::{get_rotation, get_translation, inv_transform};
 use ndarray::{arr1, Array, Array1, Array2};
 use ndarray_linalg::Norm;
 
