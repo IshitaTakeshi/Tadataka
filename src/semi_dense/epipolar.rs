@@ -1,8 +1,24 @@
 use crate::vector::normalize;
+use crate::projection::Projection;
+use crate::homogeneous::Homogeneous;
+use crate::transform::{get_rotation, get_translation, inv_transform, Transform};
 use ndarray::{arr1, Array, Array1, Array2};
 use ndarray_linalg::Norm;
 
 static EPSILON: f64 = 1e-16;
+
+pub fn calc_key_epipole(
+    transform_wk: &Array2<f64>,
+    transform_wr: &Array2<f64>,
+) -> Array1<f64> {
+    let t_wk = get_translation(transform_wk);
+    let t_wr = get_translation(transform_wr);
+    let transform_kw = inv_transform(transform_wk);
+    let rot_kw = get_rotation(&transform_kw);
+    let p_key = rot_kw.dot(&(&t_wr - &t_wk));
+    let e_key = Projection::project(&p_key);
+    e_key
+}
 
 pub fn key_coordinates(
     epipolar_direction: &Array1<f64>,
@@ -43,6 +59,64 @@ pub fn ref_coordinates(
 mod tests {
     use super::*;
     use ndarray::arr2;
+
+    #[test]
+    fn test_calc_key_epipole() {
+        let transform_wk = arr2(
+            &[[1., 0., 0., 0.],
+              [0., 1., 0., 0.],
+              [0., 0., 1., 0.],
+              [0., 0., 0., 1.]]
+        );
+
+        let transform_wr = arr2(
+            &[[1., 0., 0., 3.],
+              [0., 1., 0., 3.],
+              [0., 0., 1., 10.],
+              [0., 0., 0., 1.]]
+        );
+
+        let e_key = calc_key_epipole(&transform_wk, &transform_wr);
+        assert_eq!(e_key, arr1(&[0.3, 0.3]));
+
+        // rotate pi / 2 around the y-axis
+        let transform_wk = arr2(
+            &[[0., 0., 1., 0.],
+              [0., 1., 0., 0.],
+              [-1., 0., 0., 6.],
+              [0., 0., 0., 1.]]
+        );
+
+        // rotate - pi / 2 around the y-axis
+        let transform_wr = arr2(
+            &[[0., 0., -1., 6.],
+              [0., 1., 0., 0.],
+              [1., 0., 0., 3.],
+              [0., 0., 0., 1.]]
+        );
+
+        let e_key = calc_key_epipole(&transform_wk, &transform_wr);
+        assert_eq!(e_key, arr1(&[0.5, 0.]));
+
+        // rotate pi around the y-axis
+        let transform_wk = arr2(
+            &[[-1., 0., 0., 0.],
+              [0., 1., 0., 0.],
+              [0., 0., -1., 4.],
+              [0., 0., 0., 1.]]
+        );
+
+        // rotate - pi / 2 around the y-axis
+        let transform_wr = arr2(
+            &[[0., 0., -1., 4.],
+              [0., 1., 0., 0.],
+              [1., 0., 0., 2.],
+              [0., 0., 0., 1.]]
+        );
+
+        let e_key = calc_key_epipole(&transform_wk, &transform_wr);
+        assert_eq!(e_key, arr1(&[-2., 0.]));
+    }
 
     #[test]
     fn test_key_coordinates() {
