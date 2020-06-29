@@ -37,10 +37,9 @@ pub fn key_coordinates(
 
 pub fn ref_coordinates(
     x_min: &Array1<f64>,
-    x_max: &Array1<f64>,
+    direction: &Array1<f64>,
     step_size: f64,
 ) -> Array2<f64> {
-    let direction = x_max - x_min;
     let norm = direction.norm();
     let direction = direction / (norm + EPSILON);
 

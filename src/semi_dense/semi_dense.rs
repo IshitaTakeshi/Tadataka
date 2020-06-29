@@ -39,12 +39,13 @@ fn step_ratio(
     Ok(f64::from(ratio))
 }
 
-fn xs_key(
-    e_key: &Array1<f64>,
+fn calc_key_direction(
     x_key: &Array1<f64>,
-    key_step_size: f64
-) -> Array2<f64> {
-    key_coordinates(&(e_key - x_key), x_key, key_step_size)
+    e_key: &Array1<f64>,
+    ref_direction: &Array1<f64>,
+) -> Array1<f64> {
+    let d = x_key - e_key;
+    if ref_direction.dot(&d) > 0. { d } else { -d }
 }
 
 fn calc_ref_ends(
@@ -56,16 +57,6 @@ fn calc_ref_ends(
     let (x_min_ref, _) = transform_rk.warp(x_key, min_depth);
     let (x_max_ref, _) = transform_rk.warp(x_key, max_depth);
     (x_min_ref, x_max_ref)
-}
-
-fn xs_ref(
-    transform_rk: &Array2<f64>,
-    x_key: &Array1<f64>,
-    depth_range: (f64, f64),
-    ref_step_size: f64
-) -> Array2<f64> {
-    let (x_min_ref, x_max_ref) = calc_ref_ends(transform_rk, x_key, depth_range);
-    ref_coordinates(&x_min_ref, &x_max_ref, ref_step_size)
 }
 
 fn check_us_ref(
@@ -121,9 +112,14 @@ pub fn estimate(
         Ok(ratio) => ratio * params.ref_step_size,
     };
 
-    // calculate coordinates on the keyframe image
+    let (x_min_ref, x_max_ref) = calc_ref_ends(&transform_rk, &x_key, depth_range);
+    let ref_direction = &x_max_ref - &x_min_ref;
+
     let e_key = calc_key_epipole(&transform_wk, &transform_wr);
-    let xs_key = xs_key(&e_key, &x_key, key_step_size);
+    let key_direction = calc_key_direction(&x_key, &e_key, &ref_direction);
+
+    // calculate coordinates on the keyframe image
+    let xs_key = key_coordinates(&key_direction, &x_key, key_step_size);
     let us_key = keyframe.camera_params.unnormalize(&xs_key);
     if !all_in_range(&us_key, keyframe.image.shape()) {
         return Err(Flag::KeyOutOfRange);
@@ -140,7 +136,7 @@ pub fn estimate(
     }
 
     // calculate coordinates on the reference frame image
-    let xs_ref = xs_ref(&transform_rk, &x_key, depth_range, params.ref_step_size);
+    let xs_ref = ref_coordinates(&x_min_ref, &ref_direction, params.ref_step_size);
     let us_ref = refframe.camera_params.unnormalize(&xs_ref);
     check_us_ref(&us_ref, us_key.nrows(), refframe.image.shape())?;
 
