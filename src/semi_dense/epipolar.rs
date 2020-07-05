@@ -140,7 +140,7 @@ mod tests {
         let search_step = 5.0;
         let x_min = arr1(&[-15.0, -20.0]);
         let x_max = arr1(&[15.0, 20.0]);
-        let xs = ref_coordinates(&x_min, &x_max, search_step);
+        let xs = ref_coordinates(&x_min, &(&x_max-&x_min), search_step);
 
         let xs_true = arr2(&[
             [-15., -20.],
