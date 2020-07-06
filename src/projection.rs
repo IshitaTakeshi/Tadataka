@@ -1,7 +1,7 @@
 use crate::homogeneous::Homogeneous;
 use ndarray::{Array, Array1, ArrayBase, ArrayView1, Data, Ix1, Ix2};
 
-static EPSILON: f64 = 1e-6;
+static EPSILON: f64 = 1e-16;
 
 pub trait Projection<D, DepthType> {
     fn project(&self) -> Array<f64, D>;
