@@ -1,8 +1,9 @@
-use ndarray::{Array1, ArrayView1};
+use ndarray::Array1;
 use ndarray_linalg::Norm;
 use crate::gradient::gradient1d;
+use crate::vector::normalize;
 
-fn calc_error(a: &ArrayView1<f64>, b: &Array1<f64>) -> f64 {
+fn calc_error(a: &Array1<f64>, b: &Array1<f64>) -> f64 {
     let d = a.to_owned() - b;
     d.dot(&d)
 }
@@ -14,7 +15,10 @@ fn search_(sequence: &Array1<f64>, kernel: &Array1<f64>) -> usize {
     let mut min_error = f64::INFINITY;
     let mut argmin = 0;
     for i in 0..n - k + 1 {
-        let e = calc_error(&sequence.slice(s![i..i + k]), &kernel);
+        let e = calc_error(
+            &normalize(&sequence.slice(s![i..i + k])),
+            &normalize(&kernel)
+        );
         if e < min_error {
             min_error = e;
             argmin = i;
