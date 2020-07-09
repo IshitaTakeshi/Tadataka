@@ -2,8 +2,31 @@ import csv
 from pathlib import Path
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from tadataka.dataset.match import match_timestamps
+
+
+def convert_to_tum_poses(rotations: Rotation, positions: np.ndarray):
+    assert(len(rotations) == positions.shape[0])
+
+    posevecs = np.empty((len(rotations), 7))
+    for i, (position, rot) in enumerate(zip(positions, rotations)):
+        posevecs[i] = np.hstack((position, rot.as_quat()))
+    return posevecs
+
+
+def save_in_tum_format(filename, timestamps, rotations, positions):
+    assert(len(timestamps) == len(rotations) == positions.shape[0])
+
+    posevecs = convert_to_tum_poses(rotations, positions)
+
+    with open(filename, "w") as f:
+        for timestamp, posevec in zip(timestamps, posevecs):
+            posestr = " ".join(map(str, posevec.tolist()))
+            row = "{} {}".format(timestamp, posestr)
+
+            f.write(row + "\n")
 
 
 def load_image_paths(filepath, prefix, delimiter=' '):
