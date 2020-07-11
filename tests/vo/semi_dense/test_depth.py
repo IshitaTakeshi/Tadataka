@@ -21,7 +21,6 @@ def test_calc_ref_inv_depth():
                         1 / (-2.0 + 4.0))
 
 
-
 def test_inv_depth_search_range():
     # predicted range fits in [min, max]
     search_range = InvDepthSearchRange(0.4, 1.0, factor=2.0)

@@ -12,13 +12,6 @@ from tests.utils import random_rotation_matrix
 
 
 def test_ref_coordinates():
-    width, height = 160, 200
-    image_shape = [height, width]
-    camera_model = CameraModel(
-        CameraParameters(focal_length=[10, 10], offset=[80, 100]),
-        distortion_model=None
-    )
-
     search_step = 5.0
     x_min = np.array([-15.0, -20.0])
     x_max = np.array([15.0, 20.0])
