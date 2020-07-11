@@ -123,6 +123,7 @@ class TumRgbdDataset(BaseDataset):
 
         self.length = matches.shape[0]
 
+        self.timestamps = timestamps_gt[indices_gt]
         self.rotations = rotations[indices_gt]
         self.positions = positions[indices_gt]
 
