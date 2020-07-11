@@ -82,7 +82,7 @@ impl Frame {
     }
 
     #[getter]
-    fn transform(&self, py: Python<'_>) -> Py<PyArray2<f64>> {
+    fn transform_wf(&self, py: Python<'_>) -> Py<PyArray2<f64>> {
         let transform = self.transform.to_owned();
         transform.into_pyarray(py).to_owned()
     }
