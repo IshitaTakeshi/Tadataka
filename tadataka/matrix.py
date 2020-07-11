@@ -2,7 +2,14 @@ import numpy as np
 
 from skimage.transform import ProjectiveTransform, FundamentalMatrixTransform
 from rust_bindings import homogeneous
-from tadataka._matrix import get_rotation, get_translation
+
+
+def get_rotation(T):
+    return T[0:3, 0:3]
+
+
+def get_translation(T):
+    return T[0:3, 3]
 
 
 def get_rotation_translation(T):
