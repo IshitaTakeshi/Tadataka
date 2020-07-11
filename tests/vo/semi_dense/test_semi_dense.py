@@ -72,7 +72,7 @@ def test_update_depth():
     age_map = np.ones(shape, dtype=np.uint64)
     prior_depth = 200.0 * np.ones(shape, dtype=np.float64)
     prior_variance = np.ones(shape, dtype=np.float64)
-    flag_map, result_depth, result_variance = update_depth(
+    update_depth(
         keyframe,
         [refframe,],
         age_map,
@@ -80,10 +80,6 @@ def test_update_depth():
         prior_variance,
         params,
     )
-    from examples.plot import plot_depth
-    plot_depth(keyframe_.image, np.zeros(keyframe_.image.shape[0:2]),
-               flag_map, keyframe_.depth_map,
-               result_depth, result_variance)
 
 
 def test_estimate():
