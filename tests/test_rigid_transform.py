@@ -158,7 +158,3 @@ def test_transform_se3():
     P0 = np.random.uniform(-10, 10, (10, 3))
     P1 = transform_se3(T_10, P0)
     assert_array_almost_equal(P1, np.dot(R_10, P0.T).T + t_10)
-
-    p0 = np.random.uniform(-10, 10, 3)
-    p1 = transform_se3(T_10, p0)
-    assert_array_almost_equal(p1, np.dot(R_10, p0.T).T + t_10)
