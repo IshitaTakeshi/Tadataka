@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 approx = "0.3.2"
 blas = "0.20"
 derive_more = "0.99"
+indicatif = "0.13.0"
 iter-enum = "0.2"
 lapacke = "0.2.0"
 lapack-src = { version = "0.6.0", default-features = false, features = ["openblas"] }
@@ -22,6 +23,7 @@ num-derive = "0.3"
 num-traits  = "0.2.11"
 numpy = "0.9.0"
 openblas-src = { version = "0.9", default-features = false, features = ["static"] }
+rand = "0.7.3"
 
 [dependencies.pyo3]
 version = "0.10.1"
