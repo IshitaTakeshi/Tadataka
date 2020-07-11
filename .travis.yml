@@ -20,6 +20,7 @@ install:
   - rustup override set nightly
   - pip install -e .
   - pip install codecov pytest pytest-cov
+  - pip install --upgrade pytest
 
 script:
   - pytest tests --cov=./
