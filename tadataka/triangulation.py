@@ -4,7 +4,7 @@ import numpy as np
 from tadataka.exceptions import InvalidDepthException
 from tadataka.feature import empty_match
 from tadataka.matrix import to_homogeneous, solve_linear
-from tadataka._triangulation import calc_depth0_
+from rust_bindings.triangulation import calc_depth0 as calc_depth0_
 
 
 def linear_triangulation_(rotations, translations, keypoints):
@@ -174,4 +174,4 @@ def calc_depth0(posew0, posew1, x0, x1):
     """
     # transformation from key camera coordinate to ref camera coordinate
     pose10 = posew1.inv() * posew0
-    return calc_depth0_(pose10.R, pose10.t, x0, x1)
+    return calc_depth0_(pose10.T, x0, x1)

@@ -80,24 +80,10 @@ pybind11_module_sources = [
      ["tadataka/_projection.cpp"]),
     ("tadataka._transform",
      ["tadataka/_transform.cpp", "tadataka/_matrix.cpp"]),
-    ("tadataka._triangulation",
-     ["tadataka/_triangulation.cpp", "tadataka/_homogeneous.cpp"]),
-    ("tadataka._warp",
-     ["tadataka/_warp.cpp", "tadataka/_transform.cpp",
-      "tadataka/_projection.cpp"]),
-    ("tadataka.vo.semi_dense._depth",
-     ["tadataka/vo/semi_dense/_depth.cpp", "tadataka/_projection.cpp"]),
-    ("tadataka.vo.semi_dense._epipolar",
-     ["tadataka/vo/semi_dense/_epipolar.cpp"]),
-    ("tadataka.vo.semi_dense._gradient",
-     ["tadataka/vo/semi_dense/_gradient.cpp"]),
-    ("tadataka.vo.semi_dense._variance",
-     ["tadataka/vo/semi_dense/_variance.cpp", "tadataka/_homogeneous.cpp",
-      "tadataka/_matrix.cpp", "tadataka/_projection.cpp"]),
-    ("tadataka.vo.semi_dense._intensities",
-     ["tadataka/vo/semi_dense/_intensities.cpp"]),
 ]
 
+
+debug_rust = True
 
 setup(
     name='tadataka',
@@ -108,13 +94,15 @@ setup(
     license='Apache 2.0',
     packages=['tadataka'],
     rust_extensions=[
-        RustExtension("rust_bindings.homogeneous", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.interpolation", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.transform", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.projection", binding=Binding.PyO3, debug=False),
-        RustExtension("rust_bindings.warp", binding=Binding.PyO3, debug=False),
+        RustExtension("rust_bindings.camera", debug=debug_rust),
+        RustExtension("rust_bindings.homogeneous", debug=debug_rust),
+        RustExtension("rust_bindings.interpolation", debug=debug_rust),
+        RustExtension("rust_bindings.projection", debug=debug_rust),
+        RustExtension("rust_bindings.semi_dense", debug=debug_rust),
+        RustExtension("rust_bindings.transform", debug=debug_rust),
+        RustExtension("rust_bindings.triangulation", debug=debug_rust),
+        RustExtension("rust_bindings.warp", debug=debug_rust),
     ],
-    setup_requires=["setuptools-rust==0.10.6", "Cython>=0.29.17"],
     install_requires=[
         'autograd',
         'bidict',

@@ -7,12 +7,29 @@ edition = "2018"
 [lib]
 name = "rust_bindings"
 crate-type = ["cdylib"]
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-numpy = "0.8.0"
-ndarray = ">=0.13"
+approx = "0.3.2"
+blas = "0.20"
+derive_more = "0.99"
+indicatif = "0.13.0"
+iter-enum = "0.2"
+lapacke = "0.2.0"
+lapack-src = { version = "0.6.0", default-features = false, features = ["openblas"] }
+ndarray = "0.13"
+ndarray-linalg = "0.12"
+num = "0.2"
+num-derive = "0.3"
+num-traits  = "0.2.11"
+numpy = "0.9.0"
+openblas-src = { version = "0.9", default-features = false, features = ["static"] }
+rand = "0.7.3"
 
 [dependencies.pyo3]
-version = "0.9.0"
-features = ["extension-module"]
+version = "0.10.1"
+
+[features]
+# Use this feature when building an extension module.
+# It tells the linker to keep the python symbols unresolved,
+# so that the module can also be used with statically linked python interpreters.
+extension-module = []

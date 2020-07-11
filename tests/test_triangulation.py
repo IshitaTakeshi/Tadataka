@@ -142,7 +142,7 @@ def test_calc_depth0_():
         x1 = pi(p1)
 
         pose10 = pose1w * pose0w.inv()
-        depth = calc_depth0_(pose10.R, pose10.t, x0, x1)
+        depth = calc_depth0_(pose10.T, x0, x1)
         assert_array_almost_equal(depth, p0[2])
 
     rotation1 = Rotation.from_rotvec(np.random.uniform(-np.pi, np.pi, 3))

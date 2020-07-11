@@ -1,7 +1,7 @@
 import numpy as np
 from tadataka.decorator import allow_1d
 from tadataka.matrix import to_homogeneous, from_homogeneous
-from tadataka import _transform
+from rust_bindings import transform as _transform
 
 
 def transform_each(rotations, translations, points):
@@ -108,11 +108,8 @@ class Transform(object):
         return s * np.dot(R, P.T).T + t
 
 
-# want to use multiple dispatch and rename to 'transform'...
-def transform_se3(T_10, P0):
-    P1 = np.empty(P0.shape)
-    _transform.transform(T_10, P0, P1)
-    return P1
+def transform_se3(T10, P0):
+    return _transform.transform(T10, P0)
 
 
 def transform(R, t, P):
