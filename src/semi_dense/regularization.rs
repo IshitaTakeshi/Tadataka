@@ -1,5 +1,4 @@
 use crate::semi_dense::numeric::{Inv, Inverse};
-use crate::semi_dense::stat::are_statically_same;
 use crate::semi_dense::flag::Flag;
 use ndarray::{Array, Array2, ArrayView2};
 
