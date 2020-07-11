@@ -5,7 +5,7 @@ use crate::semi_dense::gradient::ImageGradient;
 use crate::semi_dense::hypothesis;
 use crate::semi_dense::numeric::Inverse;
 use crate::semi_dense::propagation;
-use crate::semi_dense::regularization;
+// use crate::semi_dense::regularization;
 use crate::semi_dense::semi_dense;
 use crate::warp::PerspectiveWarp;
 use super::camera::PyCameraParameters;
@@ -217,20 +217,20 @@ fn propagate<'a>(
     Ok(PyTuple::new(py, ret))
 }
 
-#[pyfunction]
-fn regularize<'a>(
-    py: Python<'a>,
-    depth_map: &PyArray2<f64>,
-    variance_map: &PyArray2<f64>,
-    flag_map: &PyArray2<i64>,
-) -> Py<PyArray2<f64>> {
-    let regularized = regularization::regularize(
-        &depth_map.as_array().to_owned(),
-        &variance_map.as_array().to_owned(),
-        &flag_map.as_array().to_owned()
-    );
-    regularized.into_pyarray(py).to_owned()
-}
+// #[pyfunction]
+// fn regularize<'a>(
+//     py: Python<'a>,
+//     depth_map: &PyArray2<f64>,
+//     variance_map: &PyArray2<f64>,
+//     flag_map: &PyArray2<i64>,
+// ) -> Py<PyArray2<f64>> {
+//     let regularized = regularization::regularize(
+//         &depth_map.as_array().to_owned(),
+//         &variance_map.as_array().to_owned(),
+//         &flag_map.as_array().to_owned()
+//     );
+//     regularized.into_pyarray(py).to_owned()
+// }
 
 #[pymodule(semi_dense)]
 fn semi_dense_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -240,7 +240,7 @@ fn semi_dense_module(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(increment_age))?;
     m.add_wrapped(wrap_pyfunction!(update_depth))?;
     m.add_wrapped(wrap_pyfunction!(propagate))?;
-    m.add_wrapped(wrap_pyfunction!(regularize))?;
+    // m.add_wrapped(wrap_pyfunction!(regularize))?;
 
     Ok(())
 }

@@ -10,7 +10,7 @@ pub mod intensities;
 pub mod numeric;
 pub mod params;
 pub mod propagation;
-pub mod regularization;
+// pub mod regularization;
 pub mod semi_dense;
 pub mod stat;
 pub mod variance;
