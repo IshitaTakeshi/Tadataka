@@ -61,10 +61,21 @@ where
     let translation = translation.to_owned();
     let translation = translation.into_shape((d, 1)).unwrap();
 
-    stack![Axis(0),
+    stack![
+        Axis(0),
         stack![Axis(1), rotation.view(), translation.view()],
         stack![Axis(1), Array::zeros((1, d)), Array::ones((1, 1))]
     ]
+}
+
+pub fn inv_transform<A, S>(transform: &ArrayBase<S, Ix2>) -> Array2<A>
+where
+    S: Data<Elem = A>,
+    A: LinalgScalar + std::ops::Neg<Output = A> {
+    let rotation = get_rotation(&transform);
+    let t = get_translation(&transform);
+    let rt = rotation.t().dot(&t);
+    return make_matrix(&rotation.t(), &(rt.map(|&e| -e)));
 }
 
 #[cfg(test)]
@@ -137,5 +148,18 @@ mod tests {
                               [7, 8, 9, -3],
                               [0, 0, 0, 1]]);
         assert_eq!(make_matrix(&rotation, &translation), expected);
+    }
+
+    #[test]
+    fn test_inv_transform() {
+        let transform = arr2(&[[1., 0., 0., -1.],
+                               [0., 0., 1., -2.],
+                               [0., -1., 0., 3.],
+                               [0., 0., 0., 1.]]);
+        assert_eq!(inv_transform(&transform).dot(&transform),
+                   arr2(&[[1., 0., 0., 0.],
+                          [0., 1., 0., 0.],
+                          [0., 0., 1., 0.],
+                          [0., 0., 0., 1.]]));
     }
 }
