@@ -110,7 +110,7 @@ setup(
         'numba',
         'numpy>=1.18.4',
         # TODO make independent from opencv
-        'opencv-python==4.2.0.34',
+        'opencv-python==4.8.1.78',
         'opencv-contrib-python==4.2.0.34',
         'pandas',
         'pyyaml>=5.3',
